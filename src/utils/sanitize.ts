@@ -50,7 +50,7 @@ const DOMPURIFY_CONFIG: Config = {
   ],
 
   // URL 协议白名单 - 只允许 http/https/mailto
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
 
   // 额外安全选项
   SAFE_FOR_TEMPLATES: true,
@@ -112,7 +112,7 @@ export function sanitizeLink(href: string): string | null {
   }
 
   // 检查协议
-  const protocolMatch = trimmed.match(/^([a-z][a-z0-9+.\-]*):/i);
+  const protocolMatch = trimmed.match(/^([a-z][a-z0-9+.-]*):/i);
 
   if (protocolMatch && protocolMatch[1]) {
     const protocol = protocolMatch[1].toLowerCase();
