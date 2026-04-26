@@ -1,0 +1,287 @@
+import { useState, useCallback } from 'react';
+import { Plus } from '@phosphor-icons/react';
+import type { Category } from '../../../stores/libraryStore';
+import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
+import { InlineEditInput } from './InlineEditInput';
+import { ContextMenu } from './ContextMenu';
+import { CategoryItem, GroupItem, AddGroupButton } from './CategoryItem';
+import styles from './CategoryManager.module.scss';
+
+export interface CategoryManagerProps {
+  categories: Category[];
+  selectedCategoryId?: string | undefined;
+  selectedGroupId?: string | undefined;
+  onSelectCategory?: (categoryId: string) => void;
+  onSelectGroup?: (categoryId: string, groupId: string) => void;
+  onCreateCategory?: (name: string) => void;
+  onRenameCategory?: (categoryId: string, newName: string) => void;
+  onDeleteCategory?: (categoryId: string) => void;
+  onCreateGroup?: (categoryId: string, name: string) => void;
+  onRenameGroup?: (categoryId: string, groupId: string, newName: string) => void;
+  onDeleteGroup?: (categoryId: string, groupId: string) => void;
+  onOrganizeSkill?: (skillId: string, categoryId: string | null, groupId?: string) => Promise<void>;
+}
+
+interface EditingState {
+  type: 'category' | 'group';
+  categoryId: string;
+  groupId?: string | undefined;
+  value: string;
+}
+
+interface ContextMenuState {
+  type: 'category' | 'group';
+  categoryId: string;
+  groupId?: string | undefined;
+  x: number;
+  y: number;
+}
+
+export function CategoryManager({
+  categories,
+  selectedCategoryId,
+  selectedGroupId,
+  onSelectCategory,
+  onSelectGroup,
+  onCreateCategory,
+  onRenameCategory,
+  onDeleteCategory,
+  onCreateGroup,
+  onRenameGroup,
+  onDeleteGroup,
+  onOrganizeSkill,
+}: CategoryManagerProps): React.ReactElement {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isCreatingGroupFor, setIsCreatingGroupFor] = useState<string | null>(null);
+
+  const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
+    useCategoryDragDrop(onOrganizeSkill);
+
+  const toggleCategory = useCallback((categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleCategoryClick = useCallback(
+    (categoryId: string) => {
+      toggleCategory(categoryId);
+      onSelectCategory?.(categoryId);
+    },
+    [toggleCategory, onSelectCategory]
+  );
+
+  const handleGroupClick = useCallback(
+    (categoryId: string, groupId: string) => {
+      onSelectGroup?.(categoryId, groupId);
+    },
+    [onSelectGroup]
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, type: 'category' | 'group', categoryId: string, groupId?: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ type, categoryId, groupId, x: e.clientX, y: e.clientY });
+    },
+    []
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const startEditing = useCallback(
+    (type: 'category' | 'group', categoryId: string, groupId?: string, currentValue?: string) => {
+      setEditing({ type, categoryId, groupId, value: currentValue || '' });
+      closeContextMenu();
+    },
+    [closeContextMenu]
+  );
+
+  const handleEditSubmit = useCallback(() => {
+    if (!editing) return;
+    const { type, categoryId, groupId, value } = editing;
+    if (!value.trim()) {
+      setEditing(null);
+      return;
+    }
+    if (type === 'category') {
+      onRenameCategory?.(categoryId, value.trim());
+    } else if (groupId) {
+      onRenameGroup?.(categoryId, groupId, value.trim());
+    }
+    setEditing(null);
+  }, [editing, onRenameCategory, onRenameGroup]);
+
+  const handleDelete = useCallback(() => {
+    if (!contextMenu) return;
+    const { type, categoryId, groupId } = contextMenu;
+    if (type === 'category') {
+      onDeleteCategory?.(categoryId);
+    } else if (groupId) {
+      onDeleteGroup?.(categoryId, groupId);
+    }
+    closeContextMenu();
+  }, [contextMenu, onDeleteCategory, onDeleteGroup, closeContextMenu]);
+
+  const handleCreateCategory = useCallback(
+    (name: string) => {
+      if (!name.trim()) {
+        setIsCreatingCategory(false);
+        return;
+      }
+      onCreateCategory?.(name.trim());
+      setIsCreatingCategory(false);
+    },
+    [onCreateCategory]
+  );
+
+  const handleCreateGroup = useCallback(
+    (categoryId: string, name: string) => {
+      if (!name.trim()) {
+        setIsCreatingGroupFor(null);
+        return;
+      }
+      onCreateGroup?.(categoryId, name.trim());
+      setIsCreatingGroupFor(null);
+    },
+    [onCreateGroup]
+  );
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <span className={styles.title}>Categories</span>
+        <button
+          type="button"
+          className={styles.addButton}
+          onClick={() => setIsCreatingCategory(true)}
+          aria-label="Create category"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+
+      <div className={styles.list}>
+        {isCreatingCategory && (
+          <InlineEditInput
+            placeholder="Category name"
+            onSubmit={handleCreateCategory}
+            onCancel={() => setIsCreatingCategory(false)}
+            autoFocus
+          />
+        )}
+
+        {categories.map((category) => {
+          const isExpanded = expandedCategories.has(category.id);
+          const isSelected = selectedCategoryId === category.id && !selectedGroupId;
+          const isEditing = editing?.type === 'category' && editing.categoryId === category.id;
+          const isDragOver = dragOverState?.categoryId === category.id && !dragOverState.groupId;
+
+          return (
+            <div key={category.id} className={styles.categoryWrapper}>
+              <CategoryItem
+                category={category}
+                isExpanded={isExpanded}
+                isSelected={isSelected}
+                isEditing={isEditing}
+                isDragOver={isDragOver}
+                editingValue={editing?.value || ''}
+                onCategoryClick={() => handleCategoryClick(category.id)}
+                onContextMenu={(e) => handleContextMenu(e, 'category', category.id)}
+                onDragOver={(e) => handleDragOver(e, category.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, category.id)}
+                onEditSubmit={handleEditSubmit}
+                onEditCancel={() => setEditing(null)}
+                onEditClick={(e) => e.stopPropagation()}
+                onMenuClick={(e) => {
+                  e.stopPropagation();
+                  handleContextMenu(e, 'category', category.id);
+                }}
+              />
+
+              {isExpanded && (
+                <div className={styles.groups}>
+                  {isCreatingGroupFor === category.id && (
+                    <InlineEditInput
+                      placeholder="Group name"
+                      onSubmit={(name) => handleCreateGroup(category.id, name)}
+                      onCancel={() => setIsCreatingGroupFor(null)}
+                      autoFocus
+                      indent
+                    />
+                  )}
+
+                  {category.groups.map((group) => {
+                    const isGroupSelected =
+                      selectedCategoryId === category.id && selectedGroupId === group.id;
+                    const isGroupEditing =
+                      editing?.type === 'group' &&
+                      editing.categoryId === category.id &&
+                      editing.groupId === group.id;
+                    const isGroupDragOver =
+                      dragOverState?.categoryId === category.id && dragOverState.groupId === group.id;
+
+                    return (
+                      <GroupItem
+                        key={group.id}
+                        group={group}
+                        isSelected={isGroupSelected}
+                        isEditing={isGroupEditing}
+                        isDragOver={isGroupDragOver}
+                        editingValue={editing?.value || ''}
+                        onGroupClick={() => handleGroupClick(category.id, group.id)}
+                        onContextMenu={(e) => handleContextMenu(e, 'group', category.id, group.id)}
+                        onDragOver={(e) => handleDragOver(e, category.id, group.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, category.id, group.id)}
+                        onEditSubmit={handleEditSubmit}
+                        onEditCancel={() => setEditing(null)}
+                        onEditClick={(e) => e.stopPropagation()}
+                        onMenuClick={(e) => {
+                          e.stopPropagation();
+                          handleContextMenu(e, 'group', category.id, group.id);
+                        }}
+                      />
+                    );
+                  })}
+
+                  <AddGroupButton onClick={() => setIsCreatingGroupFor(category.id)} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {categories.length === 0 && !isCreatingCategory && (
+          <p className={styles.emptyText}>No categories yet</p>
+        )}
+      </div>
+
+      {contextMenu && (
+        <ContextMenu
+          type={contextMenu.type}
+          categoryId={contextMenu.categoryId}
+          groupId={contextMenu.groupId}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          categories={categories}
+          onRename={startEditing}
+          onDelete={handleDelete}
+          onClose={closeContextMenu}
+        />
+      )}
+    </div>
+  );
+}

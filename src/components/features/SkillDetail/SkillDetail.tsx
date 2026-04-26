@@ -3,8 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { X, FolderOpen, FileText, Clock, Tag, Rocket } from '@phosphor-icons/react';
+import { X, FolderOpen, FileText, Clock, Tag, Rocket, Export } from '@phosphor-icons/react';
 import type { LibrarySkill } from '../../../stores/libraryStore';
+import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillDetail.module.scss';
 
 export interface SkillDetailProps {
@@ -13,6 +14,7 @@ export interface SkillDetailProps {
   resources?: SkillResource[];
   onClose?: () => void;
   onDeploy?: (skill: LibrarySkill) => void;
+  onExport?: (skillId: string) => void;
 }
 
 export interface SkillResource {
@@ -28,6 +30,7 @@ export function SkillDetail({
   resources = [],
   onClose,
   onDeploy,
+  onExport,
 }: SkillDetailProps): React.ReactElement | null {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -186,6 +189,14 @@ export function SkillDetail({
       <footer className={styles.footer}>
         <button
           type="button"
+          className={styles.exportButton}
+          onClick={() => onExport?.(skill.id)}
+        >
+          <Export size={16} />
+          <span>Export</span>
+        </button>
+        <button
+          type="button"
           className={styles.deployButton}
           onClick={() => onDeploy?.(skill)}
         >
@@ -195,15 +206,4 @@ export function SkillDetail({
       </footer>
     </aside>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(date: Date | string): string {
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

@@ -1,15 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { DotsThree, Trash, Export, Rocket, FolderOpen } from '@phosphor-icons/react';
 import type { LibrarySkill } from '../../../stores/libraryStore';
+import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillCard.module.scss';
 
 export interface SkillCardProps {
   skill: LibrarySkill;
   isSelected?: boolean;
+  isDragging?: boolean;
   onSelect?: (skill: LibrarySkill) => void;
   onDelete?: (skillId: string) => void;
   onExport?: (skillId: string) => void;
   onDeploy?: (skill: LibrarySkill) => void;
+  onDragStart?: (skill: LibrarySkill) => void;
+  onDragEnd?: (skill: LibrarySkill) => void;
 }
 
 interface ContextMenuPosition {
@@ -20,13 +24,17 @@ interface ContextMenuPosition {
 export function SkillCard({
   skill,
   isSelected = false,
+  isDragging = false,
   onSelect,
   onDelete,
   onExport,
   onDeploy,
+  onDragStart,
+  onDragEnd,
 }: SkillCardProps): React.ReactElement {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 });
+  const [isBeingDragged, setIsBeingDragged] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -38,10 +46,6 @@ export function SkillCard({
     e.preventDefault();
     setContextMenuPos({ x: e.clientX, y: e.clientY });
     setShowContextMenu(true);
-  }, []);
-
-  const handleCloseContextMenu = useCallback(() => {
-    setShowContextMenu(false);
   }, []);
 
   const handleDelete = useCallback(() => {
@@ -58,6 +62,24 @@ export function SkillCard({
     setShowContextMenu(false);
     onDeploy?.(skill);
   }, [onDeploy, skill]);
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.dataTransfer.setData('application/json', JSON.stringify({
+        skillId: skill.id,
+        skillName: skill.name,
+      }));
+      e.dataTransfer.effectAllowed = 'move';
+      setIsBeingDragged(true);
+      onDragStart?.(skill);
+    },
+    [skill, onDragStart]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setIsBeingDragged(false);
+    onDragEnd?.(skill);
+  }, [skill, onDragEnd]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -91,9 +113,16 @@ export function SkillCard({
     <>
       <article
         ref={cardRef}
-        className={[styles.card, isSelected && styles.selected].filter(Boolean).join(' ')}
+        className={[
+          styles.card,
+          isSelected && styles.selected,
+          (isBeingDragged || isDragging) && styles.dragging,
+        ].filter(Boolean).join(' ')}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        draggable
         tabIndex={0}
         role="button"
         aria-label={`Skill: ${skill.name}`}
@@ -183,15 +212,4 @@ export function SkillCard({
       )}
     </>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(date: Date): string {
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

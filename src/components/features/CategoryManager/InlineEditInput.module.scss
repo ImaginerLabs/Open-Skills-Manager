@@ -1,0 +1,25 @@
+@use '../../../styles/variables' as *;
+
+.inlineInput {
+  flex: 1;
+  padding: 2px var(--space-2);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  outline: none;
+
+  .light & {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+}
+
+.indented {
+  margin-left: var(--space-6);
+}

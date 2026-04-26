@@ -40,6 +40,12 @@
   }
 }
 
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+}
+
 .header {
   display: flex;
   align-items: flex-start;

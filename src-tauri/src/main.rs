@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    tauri_init_temp_lib::run()
+    claude_code_skills_manager_lib::run()
 }

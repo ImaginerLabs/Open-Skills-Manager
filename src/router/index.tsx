@@ -1,11 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout/MainLayout';
+import { Library } from '../pages/Library';
+import { ToastContainer, ConfirmDialog } from '../components/ui';
 
 // Placeholder pages - will be implemented in later epics
-function LibraryPage(): React.ReactElement {
-  return <div>Library Page</div>;
-}
-
 function SkillDetailPage(): React.ReactElement {
   return <div>Skill Detail Page</div>;
 }
@@ -22,10 +20,20 @@ function SettingsPage(): React.ReactElement {
   return <div>Settings Page</div>;
 }
 
+function RootLayout(): React.ReactElement {
+  return (
+    <>
+      <MainLayout />
+      <ToastContainer />
+      <ConfirmDialog />
+    </>
+  );
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <MainLayout />,
+    element: <RootLayout />,
     children: [
       {
         index: true,
@@ -33,7 +41,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'library',
-        element: <LibraryPage />,
+        element: <Library />,
       },
       {
         path: 'library/:skillId',

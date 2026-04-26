@@ -3,4 +3,4 @@ export { useGlobalStore, type GlobalStore, type GlobalSkill } from './globalStor
 export { useProjectStore, type ProjectStore, type Project, type ProjectSkill } from './projectStore';
 export { useSettingsStore, type SettingsStore, type Theme, type Language } from './settingsStore';
 export { useUpdateStore, type UpdateStore } from './updateStore';
-export { useUIStore, type UIStore, type SidebarState, type ActiveView } from './uiStore';
+export { useUIStore, type UIStore, type ToastType, type Toast } from './uiStore';
