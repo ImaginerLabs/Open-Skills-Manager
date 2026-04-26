@@ -4,7 +4,7 @@ import { FolderOpen, FileArchive, X, Trash, Warning } from '@phosphor-icons/reac
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
-import { useLibraryStore } from '@/stores/libraryStore';
+import { useLibraryStore, type LibrarySkill } from '@/stores/libraryStore';
 import { libraryService } from '@/services/libraryService';
 import { DuplicateHandlerDialog } from './DuplicateHandlerDialog';
 import { selectFolders, selectZipFiles, validateFolderName, processDroppedPaths } from './importUtils';
@@ -13,7 +13,9 @@ import styles from './ImportDialog.module.scss';
 export interface ImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportStart?: (paths: string[]) => void;
+  onImportStart?: (paths: string[], categoryId?: string | undefined, groupId?: string | undefined) => void;
+  selectedCategoryId?: string | undefined;
+  selectedGroupId?: string | undefined;
 }
 
 export interface ImportItem {
@@ -41,7 +43,7 @@ const VALIDATION_ERRORS = {
   E203: `Skill size exceeds ${MAX_SKILL_SIZE_MB}MB limit`,
 } as const;
 
-export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogProps): ReactNode {
+export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryId, selectedGroupId }: ImportDialogProps): ReactNode {
   const [items, setItems] = useState<ImportItem[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{
@@ -53,7 +55,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogPro
   const addSkill = useLibraryStore((state) => state?.addSkill);
   const removeSkill = useLibraryStore((state) => state?.removeSkill);
   const skills = useLibraryStore((state) => state?.skills);
-  const existingSkills = Array.isArray(skills) ? skills : [];
+  const existingSkills = Array.isArray(skills) ? skills.filter((s): s is LibrarySkill => s != null && s.folderName != null) : [];
 
   // Tauri native drag-drop event listener
   useEffect(() => {
@@ -216,11 +218,11 @@ export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogPro
     setIsValidating(false);
 
     if (paths.length > 0) {
-      onImportStart?.(paths);
+      onImportStart?.(paths, selectedCategoryId, selectedGroupId);
       setItems([]);
       onClose();
     }
-  }, [items, existingSkills, onImportStart, onClose]);
+  }, [items, existingSkills, onImportStart, onClose, selectedCategoryId, selectedGroupId]);
 
   const handleClose = useCallback(() => {
     setItems([]);

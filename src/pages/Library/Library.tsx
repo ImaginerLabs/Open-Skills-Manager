@@ -25,6 +25,7 @@ export function Library(): React.ReactElement {
     skills = [],
     selectedSkill,
     selectedCategoryId,
+    selectedGroupId,
     isLoading,
     error,
     setSkills,
@@ -36,6 +37,7 @@ export function Library(): React.ReactElement {
     updateExportProgress,
     completeExport,
     setExportError,
+    resetExport,
     startImport,
     updateImportProgress,
     completeImport,
@@ -168,6 +170,7 @@ export function Library(): React.ReactElement {
         if (result === null) {
           // User cancelled save dialog
           setShowExportProgress(false);
+          resetExport();
           return;
         }
         if (!result.success) {
@@ -184,6 +187,7 @@ export function Library(): React.ReactElement {
           if (result === null) {
             // User cancelled save dialog
             setShowExportProgress(false);
+            resetExport();
             return;
           }
           if (!result.success) {
@@ -198,7 +202,7 @@ export function Library(): React.ReactElement {
       setExportError(message);
       showToast('error', message);
     }
-  }, [startExport, updateExportProgress, completeExport, setExportError, showToast]);
+  }, [startExport, updateExportProgress, completeExport, setExportError, showToast, resetExport]);
 
   const handleExportClose = useCallback(() => {
     setShowExportDialog(false);
@@ -217,7 +221,7 @@ export function Library(): React.ReactElement {
     setShowImportDialog(false);
   }, []);
 
-  const handleImportStart = useCallback(async (paths: string[]) => {
+  const handleImportStart = useCallback(async (paths: string[], categoryId?: string, groupId?: string) => {
     setShowImportProgress(true);
     startImport(paths.length);
 
@@ -237,7 +241,7 @@ export function Library(): React.ReactElement {
       updateImportProgress(i + 1, name);
 
       try {
-        const result = await libraryService.import({ path });
+        const result = await libraryService.import({ path, categoryId, groupId });
         if (result.success) {
           successful++;
         } else {
@@ -423,6 +427,8 @@ export function Library(): React.ReactElement {
         isOpen={showImportDialog}
         onClose={handleImportClose}
         onImportStart={handleImportStart}
+        selectedCategoryId={selectedCategoryId}
+        selectedGroupId={selectedGroupId}
       />
 
       <ImportProgress
