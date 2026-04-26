@@ -34,6 +34,9 @@ interface ProjectState {
   projectSkills: Map<string, ProjectSkill[]>;
   isLoading: boolean;
   isRefreshing: boolean;
+  refreshingProjectId: string | null;
+  lastRefreshAt: Map<string, Date>;
+  refreshError: string | null;
   error: string | null;
 }
 
@@ -44,8 +47,10 @@ interface ProjectActions {
   selectProject: (project: Project | null) => void;
   setProjectSkills: (projectId: string, skills: ProjectSkill[]) => void;
   setLoading: (loading: boolean) => void;
-  setRefreshing: (refreshing: boolean) => void;
+  setRefreshing: (refreshing: boolean, projectId?: string) => void;
+  setRefreshError: (error: string | null) => void;
   setError: (error: string | null) => void;
+  clearProjectSkills: (projectId: string) => void;
 }
 
 export type ProjectStore = ProjectState & ProjectActions;
@@ -59,29 +64,46 @@ export const useProjectStore = create<ProjectStore>()(
         projectSkills: new Map(),
         isLoading: false,
         isRefreshing: false,
+        refreshingProjectId: null,
+        lastRefreshAt: new Map(),
+        refreshError: null,
         error: null,
 
         setProjects: (projects) => set({ projects }),
         addProject: (project) => set((state) => ({ projects: [...state.projects, project] })),
         removeProject: (id) =>
-          set((state) => ({
-            projects: state.projects.filter((p) => p.id !== id),
-            projectSkills: (() => {
-              const newMap = new Map(state.projectSkills);
-              newMap.delete(id);
-              return newMap;
-            })(),
-          })),
+          set((state) => {
+            const newSkillsMap = new Map(state.projectSkills);
+            newSkillsMap.delete(id);
+            const newRefreshMap = new Map(state.lastRefreshAt);
+            newRefreshMap.delete(id);
+            return {
+              projects: state.projects.filter((p) => p.id !== id),
+              projectSkills: newSkillsMap,
+              lastRefreshAt: newRefreshMap,
+              selectedProject: state.selectedProject?.id === id ? null : state.selectedProject,
+            };
+          }),
         selectProject: (project) => set({ selectedProject: project }),
         setProjectSkills: (projectId, skills) =>
           set((state) => {
             const newMap = new Map(state.projectSkills);
             newMap.set(projectId, skills);
-            return { projectSkills: newMap };
+            const newRefreshMap = new Map(state.lastRefreshAt);
+            newRefreshMap.set(projectId, new Date());
+            return { projectSkills: newMap, lastRefreshAt: newRefreshMap };
           }),
         setLoading: (loading) => set({ isLoading: loading }),
-        setRefreshing: (refreshing) => set({ isRefreshing: refreshing }),
+        setRefreshing: (refreshing, projectId) =>
+          set({ isRefreshing: refreshing, refreshingProjectId: projectId ?? null }),
+        setRefreshError: (error) => set({ refreshError: error }),
         setError: (error) => set({ error }),
+        clearProjectSkills: (projectId) =>
+          set((state) => {
+            const newMap = new Map(state.projectSkills);
+            newMap.delete(projectId);
+            return { projectSkills: newMap };
+          }),
       }),
       {
         name: 'project-store',

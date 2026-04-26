@@ -25,7 +25,7 @@ export interface Deployment {
   skillId: string;
   targetScope: 'global' | 'project';
   targetPath: string;
-  projectName?: string;
+  projectName?: string | undefined;
   deployedAt: Date;
 }
 
@@ -118,6 +118,8 @@ interface LibraryActions {
   removeGroup: (categoryId: string, groupId: string) => void;
   setGroups: (groups: Group[]) => void;
   updateDeployments: (skillId: string, deployments: Deployment[]) => void;
+  addDeployment: (skillId: string, deployment: Deployment) => void;
+  removeDeployment: (skillId: string, deploymentId: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   // Import actions
@@ -203,6 +205,22 @@ export const useLibraryStore = create<LibraryStore>()(
           set((state) => ({
             skills: state.skills.map((s) =>
               s.id === skillId ? { ...s, deployments } : s
+            ),
+          })),
+        addDeployment: (skillId, deployment) =>
+          set((state) => ({
+            skills: state.skills.map((s) =>
+              s.id === skillId
+                ? { ...s, deployments: [...s.deployments, deployment] }
+                : s
+            ),
+          })),
+        removeDeployment: (skillId, deploymentId) =>
+          set((state) => ({
+            skills: state.skills.map((s) =>
+              s.id === skillId
+                ? { ...s, deployments: s.deployments.filter((d) => d.id !== deploymentId) }
+                : s
             ),
           })),
         setLoading: (loading) => set({ isLoading: loading }),

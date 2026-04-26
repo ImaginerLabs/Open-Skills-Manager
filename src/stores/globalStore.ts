@@ -9,6 +9,7 @@ export interface GlobalSkill {
   description: string;
   path: string;
   skillMdPath: string;
+  skillMdContent?: string;
   installedAt?: Date;
   size: number;
   fileCount: number;
@@ -20,6 +21,7 @@ interface GlobalState {
   skills: GlobalSkill[];
   selectedSkill: GlobalSkill | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
 }
 
@@ -29,6 +31,7 @@ interface GlobalActions {
   removeSkill: (id: string) => void;
   selectSkill: (skill: GlobalSkill | null) => void;
   setLoading: (loading: boolean) => void;
+  setRefreshing: (refreshing: boolean) => void;
   setError: (error: string | null) => void;
 }
 
@@ -40,13 +43,18 @@ export const useGlobalStore = create<GlobalStore>()(
       skills: [],
       selectedSkill: null,
       isLoading: false,
+      isRefreshing: false,
       error: null,
 
       setSkills: (skills) => set({ skills }),
       addSkill: (skill) => set((state) => ({ skills: [...state.skills, skill] })),
-      removeSkill: (id) => set((state) => ({ skills: state.skills.filter((s) => s.id !== id) })),
+      removeSkill: (id) => set((state) => ({
+        skills: state.skills.filter((s) => s.id !== id),
+        selectedSkill: state.selectedSkill?.id === id ? null : state.selectedSkill,
+      })),
       selectSkill: (skill) => set({ selectedSkill: skill }),
-      setLoading: (loading) => set({ isLoading: loading }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setRefreshing: (isRefreshing) => set({ isRefreshing }),
       setError: (error) => set({ error }),
     }),
     { name: 'global-store' }
