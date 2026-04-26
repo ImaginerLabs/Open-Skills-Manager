@@ -161,3 +161,14 @@ async function installSkill(skillId: string): Promise<void> {
   useSkillStore.getState().addSkill(result.data);
 }
 ```
+
+---
+
+## IPC 调试
+
+IPC 通信问题的调试方法，参考 [调试规范](./debugging-standards.md)：
+
+- **Rust Console**: 查看 `println!` 输出的 IPC 日志
+- **CrabNebula DevTools**: 追踪 IPC 命令调用和响应
+- **WebView DevTools**: 检查前端 IPC 调用和返回值
+```

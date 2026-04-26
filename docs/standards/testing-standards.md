@@ -114,3 +114,13 @@ npm run test:coverage
 2. **使用语义化查询** - 优先使用 `getByRole`, `getByText`
 3. **避免测试实现细节** - 不测试组件内部状态
 4. **保持测试独立** - 每个测试应该独立运行
+
+---
+
+## 调试集成
+
+测试失败时的调试方法，参考 [调试规范](./debugging-standards.md)：
+
+- **Rust 端**: 使用 `RUST_BACKTRACE=1` 获取堆栈追踪
+- **WebView 端**: 程序化打开 DevTools 检查 DOM/JS
+- **性能分析**: 使用 CrabNebula DevTools 追踪命令执行

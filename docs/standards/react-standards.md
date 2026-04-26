@@ -193,3 +193,13 @@ function SkillCardActions({ skill }: { skill: Skill }) {
   return <Button onClick={() => installSkill(skill.id)}>Install</Button>;
 }
 ```
+
+---
+
+## 前端调试
+
+React 组件调试方法，参考 [调试规范](./debugging-standards.md)：
+
+- **WebView DevTools**: 使用 `window.open_devtools()` 检查组件 DOM 和状态
+- **React DevTools**: 安装 React DevTools 浏览器扩展检查组件树
+- **CrabNebula DevTools**: 追踪 IPC 调用和事件响应
