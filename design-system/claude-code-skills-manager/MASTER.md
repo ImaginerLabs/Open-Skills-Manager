@@ -589,7 +589,7 @@ Based on 4px grid:
 
 ### Visual Anti-Patterns
 
-- ❌ **Emojis as icons** — 使用 SVG 图标 (Heroicons, Lucide, SF Symbols)
+- ❌ **Emojis as icons** — 使用 SVG 图标 (Phosphor Icons: `@phosphor-icons/react`)
 - ❌ **Flat backgrounds** — 使用毛玻璃或微妙渐变增加深度
 - ❌ **Hard borders** — 使用半透明边框 `rgba(255,255,255,0.1)`
 - ❌ **Pure black/white** — 使用带有色调的灰度色
