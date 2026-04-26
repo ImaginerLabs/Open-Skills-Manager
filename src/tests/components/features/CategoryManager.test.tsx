@@ -105,6 +105,7 @@ describe('CategoryManager', () => {
     onRenameGroup: vi.fn(),
     onDeleteGroup: vi.fn(),
     onOrganizeSkill: vi.fn(),
+    totalSkillsCount: 12,
   };
 
   beforeEach(() => {

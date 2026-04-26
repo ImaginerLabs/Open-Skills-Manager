@@ -10,7 +10,7 @@ import {
   CaretRight,
   CaretDown,
 } from '@phosphor-icons/react';
-import { CategoryManager } from '../../features/CategoryManager';
+import { CategoryManager, ALL_CATEGORY_ID } from '../../features/CategoryManager';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
@@ -40,10 +40,17 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   );
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { categories, updateSkill, selectedCategoryId, selectedGroupId, selectCategory, selectGroup } = useLibraryStore();
+  const { categories, updateSkill, selectedCategoryId, selectedGroupId, selectCategory, selectGroup, skills } = useLibraryStore();
   const { showToast } = useUIStore();
   const dragTargetRef = useRef<HTMLDivElement>(null);
   const categoryManager = useCategoryManager();
+
+  // Set default selection to "All" category on mount
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      selectCategory(ALL_CATEGORY_ID);
+    }
+  }, [selectedCategoryId, selectCategory]);
 
   const navSections: NavSection[] = [
     {
@@ -253,6 +260,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                     categories={categories}
                     selectedCategoryId={selectedCategoryId}
                     selectedGroupId={selectedGroupId}
+                    totalSkillsCount={skills?.length ?? 0}
                     onSelectCategory={handleSelectCategory}
                     onSelectGroup={handleSelectGroup}
                     onCreateCategory={handleCreateCategory}

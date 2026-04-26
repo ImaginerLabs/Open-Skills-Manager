@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { LibrarySkill } from '../stores/libraryStore';
+import { ALL_CATEGORY_ID } from '../components/features/CategoryManager/CategoryManager';
 
 type SortOption = 'name' | 'date' | 'size';
 type SortDirection = 'asc' | 'desc';
@@ -39,7 +40,8 @@ export function useLibraryFilters(
       );
     }
 
-    if (selectedCategoryId) {
+    // Filter by category, but skip filtering for "All" category
+    if (selectedCategoryId && selectedCategoryId !== ALL_CATEGORY_ID) {
       result = result.filter((skill) => skill.categoryId === selectedCategoryId);
     }
 

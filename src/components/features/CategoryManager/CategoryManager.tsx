@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus } from '@phosphor-icons/react';
+import { Plus, FolderSimple } from '@phosphor-icons/react';
 import type { Category } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { InlineEditInput } from './InlineEditInput';
@@ -7,10 +7,14 @@ import { ContextMenu } from './ContextMenu';
 import { CategoryItem, GroupItem, AddGroupButton } from './CategoryItem';
 import styles from './CategoryManager.module.scss';
 
+// Special ID for the "All" category
+export const ALL_CATEGORY_ID = 'cat-all';
+
 export interface CategoryManagerProps {
   categories: Category[];
   selectedCategoryId?: string | undefined;
   selectedGroupId?: string | undefined;
+  totalSkillsCount: number;
   onSelectCategory?: (categoryId: string) => void;
   onSelectGroup?: (categoryId: string, groupId: string) => void;
   onCreateCategory?: (name: string) => void;
@@ -41,6 +45,7 @@ export function CategoryManager({
   categories,
   selectedCategoryId,
   selectedGroupId,
+  totalSkillsCount,
   onSelectCategory,
   onSelectGroup,
   onCreateCategory,
@@ -176,6 +181,23 @@ export function CategoryManager({
       </div>
 
       <div className={styles.list}>
+        {/* "All" category - special virtual category */}
+        <div
+          className={[
+            styles.categoryItem,
+            selectedCategoryId === ALL_CATEGORY_ID && !selectedGroupId && styles.selected,
+          ].filter(Boolean).join(' ')}
+          onClick={() => onSelectCategory?.(ALL_CATEGORY_ID)}
+          role="button"
+          tabIndex={0}
+        >
+          <span className={styles.expandIcon}>
+            <FolderSimple size={16} className={styles.icon} />
+          </span>
+          <span className={styles.name}>All</span>
+          <span className={styles.count}>{totalSkillsCount}</span>
+        </div>
+
         {isCreatingCategory && (
           <InlineEditInput
             placeholder="Category name"

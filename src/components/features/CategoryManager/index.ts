@@ -1,4 +1,4 @@
-export { CategoryManager } from './CategoryManager';
+export { CategoryManager, ALL_CATEGORY_ID } from './CategoryManager';
 export { InlineEditInput } from './InlineEditInput';
 export { ContextMenu } from './ContextMenu';
 export type { CategoryManagerProps } from './CategoryManager';
