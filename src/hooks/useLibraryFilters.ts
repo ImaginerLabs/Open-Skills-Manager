@@ -17,13 +17,17 @@ interface UseLibraryFiltersResult {
 
 export function useLibraryFilters(
   skills: LibrarySkill[],
-  selectedCategoryId: string | null
+  selectedCategoryId: string | null | undefined
 ): UseLibraryFiltersResult {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const filteredSkills = useMemo(() => {
+    // Defensive check: ensure skills is an array
+    if (!Array.isArray(skills)) {
+      return [];
+    }
     let result = [...skills];
 
     if (searchQuery) {

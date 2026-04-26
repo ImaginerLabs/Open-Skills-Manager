@@ -38,11 +38,9 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['library', 'scopes'])
   );
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
-  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { categories, updateSkill } = useLibraryStore();
+  const { categories, updateSkill, selectedCategoryId, selectedGroupId, selectCategory, selectGroup } = useLibraryStore();
   const { showToast } = useUIStore();
   const dragTargetRef = useRef<HTMLDivElement>(null);
   const categoryManager = useCategoryManager();
@@ -77,14 +75,13 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   }, []);
 
   const handleSelectCategory = useCallback((categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedGroupId(undefined);
-  }, []);
+    selectCategory(categoryId);
+  }, [selectCategory]);
 
   const handleSelectGroup = useCallback((categoryId: string, groupId: string) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedGroupId(groupId);
-  }, []);
+    selectCategory(categoryId);
+    selectGroup(groupId);
+  }, [selectCategory, selectGroup]);
 
   const handleCreateCategory = useCallback(
     (name: string) => {
@@ -104,12 +101,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     (categoryId: string) => {
       categoryManager.deleteCategory(categoryId).then((success) => {
         if (success && selectedCategoryId === categoryId) {
-          setSelectedCategoryId(undefined);
-          setSelectedGroupId(undefined);
+          selectCategory(undefined);
         }
       });
     },
-    [categoryManager, selectedCategoryId]
+    [categoryManager, selectedCategoryId, selectCategory]
   );
 
   const handleCreateGroup = useCallback(
@@ -130,11 +126,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     (categoryId: string, groupId: string) => {
       categoryManager.deleteGroup(categoryId, groupId).then((success) => {
         if (success && selectedGroupId === groupId) {
-          setSelectedGroupId(undefined);
+          selectGroup(undefined);
         }
       });
     },
-    [categoryManager, selectedGroupId]
+    [categoryManager, selectedGroupId, selectGroup]
   );
 
   useEffect(() => {

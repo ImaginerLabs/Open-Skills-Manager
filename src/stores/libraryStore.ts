@@ -9,6 +9,7 @@ export interface LibrarySkill {
   description: string;
   path: string;
   skillMdPath: string;
+  skillMdContent?: string;
   categoryId?: string;
   groupId?: string;
   importedAt: Date;
@@ -92,6 +93,8 @@ interface LibraryState {
   categories: Category[];
   groups: Group[];
   selectedSkill: LibrarySkill | null;
+  selectedCategoryId: string | undefined;
+  selectedGroupId: string | undefined;
   isLoading: boolean;
   error: string | null;
   importProgress: ImportProgress;
@@ -104,6 +107,8 @@ interface LibraryActions {
   removeSkill: (id: string) => void;
   updateSkill: (id: string, updates: Partial<LibrarySkill>) => void;
   selectSkill: (skill: LibrarySkill | null) => void;
+  selectCategory: (categoryId: string | undefined) => void;
+  selectGroup: (groupId: string | undefined) => void;
   setCategories: (categories: Category[]) => void;
   addCategory: (category: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
@@ -142,6 +147,8 @@ export const useLibraryStore = create<LibraryStore>()(
         categories: [],
         groups: [],
         selectedSkill: null,
+        selectedCategoryId: undefined,
+        selectedGroupId: undefined,
         isLoading: false,
         error: null,
         importProgress: initialImportProgress,
@@ -156,6 +163,8 @@ export const useLibraryStore = create<LibraryStore>()(
             skills: state.skills.map((s) => (s.id === id ? { ...s, ...updates } : s)),
           })),
         selectSkill: (skill) => set({ selectedSkill: skill }),
+        selectCategory: (categoryId) => set({ selectedCategoryId: categoryId, selectedGroupId: undefined }),
+        selectGroup: (groupId) => set({ selectedGroupId: groupId }),
         setCategories: (categories) => set({ categories }),
         addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
         updateCategory: (id, updates) =>
@@ -264,6 +273,15 @@ export const useLibraryStore = create<LibraryStore>()(
           categories: state.categories,
           groups: state.groups,
         }),
+        onRehydrateStorage: () => (state) => {
+          // Ensure categories is always an array after hydration
+          if (state && !Array.isArray(state.categories)) {
+            state.categories = [];
+          }
+          if (state && !Array.isArray(state.groups)) {
+            state.groups = [];
+          }
+        },
       }
     ),
     { name: 'library-store' }

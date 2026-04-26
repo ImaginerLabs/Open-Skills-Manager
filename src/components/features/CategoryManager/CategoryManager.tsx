@@ -60,6 +60,9 @@ export function CategoryManager({
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
     useCategoryDragDrop(onOrganizeSkill);
 
+  // Ensure categories is always an array (defensive against corrupted localStorage)
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
   const toggleCategory = useCallback((categoryId: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
@@ -182,7 +185,7 @@ export function CategoryManager({
           />
         )}
 
-        {categories.map((category) => {
+        {safeCategories.map((category) => {
           const isExpanded = expandedCategories.has(category.id);
           const isSelected = selectedCategoryId === category.id && !selectedGroupId;
           const isEditing = editing?.type === 'category' && editing.categoryId === category.id;
@@ -264,7 +267,7 @@ export function CategoryManager({
           );
         })}
 
-        {categories.length === 0 && !isCreatingCategory && (
+        {safeCategories.length === 0 && !isCreatingCategory && (
           <p className={styles.emptyText}>No categories yet</p>
         )}
       </div>
@@ -276,7 +279,7 @@ export function CategoryManager({
           groupId={contextMenu.groupId}
           x={contextMenu.x}
           y={contextMenu.y}
-          categories={categories}
+          categories={safeCategories}
           onRename={startEditing}
           onDelete={handleDelete}
           onClose={closeContextMenu}

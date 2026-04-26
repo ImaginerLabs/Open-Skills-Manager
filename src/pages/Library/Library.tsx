@@ -5,6 +5,8 @@ import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { SkillCard } from '../../components/features/SkillCard';
 import { SkillDetail } from '../../components/features/SkillDetail';
 import { SkillListSkeleton } from '../../components/common/Skeletons/SkillListSkeleton';
+import { ImportDialog } from '../../components/features/ImportDialog';
+import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog, type ExportFormat } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
 import { libraryService } from '../../services/libraryService';
@@ -22,6 +24,7 @@ export function Library(): React.ReactElement {
   const {
     skills,
     selectedSkill,
+    selectedCategoryId,
     isLoading,
     error,
     setSkills,
@@ -33,14 +36,18 @@ export function Library(): React.ReactElement {
     updateExportProgress,
     completeExport,
     setExportError,
+    startImport,
+    updateImportProgress,
+    completeImport,
   } = useLibraryStore();
 
   const { showToast } = useUIStore();
 
-  const [selectedCategoryId] = useState<string | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [containerWidth, setContainerWidth] = useState(1200);
   const [containerHeight, setContainerHeight] = useState(800);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showImportProgress, setShowImportProgress] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
   const [showExportProgress, setShowExportProgress] = useState(false);
@@ -105,7 +112,7 @@ export function Library(): React.ReactElement {
       try {
         const result = await libraryService.get(skill.id);
         if (result.success && result.data) {
-          setSkillMdContent('');
+          setSkillMdContent(result.data.skillMdContent || '');
         }
       } catch {
         setSkillMdContent('');
@@ -196,6 +203,63 @@ export function Library(): React.ReactElement {
     setShowExportProgress(false);
   }, []);
 
+  const handleOpenImport = useCallback(() => {
+    setShowImportDialog(true);
+  }, []);
+
+  const handleImportClose = useCallback(() => {
+    setShowImportDialog(false);
+  }, []);
+
+  const handleImportStart = useCallback(async (paths: string[]) => {
+    setShowImportProgress(true);
+    startImport(paths.length);
+
+    let successful = 0;
+    let failed = 0;
+    const failedItems: Array<{ name: string; error: string; code: string }> = [];
+
+    for (let i = 0; i < paths.length; i++) {
+      const path = paths[i]!;
+      const name = path.split('/').pop() || path;
+      updateImportProgress(i + 1, name);
+
+      try {
+        const result = await libraryService.import({ path });
+        if (result.success) {
+          successful++;
+        } else {
+          failed++;
+          failedItems.push({
+            name,
+            error: result.error.message,
+            code: result.error.code,
+          });
+        }
+      } catch (e) {
+        failed++;
+        failedItems.push({
+          name,
+          error: e instanceof Error ? e.message : 'Import failed',
+          code: 'IMPORT_ERROR',
+        });
+      }
+    }
+
+    completeImport(successful, failed, 0, failedItems);
+
+    if (successful > 0) {
+      const listResult = await libraryService.list();
+      if (listResult.success) {
+        setSkills(listResult.data);
+      }
+    }
+  }, [startImport, updateImportProgress, completeImport, setSkills]);
+
+  const handleImportProgressClose = useCallback(() => {
+    setShowImportProgress(false);
+  }, []);
+
   const isEmpty = filteredSkills.length === 0 && !isLoading;
   const hasSkills = skills.length > 0;
   const effectiveWidth = selectedSkill ? containerWidth - SIDEBAR_WIDTH : containerWidth;
@@ -235,7 +299,7 @@ export function Library(): React.ReactElement {
             <option value="date">Date</option>
             <option value="size">Size</option>
           </select>
-          <button type="button" className={styles.importButton}>
+          <button type="button" className={styles.importButton} onClick={handleOpenImport}>
             <Plus size={18} />
             <span>Import</span>
           </button>
@@ -270,7 +334,7 @@ export function Library(): React.ReactElement {
                 <p className={styles.emptyText}>
                   Import skills from folders or zip files to get started
                 </p>
-                <button type="button" className={styles.importButton}>
+                <button type="button" className={styles.importButton} onClick={handleOpenImport}>
                   <Plus size={18} />
                   <span>Import your first skill</span>
                 </button>
@@ -325,6 +389,18 @@ export function Library(): React.ReactElement {
           onExport={handleExportSkill}
         />
       )}
+
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={handleImportClose}
+        onImportStart={handleImportStart}
+      />
+
+      <ImportProgress
+        isOpen={showImportProgress}
+        onCancel={() => {}}
+        onClose={handleImportProgressClose}
+      />
 
       <ExportDialog
         isOpen={showExportDialog}

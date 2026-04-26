@@ -5,6 +5,8 @@ use std::io::Write;
 use zip::ZipWriter;
 use zip::write::FileOptions;
 
+use super::AppError;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpcResult<T> {
     pub success: bool,
@@ -54,6 +56,8 @@ pub struct LibrarySkill {
     pub description: String,
     pub path: String,
     pub skill_md_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill_md_content: Option<String>,
     pub category_id: Option<String>,
     pub group_id: Option<String>,
     pub imported_at: String,
@@ -265,7 +269,9 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
     if !library_path.exists() {
         // Create directory if it doesn't exist
         if let Err(e) = fs::create_dir_all(&library_path) {
-            return IpcResult::error("CREATE_DIR_FAILED", &format!("Failed to create library directory: {}", e));
+            return IpcResult::error(AppError::E101CreateDirFailed(
+                format!("Library directory: {}", e)
+            ).code(), &format!("Failed to create library directory: {}", e));
         }
         return IpcResult::success(vec![]);
     }
@@ -291,6 +297,7 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                         description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
                         path: path.to_string_lossy().to_string(),
                         skill_md_path: skill_md.to_string_lossy().to_string(),
+                        skill_md_content: None,
                         category_id: None,
                         group_id: None,
                         imported_at: chrono::Utc::now().to_rfc3339(),
@@ -327,6 +334,9 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
                         let metadata = parse_skill_md(&skill_md);
                         let (size, file_count) = count_files(&path);
 
+                        // Read SKILL.md content
+                        let skill_md_content = fs::read_to_string(&skill_md).ok();
+
                         let skill = LibrarySkill {
                             id,
                             name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
@@ -335,6 +345,7 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
                             description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
                             path: path.to_string_lossy().to_string(),
                             skill_md_path: skill_md.to_string_lossy().to_string(),
+                            skill_md_content,
                             category_id: None,
                             group_id: None,
                             imported_at: chrono::Utc::now().to_rfc3339(),
@@ -351,7 +362,9 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
         }
     }
 
-    IpcResult::error("NOT_FOUND", &format!("Skill not found: {}", id))
+    IpcResult::error(AppError::E203SkillNotFound(
+        format!("Skill not found: {}", id)
+    ).code(), &format!("Skill not found: {}", id))
 }
 
 #[tauri::command]
@@ -365,7 +378,9 @@ pub fn library_delete(id: String) -> IpcResult<()> {
                 let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 if folder_name == id || path.to_string_lossy().contains(&id) {
                     if let Err(e) = fs::remove_dir_all(&path) {
-                        return IpcResult::error("DELETE_FAILED", &format!("Failed to delete skill: {}", e));
+                        return IpcResult::error(AppError::E104DeleteFailed(
+                            format!("Skill: {}", e)
+                        ).code(), &format!("Failed to delete skill: {}", e));
                     }
                     return IpcResult::success(());
                 }
@@ -373,7 +388,9 @@ pub fn library_delete(id: String) -> IpcResult<()> {
         }
     }
 
-    IpcResult::error("NOT_FOUND", &format!("Skill not found: {}", id))
+    IpcResult::error(AppError::E203SkillNotFound(
+        format!("Skill not found: {}", id)
+    ).code(), &format!("Skill not found: {}", id))
 }
 
 #[tauri::command]
@@ -381,7 +398,9 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
     let source = PathBuf::from(&path);
 
     if !source.exists() {
-        return IpcResult::error("NOT_FOUND", &format!("Source path does not exist: {}", path));
+        return IpcResult::error(AppError::E100FileNotFound(
+            path.clone()
+        ).code(), &format!("Source path does not exist: {}", path));
     }
 
     let skill_md = if source.is_file() && source.file_name().map(|n| n.to_string_lossy() == "SKILL.md").unwrap_or(false) {
@@ -389,16 +408,22 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
     } else if source.is_dir() {
         source.join("SKILL.md")
     } else {
-        return IpcResult::error("INVALID_SOURCE", "Source must be a SKILL.md file or a folder containing one");
+        return IpcResult::error(AppError::E002InvalidInput(
+            "Source must be SKILL.md or folder".to_string()
+        ).code(), "Source must be a SKILL.md file or a folder containing one");
     };
 
     if !skill_md.exists() {
-        return IpcResult::error("SKILL_MD_NOT_FOUND", "SKILL.md not found in the specified location");
+        return IpcResult::error(AppError::E100FileNotFound(
+            "SKILL.md".to_string()
+        ).code(), "SKILL.md not found in the specified location");
     }
 
     let library_path = get_library_path();
     if let Err(e) = fs::create_dir_all(&library_path) {
-        return IpcResult::error("CREATE_DIR_FAILED", &format!("Failed to create library directory: {}", e));
+        return IpcResult::error(AppError::E101CreateDirFailed(
+            format!("Library directory: {}", e)
+        ).code(), &format!("Failed to create library directory: {}", e));
     }
 
     // Determine destination folder name
@@ -411,14 +436,20 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
     // Copy files
     if source.is_dir() {
         if let Err(e) = copy_dir_all(&source, &dest) {
-            return IpcResult::error("COPY_FAILED", &format!("Failed to copy skill: {}", e));
+            return IpcResult::error(AppError::E105CopyFailed(
+                format!("Skill directory: {}", e)
+            ).code(), &format!("Failed to copy skill: {}", e));
         }
     } else {
         if let Err(e) = fs::create_dir_all(&dest) {
-            return IpcResult::error("CREATE_DIR_FAILED", &format!("Failed to create skill folder: {}", e));
+            return IpcResult::error(AppError::E101CreateDirFailed(
+                format!("Skill folder: {}", e)
+            ).code(), &format!("Failed to create skill folder: {}", e));
         }
         if let Err(e) = fs::copy(&skill_md, dest.join("SKILL.md")) {
-            return IpcResult::error("COPY_FAILED", &format!("Failed to copy SKILL.md: {}", e));
+            return IpcResult::error(AppError::E105CopyFailed(
+                format!("SKILL.md: {}", e)
+            ).code(), &format!("Failed to copy SKILL.md: {}", e));
         }
     }
 
@@ -433,6 +464,7 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
         path: dest.to_string_lossy().to_string(),
         skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
+        skill_md_content: None,
         category_id,
         group_id,
         imported_at: chrono::Utc::now().to_rfc3339(),
@@ -471,7 +503,9 @@ pub fn library_export(id: String, format: String) -> IpcResult<String> {
         }
     }
 
-    IpcResult::error("NOT_FOUND", &format!("Skill not found: {}", id))
+    IpcResult::error(AppError::E203SkillNotFound(
+        format!("Skill not found: {}", id)
+    ).code(), &format!("Skill not found: {}", id))
 }
 
 #[tauri::command]
@@ -482,7 +516,9 @@ pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<St
     // Create zip file
     let file = match fs::File::create(&dest) {
         Ok(f) => f,
-        Err(e) => return IpcResult::error("CREATE_FILE_FAILED", &format!("Failed to create zip file: {}", e)),
+        Err(e) => return IpcResult::error(AppError::E102WriteFailed(
+            format!("Zip file: {}", e)
+        ).code(), &format!("Failed to create zip file: {}", e)),
     };
 
     let mut zip = ZipWriter::new(file);
@@ -501,7 +537,9 @@ pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<St
                     if folder_name == *id || path.to_string_lossy().contains(id) {
                         // Add skill folder to zip
                         if let Err(e) = add_dir_to_zip(&mut zip, &path, &folder_name, options) {
-                            return IpcResult::error("ZIP_ERROR", &format!("Failed to add skill to zip: {}", e));
+                            return IpcResult::error(AppError::E102WriteFailed(
+                                format!("Zip archive: {}", e)
+                            ).code(), &format!("Failed to add skill to zip: {}", e));
                         }
                         exported_count += 1;
                         break;
@@ -513,11 +551,15 @@ pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<St
 
     // Finalize zip
     if let Err(e) = zip.finish() {
-        return IpcResult::error("ZIP_FINISH_FAILED", &format!("Failed to finalize zip: {}", e));
+        return IpcResult::error(AppError::E102WriteFailed(
+            format!("Zip finalization: {}", e)
+        ).code(), &format!("Failed to finalize zip: {}", e));
     }
 
     if exported_count == 0 {
-        return IpcResult::error("NO_SKILLS_EXPORTED", "No skills were found to export");
+        return IpcResult::error(AppError::E203SkillNotFound(
+            "No skills found".to_string()
+        ).code(), "No skills were found to export");
     }
 
     IpcResult::success(dest_path)
@@ -573,7 +615,9 @@ pub fn library_categories_create(name: String, icon: Option<String>, color: Opti
     categories.push(category.clone());
 
     if let Err(e) = save_categories(&categories) {
-        return IpcResult::error("SAVE_FAILED", &e);
+        return IpcResult::error(AppError::E102WriteFailed(
+            format!("Categories: {}", e)
+        ).code(), &e);
     }
 
     IpcResult::success(category)
@@ -588,13 +632,17 @@ pub fn library_categories_rename(id: String, new_name: String) -> IpcResult<Cate
         let updated = category.clone();
 
         if let Err(e) = save_categories(&categories) {
-            return IpcResult::error("SAVE_FAILED", &e);
+            return IpcResult::error(AppError::E102WriteFailed(
+                format!("Categories: {}", e)
+            ).code(), &e);
         }
 
         return IpcResult::success(updated);
     }
 
-    IpcResult::error("NOT_FOUND", &format!("Category not found: {}", id))
+    IpcResult::error(AppError::E300CategoryNotFound(
+        format!("Category: {}", id)
+    ).code(), &format!("Category not found: {}", id))
 }
 
 #[tauri::command]
@@ -605,11 +653,15 @@ pub fn library_categories_delete(id: String) -> IpcResult<()> {
     categories.retain(|c| c.id != id);
 
     if categories.len() == initial_len {
-        return IpcResult::error("NOT_FOUND", &format!("Category not found: {}", id));
+        return IpcResult::error(AppError::E300CategoryNotFound(
+            format!("Category: {}", id)
+        ).code(), &format!("Category not found: {}", id));
     }
 
     if let Err(e) = save_categories(&categories) {
-        return IpcResult::error("SAVE_FAILED", &e);
+        return IpcResult::error(AppError::E102WriteFailed(
+            format!("Categories: {}", e)
+        ).code(), &e);
     }
 
     IpcResult::success(())
@@ -636,13 +688,17 @@ pub fn library_groups_create(category_id: String, name: String) -> IpcResult<Gro
         category.groups.push(group.clone());
 
         if let Err(e) = save_categories(&categories) {
-            return IpcResult::error("SAVE_FAILED", &e);
+            return IpcResult::error(AppError::E102WriteFailed(
+                format!("Categories: {}", e)
+            ).code(), &e);
         }
 
         return IpcResult::success(group);
     }
 
-    IpcResult::error("CATEGORY_NOT_FOUND", &format!("Category not found: {}", category_id))
+    IpcResult::error(AppError::E300CategoryNotFound(
+        format!("Category: {}", category_id)
+    ).code(), &format!("Category not found: {}", category_id))
 }
 
 #[tauri::command]
@@ -655,14 +711,18 @@ pub fn library_groups_rename(category_id: String, group_id: String, new_name: St
             let updated = group.clone();
 
             if let Err(e) = save_categories(&categories) {
-                return IpcResult::error("SAVE_FAILED", &e);
+                return IpcResult::error(AppError::E102WriteFailed(
+                    format!("Categories: {}", e)
+                ).code(), &e);
             }
 
             return IpcResult::success(updated);
         }
     }
 
-    IpcResult::error("NOT_FOUND", "Group or category not found")
+    IpcResult::error(AppError::E302GroupNotFound(
+        "Group or category not found".to_string()
+    ).code(), "Group or category not found")
 }
 
 #[tauri::command]
@@ -674,17 +734,23 @@ pub fn library_groups_delete(category_id: String, group_id: String) -> IpcResult
         category.groups.retain(|g| g.id != group_id);
 
         if category.groups.len() == initial_len {
-            return IpcResult::error("NOT_FOUND", "Group not found");
+            return IpcResult::error(AppError::E302GroupNotFound(
+                format!("Group: {}", group_id)
+            ).code(), "Group not found");
         }
 
         if let Err(e) = save_categories(&categories) {
-            return IpcResult::error("SAVE_FAILED", &e);
+            return IpcResult::error(AppError::E102WriteFailed(
+                format!("Categories: {}", e)
+            ).code(), &e);
         }
 
         return IpcResult::success(());
     }
 
-    IpcResult::error("CATEGORY_NOT_FOUND", &format!("Category not found: {}", category_id))
+    IpcResult::error(AppError::E300CategoryNotFound(
+        format!("Category: {}", category_id)
+    ).code(), &format!("Category not found: {}", category_id))
 }
 
 // ============================================================================
@@ -692,7 +758,7 @@ pub fn library_groups_delete(category_id: String, group_id: String) -> IpcResult
 // ============================================================================
 
 #[tauri::command]
-pub fn library_organize(skill_id: String, category_id: Option<String>, group_id: Option<String>) -> IpcResult<()> {
+pub fn library_organize(_skill_id: String, _category_id: Option<String>, _group_id: Option<String>) -> IpcResult<()> {
     // In a real implementation, this would update a database or metadata file
     // For now, we'll just return success
     // The frontend will handle updating the store

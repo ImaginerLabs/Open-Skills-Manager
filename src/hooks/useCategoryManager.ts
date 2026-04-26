@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { libraryService } from '../services/libraryService';
 import { useLibraryStore } from '../stores/libraryStore';
 import { useUIStore } from '../stores/uiStore';
@@ -218,13 +218,16 @@ export function useCategoryManager(): UseCategoryManagerResult {
     [removeGroup, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
   );
 
-  return {
-    createCategory,
-    renameCategory,
-    deleteCategory,
-    createGroup,
-    renameGroup,
-    deleteGroup,
-    loadCategories,
-  };
+  return useMemo(
+    () => ({
+      createCategory,
+      renameCategory,
+      deleteCategory,
+      createGroup,
+      renameGroup,
+      deleteGroup,
+      loadCategories,
+    }),
+    [createCategory, renameCategory, deleteCategory, createGroup, renameGroup, deleteGroup, loadCategories]
+  );
 }
