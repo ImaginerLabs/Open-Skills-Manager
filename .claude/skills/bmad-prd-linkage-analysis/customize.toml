@@ -1,0 +1,28 @@
+# Customization configuration for bmad-prd-linkage-analysis
+
+[workflow]
+# Activation steps to run before main workflow
+activation_steps_prepend = []
+
+# Facts that persist throughout the workflow
+persistent_facts = [
+    "file:docs/knowledge",
+    "file:_bmad/bmm/config.yaml"
+]
+
+# Activation steps to run after greeting
+activation_steps_append = []
+
+[output]
+# Default output location for analysis reports
+report_path = "_bmad-output/prd-linkage-analysis"
+
+[analysis]
+# Minimum requirements to analyze (skip modules with fewer requirements)
+min_requirements_per_module = 1
+
+# Include NFR analysis
+include_nfr = true
+
+# Generate mermaid diagrams
+generate_diagrams = true
