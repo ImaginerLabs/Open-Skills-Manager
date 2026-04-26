@@ -1,4 +1,5 @@
 mod commands;
+mod utils;
 
 use commands::{
     library, global, project, deploy, search, config, icloud, locale, theme, update, security,
@@ -7,6 +8,8 @@ use commands::{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    utils::logger::init_logger();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())

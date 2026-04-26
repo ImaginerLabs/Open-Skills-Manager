@@ -1,3 +1,4 @@
+pub mod error_codes;
 pub mod library;
 pub mod global;
 pub mod project;
@@ -11,3 +12,6 @@ pub mod update;
 pub mod security;
 pub mod error;
 pub mod performance;
+
+pub use error_codes::AppError;
+pub use library::IpcError;
