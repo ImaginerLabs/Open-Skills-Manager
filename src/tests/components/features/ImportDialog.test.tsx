@@ -359,7 +359,7 @@ describe('ImportDialog', () => {
       fireEvent.click(importButton);
 
       await waitFor(() => {
-        expect(onImportStart).toHaveBeenCalledWith(['/path/to/skill']);
+        expect(onImportStart).toHaveBeenCalledWith(['/path/to/skill'], undefined, undefined);
       });
     });
 
