@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
-import { Plus, FolderOpen, ArrowDown, MagnifyingGlass } from '@phosphor-icons/react';
+import { Plus, FolderOpen, MagnifyingGlass, TextAa, Calendar, Database, ArrowsDownUp } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { SkillCard } from '../../components/features/SkillCard';
 import { SkillDetail } from '../../components/features/SkillDetail';
@@ -317,21 +317,36 @@ export function Library(): React.ReactElement {
           </div>
           <button
             type="button"
-            className={[styles.sortButton, sortDirection === 'desc' && styles.active].filter(Boolean).join(' ')}
+            className={styles.sortButton}
             onClick={toggleSortDirection}
             title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
           >
-            <ArrowDown size={18} />
+            <ArrowsDownUp size={16} />
           </button>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'size')}
-            className={styles.sortSelect}
+          <button
+            type="button"
+            className={[styles.sortOptionButton, sortBy === 'name' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setSortBy('name')}
+            title="Sort by name"
           >
-            <option value="name">Name</option>
-            <option value="date">Date</option>
-            <option value="size">Size</option>
-          </select>
+            <TextAa size={16} />
+          </button>
+          <button
+            type="button"
+            className={[styles.sortOptionButton, sortBy === 'date' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setSortBy('date')}
+            title="Sort by date"
+          >
+            <Calendar size={16} />
+          </button>
+          <button
+            type="button"
+            className={[styles.sortOptionButton, sortBy === 'size' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setSortBy('size')}
+            title="Sort by size"
+          >
+            <Database size={16} />
+          </button>
           <button type="button" className={styles.importButton} onClick={handleOpenImport}>
             <Plus size={18} />
             <span>Import</span>

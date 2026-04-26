@@ -78,10 +78,12 @@
   }
 }
 
-.sortButton {
+.sortButton,
+.sortOptionButton {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 32px;
   padding: var(--space-2);
   background: transparent;
   border: 1px solid var(--color-border);
@@ -89,15 +91,11 @@
   color: var(--color-text-tertiary);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease,
-    transform var(--duration-instant) ease;
+    border-color var(--duration-fast) ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--color-text-primary);
-  }
-
-  &.active {
-    transform: scaleY(-1);
   }
 
   .light &:hover {
@@ -105,23 +103,15 @@
   }
 }
 
-.sortSelect {
-  padding: var(--space-2) var(--space-3);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
+.sortOptionButton {
+  &.active {
+    background: rgba(10, 132, 255, 0.15);
     border-color: var(--color-primary);
+    color: var(--color-primary);
   }
 
-  .light & {
-    background: rgba(0, 0, 0, 0.03);
+  .light &.active {
+    background: rgba(0, 122, 255, 0.1);
   }
 }
 
@@ -129,7 +119,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  height: 32px;
+  padding: 0 var(--space-4);
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
@@ -209,7 +200,9 @@
 
 // Reduced motion
 @media (prefers-reduced-motion: reduce) {
-  .sortButton.active {
-    transform: none;
+  .sortButton,
+  .sortOptionButton,
+  .importButton {
+    transition: none;
   }
 }

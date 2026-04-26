@@ -2,19 +2,11 @@
 
 Templates and patterns for spawning different types of agents.
 
-## Why These Patterns Matter
-
-Consistent spawning patterns ensure:
-- Agents receive complete context
-- Outputs are predictable and verifiable
-- Coordination is reliable
-- Context stays lean (main agent doesn't read full outputs)
-
 ## Core Pattern: Task-Context-Output
 
 Every agent spawn follows this structure:
 
-```
+```javascript
 Agent({
   description: "<what this agent does>",
   prompt: `
@@ -35,41 +27,70 @@ Agent({
 })
 ```
 
-## Specialist Agent
+## BMad Development Agent Template
 
-For complex domain work requiring expertise.
+**CRITICAL**: All development agents MUST invoke `/bmad-dev-story` skill.
 
 ```javascript
 Agent({
-  description: "Implement {feature-name}",
+  name: "core-dev",
+  description: "Core: Implement Story X",
+  subagent_type: "bmad-dev",
+  run_in_background: true,
   prompt: `
-## Task
-Implement {feature-name} with the following requirements:
-- {requirement-1}
-- {requirement-2}
+## MANDATORY: Use BMad Development Workflow
 
-## Context Files
-Read these files for context:
-- {dependency-file-1}: {purpose}
-- {dependency-file-2}: {purpose}
+**CRITICAL**: You MUST invoke the /bmad-dev-story skill to load the BMad development workflow.
+
+### Step 1: Invoke BMad Dev Story Skill
+Run: /bmad-dev-story
+
+This will load:
+- Story file from _bmad-output/
+- Project context and coding standards
+- Red-green-refactor development cycle
+- Test-first discipline
+- Definition of Done validation
+
+### Step 2: Read ALL Mandatory Standards
+
+**Frontend Development Standards (MANDATORY)**:
+- docs/standards/react-standards.md      # React component standards
+- docs/standards/typescript-standards.md # TypeScript standards
+- docs/standards/hooks-standards.md      # Hook standards
+- docs/standards/state-management.md     # Zustand state management
+- docs/standards/component-library.md    # Component library reuse
+
+**Styling Standards (MANDATORY)**:
+- docs/standards/design-tokens.md        # Design tokens
+- design-system/claude-code-skills-manager/MASTER.md  # Design system (CRITICAL)
+
+**Project Standards (MANDATORY)**:
+- CLAUDE.md                              # Project overview
+- docs/standards/project-structure.md    # Directory structure
+- docs/standards/naming-conventions.md   # Naming conventions
+
+### Step 3: Implement Story
+Follow the BMad workflow exactly:
+1. Load story file
+2. Implement tasks in order (red-green-refactor)
+3. Write tests FIRST
+4. Run all tests
+5. Mark tasks complete only when tests pass
+6. Update story status to "review"
+
+## Story File
+Story path: _bmad-output/stories/story-X-Y-name.md
 
 ## Output
-- Write implementation to: {output-path}
-- Return: file path + 100-word summary of what was implemented
-
-## Constraints
-- Follow patterns in: {conventions-file}
-- Use existing utilities from: {utilities-path}
-- Match coding style in: {style-reference}
-  `,
-  subagent_type: "bmad-dev", // or appropriate specialist
-  run_in_background: true
+- Implemented code following ALL standards
+- All tests passing
+- Story status updated to "review"
+`
 })
 ```
 
-**When to use**: Architecture, complex features, domain-specific logic
-
-## Utility Agent
+## Utility Agent Template
 
 For shared, reusable components.
 
@@ -88,50 +109,50 @@ Create a reusable {utility-name} that multiple modules can use.
 ## Output
 - Write to: src/utils/{utility-name}.ts
 - Export: {export-signature}
-- Return: file path + usage example (how to import and use)
+- Return: file path + usage example
 
 ## Constraints
 - Single responsibility: {specific-purpose}
 - Well-documented with JSDoc
 - Include type definitions
   `,
-  subagent_type: "general-purpose",
+  subagent_type: "bmad-dev",
   run_in_background: true
 })
 ```
 
-**When to use**: Shared utilities, helpers, common functions, formatters, validators
-
-## Worker Agent
-
-For standard implementation tasks (tests, docs, simple features).
+## Standards Checker Template
 
 ```javascript
 Agent({
-  description: "{task-type}: {scope}",
+  name: "standards-checker",
+  description: "Standards Check: Validate code follows all standards",
+  subagent_type: "bmad-architect",
+  run_in_background: false,  // MUST be sequential
   prompt: `
-## Task
-{task-description}
+## MANDATORY: Read ALL Project Standards
+Read ALL files in docs/standards/ directory, plus:
+- CLAUDE.md
+- design-system/claude-code-skills-manager/MASTER.md
+- docs/standards/bmad-workflow.md
 
-## Implementation Files
-Read these to understand what to {task-type}:
-- {impl-file-1}
-- {impl-file-2}
+## Task: Standards Validation
+Check the following files for compliance:
+[LIST OF FILES TO CHECK]
+
+## Validation Checklist
+1. File Size: Max 300 lines per file
+2. Directory Structure: Follow project-structure.md
+3. Naming Conventions: Follow naming-conventions.md
+4. React Standards: Follow react-standards.md
+5. TypeScript Standards: Follow typescript-standards.md
+6. BMad Workflow: Story file exists, acceptance criteria met
 
 ## Output
-- Write to: {output-path}
-- Return: file path + brief summary
-
-## Standards
-- Follow patterns in: {standards-file}
-- Match existing style in: {style-reference}
-  `,
-  subagent_type: "general-purpose",
-  run_in_background: true
+Report violations or PASS. If FAIL, list required fixes.
+`
 })
 ```
-
-**When to use**: Tests, documentation, simple CRUD, boilerplate
 
 ## Parallel Spawn Pattern
 
@@ -145,8 +166,6 @@ Agent({ description: "Task C", prompt: "...", run_in_background: true })
 
 // Main agent continues, receives notifications as each completes
 ```
-
-**Why**: All start immediately, run concurrently, finish faster
 
 ## Sequential Spawn Pattern
 
@@ -177,42 +196,6 @@ Read output from Task A: ${result1.outputPath}
 })
 ```
 
-**Why**: Ensures dependencies complete before dependents start
-
-## Hybrid Pattern
-
-Mix parallel and sequential for complex workflows:
-
-```javascript
-// Phase 1: Parallel utilities
-const [util1, util2] = await Promise.all([
-  Agent({ description: "Utility 1", prompt: "...", run_in_background: true }),
-  Agent({ description: "Utility 2", prompt: "...", run_in_background: true })
-])
-
-// Wait for both, verify
-await Promise.all([util1.promise, util2.promise])
-
-// Phase 2: Sequential core (uses utilities)
-const core = await Agent({
-  description: "Core implementation",
-  prompt: `
-## Context
-Utilities created:
-- ${util1.outputPath}
-- ${util2.outputPath}
-...
-  `,
-  run_in_background: false
-})
-
-// Phase 3: Parallel tests/docs
-await Promise.all([
-  Agent({ description: "Tests", prompt: `...${core.outputPath}...`, run_in_background: true }),
-  Agent({ description: "Docs", prompt: `...${core.outputPath}...`, run_in_background: true })
-])
-```
-
 ## Return Format
 
 All agents should return a consistent format:
@@ -227,3 +210,14 @@ All agents should return a consistent format:
 ```
 
 Main agent only stores this metadata, never the full output content.
+
+## Standards by Agent Type
+
+| Agent Type | Standards to Read |
+|------------|-------------------|
+| **Core Developer** | ALL mandatory standards (frontend + styling + project) |
+| **Component Developer** | ALL mandatory standards - Design system CRITICAL |
+| **Utility Developer** | CLAUDE.md, typescript-standards, hooks-standards, naming-conventions |
+| **Standards Checker** | ALL docs/standards/*, CLAUDE.md, design-system/MASTER.md, bmad-workflow.md |
+| **QA Engineer** | CLAUDE.md, testing-standards, react-standards, typescript-standards |
+| **Code Quality** | CLAUDE.md, typescript-standards, react-standards, design-tokens |

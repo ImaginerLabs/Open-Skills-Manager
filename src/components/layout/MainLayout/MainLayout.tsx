@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Globe,
@@ -39,6 +39,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     new Set(['library', 'scopes'])
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const { categories, updateSkill, selectedCategoryId, selectedGroupId, selectCategory, selectGroup, skills } = useLibraryStore();
   const { showToast } = useUIStore();
@@ -83,12 +85,20 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
 
   const handleSelectCategory = useCallback((categoryId: string) => {
     selectCategory(categoryId);
-  }, [selectCategory]);
+    // Navigate to library if not already there
+    if (!location.pathname.startsWith('/library')) {
+      navigate('/library');
+    }
+  }, [selectCategory, location.pathname, navigate]);
 
   const handleSelectGroup = useCallback((categoryId: string, groupId: string) => {
     selectCategory(categoryId);
     selectGroup(groupId);
-  }, [selectCategory, selectGroup]);
+    // Navigate to library if not already there
+    if (!location.pathname.startsWith('/library')) {
+      navigate('/library');
+    }
+  }, [selectCategory, selectGroup, location.pathname, navigate]);
 
   const handleCreateCategory = useCallback(
     (name: string) => {
