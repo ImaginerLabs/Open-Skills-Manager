@@ -274,12 +274,17 @@ export const useLibraryStore = create<LibraryStore>()(
           groups: state.groups,
         }),
         onRehydrateStorage: () => (state) => {
-          // Ensure categories is always an array after hydration
-          if (state && !Array.isArray(state.categories)) {
-            state.categories = [];
-          }
-          if (state && !Array.isArray(state.groups)) {
-            state.groups = [];
+          // Ensure arrays are always valid after hydration
+          if (state) {
+            if (!Array.isArray(state.skills)) {
+              state.skills = [];
+            }
+            if (!Array.isArray(state.categories)) {
+              state.categories = [];
+            }
+            if (!Array.isArray(state.groups)) {
+              state.groups = [];
+            }
           }
         },
       }
