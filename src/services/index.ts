@@ -1,0 +1,14 @@
+export { invokeIPC, createEventSubscription, type IPCError, type IpcResult } from './ipcService';
+export { libraryService } from './libraryService';
+export { globalService } from './globalService';
+export { projectService } from './projectService';
+export { deployService } from './deployService';
+export { searchService, type SearchResult } from './searchService';
+export { configService, type AppConfig } from './configService';
+export { icloudService, type SyncStatus, type ConflictInfo } from './icloudService';
+export { localeService } from './localeService';
+export { themeService } from './themeService';
+export { updateService, type UpdateInfo } from './updateService';
+export { securityService } from './securityService';
+export { errorService, type ErrorLog } from './errorService';
+export { performanceService, type PerformanceMetrics, type OperationMetric } from './performanceService';

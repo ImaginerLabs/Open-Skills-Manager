@@ -1,0 +1,35 @@
+@use '../../../styles/variables' as *;
+
+.skeleton {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.5s ease-in-out infinite;
+
+  .light & {
+    background: rgba(0, 0, 0, 0.1);
+  }
+}
+
+.text {
+  height: 1em;
+  width: 100%;
+}
+
+.circle {
+  border-radius: var(--radius-full);
+  aspect-ratio: 1;
+}
+
+.rect {
+  border-radius: var(--radius-md);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}

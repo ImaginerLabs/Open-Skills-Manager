@@ -1,0 +1,49 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/glassmorphism' as glass;
+
+.card {
+  @include glass.glass-card;
+  padding: var(--space-4);
+  cursor: pointer;
+}
+
+.static {
+  cursor: default;
+
+  &:hover {
+    transform: none;
+    border-color: var(--color-border);
+    box-shadow: none;
+  }
+}
+
+.compact {
+  padding: var(--space-3);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

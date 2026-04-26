@@ -1,0 +1,1 @@
+export { SkillDetail, type SkillDetailProps, type SkillResource } from './SkillDetail';

@@ -1,0 +1,47 @@
+@use '../../../styles/variables' as *;
+
+.progress-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.progress-dialog__bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-dialog__fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--duration-normal) ease;
+}
+
+.progress-dialog__info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.progress-dialog__counts {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.progress-dialog__success {
+  color: var(--color-success);
+}
+
+.progress-dialog__error {
+  color: var(--color-error);
+}
+
+.progress-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
