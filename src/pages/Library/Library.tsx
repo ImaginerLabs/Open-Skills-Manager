@@ -22,7 +22,7 @@ const SIDEBAR_WIDTH = 420;
 
 export function Library(): React.ReactElement {
   const {
-    skills,
+    skills = [],
     selectedSkill,
     selectedCategoryId,
     isLoading,
