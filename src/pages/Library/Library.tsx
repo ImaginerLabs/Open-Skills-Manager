@@ -39,6 +39,7 @@ export function Library(): React.ReactElement {
     startImport,
     updateImportProgress,
     completeImport,
+    cancelImport,
   } = useLibraryStore();
 
   const { showToast } = useUIStore();
@@ -179,7 +180,12 @@ export function Library(): React.ReactElement {
         for (let i = 0; i < skillsToExport.length; i++) {
           const skill = skillsToExport[i]!;
           updateExportProgress(i + 1, skill.name);
-          const result = await libraryService.export(skill.id, format);
+          const result = await libraryService.export(skill.id, format, skill.name);
+          if (result === null) {
+            // User cancelled save dialog
+            setShowExportProgress(false);
+            return;
+          }
           if (!result.success) {
             throw new Error(result.error?.message || 'Export failed');
           }
@@ -220,6 +226,12 @@ export function Library(): React.ReactElement {
     const failedItems: Array<{ name: string; error: string; code: string }> = [];
 
     for (let i = 0; i < paths.length; i++) {
+      // Check for cancellation
+      const currentProgress = useLibraryStore.getState().importProgress;
+      if (currentProgress.status === 'cancelled') {
+        break;
+      }
+
       const path = paths[i]!;
       const name = path.split('/').pop() || path;
       updateImportProgress(i + 1, name);
@@ -246,7 +258,11 @@ export function Library(): React.ReactElement {
       }
     }
 
-    completeImport(successful, failed, 0, failedItems);
+    // Check final status to determine how to complete
+    const finalProgress = useLibraryStore.getState().importProgress;
+    const wasCancelled = finalProgress.status === 'cancelled';
+
+    completeImport(successful, failed, wasCancelled ? paths.length - successful - failed : 0, failedItems);
 
     if (successful > 0) {
       const listResult = await libraryService.list();
@@ -255,6 +271,19 @@ export function Library(): React.ReactElement {
       }
     }
   }, [startImport, updateImportProgress, completeImport, setSkills]);
+
+  const handleImportCancel = useCallback(() => {
+    cancelImport();
+  }, [cancelImport]);
+
+  const handleRetryFailed = useCallback(async (_failedItems: Array<{ name: string; error: string; code: string }>) => {
+    // Map failed items back to paths (using the name as folder path hint)
+    // Note: We need to re-import from the original paths, but we only have names here
+    // For retry, we'll need to re-open the import dialog or store original paths
+    // For now, we show the import dialog again for the user to select the failed items
+    setShowImportProgress(false);
+    setShowImportDialog(true);
+  }, []);
 
   const handleImportProgressClose = useCallback(() => {
     setShowImportProgress(false);
@@ -398,7 +427,8 @@ export function Library(): React.ReactElement {
 
       <ImportProgress
         isOpen={showImportProgress}
-        onCancel={() => {}}
+        onCancel={handleImportCancel}
+        onRetry={handleRetryFailed}
         onClose={handleImportProgressClose}
       />
 

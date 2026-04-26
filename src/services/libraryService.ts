@@ -7,8 +7,24 @@ export const libraryService = {
   delete: (id: string) => invokeIPC<void>('library_delete', { id }),
   import: (options: { path: string; categoryId?: string; groupId?: string }) =>
     invokeIPC<LibrarySkill>('library_import', options),
-  export: (id: string, format: 'zip' | 'folder') =>
-    invokeIPC<string>('library_export', { id, format }),
+  export: async (id: string, format: 'zip' | 'folder', skillName?: string) => {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+
+    if (format === 'zip') {
+      const destPath = await save({
+        defaultPath: `${skillName || id}.zip`,
+        filters: [{ name: 'Zip', extensions: ['zip'] }],
+      });
+      if (!destPath) return null;
+      return invokeIPC<string>('library_export', { id, format, dest_path: destPath });
+    } else {
+      const destPath = await save({
+        defaultPath: skillName || id,
+      });
+      if (!destPath) return null;
+      return invokeIPC<string>('library_export', { id, format, dest_path: destPath });
+    }
+  },
   exportBatch: async (ids: string[], defaultName?: string) => {
     const { save } = await import('@tauri-apps/plugin-dialog');
     const result = await save({
