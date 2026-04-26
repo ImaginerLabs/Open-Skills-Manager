@@ -1,7 +1,7 @@
 # 调试规范
 
 **版本:** 1.0
-**最后更新:** 2026-04-26
+**最后更新:** 2026-04-27
 
 ---
 
@@ -251,8 +251,102 @@ fn main() {
 
 ---
 
+## WebDriver 无头调试
+
+项目已集成 [tauri-webdriver](https://github.com/danielraffel/tauri-webdriver)，支持在无 GUI 环境（如 SSH、CI）中通过 W3C WebDriver 协议获取应用状态。
+
+### 适用场景
+
+- 无头环境无法打开 DevTools 或查看窗口
+- CI 流水线中验证页面渲染结果
+- 自动化抓取 DOM 结构排查问题
+
+### 前置条件
+
+```bash
+# 1. 确保插件已启用（仅 debug 构建）
+# src-tauri/src/lib.rs 中已注册 tauri_plugin_webdriver_automation
+
+# 2. 安装 CLI
+cargo install tauri-webdriver-automation
+
+# 3. 启动 WebDriver 服务器（保持运行）
+tauri-wd --port 4444
+```
+
+### 获取页面 HTML 源码
+
+```bash
+# 创建 session
+curl -s -X POST http://localhost:4444/session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capabilities": {
+      "alwaysMatch": {
+        "tauri:options": {
+          "application": "src-tauri/target/debug/claude-code-skills-manager"
+        }
+      }
+    }
+  }'
+# 响应包含 sessionId
+
+# 获取完整 HTML 源码
+curl -s http://localhost:4444/session/<session-id>/source
+
+# 清理 session
+curl -s -X DELETE http://localhost:4444/session/<session-id>
+```
+
+### 其他可用端点
+
+| 端点 | 用途 |
+|------|------|
+| `GET /session/{id}/source` | 完整 HTML 源码 |
+| `GET /session/{id}/title` | 页面标题 |
+| `POST /session/{id}/execute/sync` | 执行 JavaScript |
+| `GET /session/{id}/screenshot` | 全页截图 (base64 PNG) |
+
+### 元素点击与交互
+
+```bash
+# 1. 查找元素（CSS 选择器）
+curl -s -X POST http://localhost:4444/session/<id>/element \
+  -H "Content-Type: application/json" \
+  -d '{"using":"css selector","value":"button"}'
+# 响应包含 ELEMENT ID
+
+# 2. 点击元素
+curl -s -X POST http://localhost:4444/session/<id>/element/<eid>/click
+
+# 3. 输入文本
+curl -s -X POST http://localhost:4444/session/<id>/element/<eid>/value \
+  -H "Content-Type: application/json" \
+  -d '{"text":["hello"]}'
+
+# 4. 执行 JavaScript
+curl -s -X POST http://localhost:4444/session/<id>/execute/sync \
+  -H "Content-Type: application/json" \
+  -d '{"script":"return document.title","args":[]}'
+```
+
+### 常见问题
+
+| 错误 | 原因 | 解决 |
+|------|------|------|
+| `no such window` | 窗口尚未创建完成 | **创建 session 后等待 8-10 秒**再执行操作 |
+| `session not created` | 应用未报告插件端口 | 确认应用是 debug 构建且插件已注册 |
+| `no such element` | 元素不存在或尚未渲染 | 检查选择器，或添加显式等待 |
+
+> **注意：** macOS 上 GUI 窗口初始化需要一定时间，建议在 session 创建后等待 `8-10 秒` 再进行元素查找、点击等操作。
+
+完整端点列表参考 [SPEC.md](https://github.com/danielraffel/tauri-webdriver/blob/main/SPEC.md)。
+
+---
+
 ## 参考链接
 
 - [Tauri Debug Documentation](https://v2.tauri.app/develop/debug/)
 - [CrabNebula DevTools](https://docs.crabnebula.dev/devtools/get-started/)
 - [vscode-lldb Extension](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
+- [tauri-webdriver GitHub](https://github.com/danielraffel/tauri-webdriver)
