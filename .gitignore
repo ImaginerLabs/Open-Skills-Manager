@@ -81,7 +81,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
-.output
+dist-electron
 
 # Gatsby files
 .cache/
@@ -92,8 +92,9 @@ dist
 # vuepress build output
 .vuepress/dist
 
-# vuepress v2.x temp directory
+# vuepress v2.x temp and cache directory
 .temp
+.cache
 
 # Sveltekit cache directory
 .svelte-kit/
@@ -125,9 +126,6 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
-# pnpm
-.pnpm-store
-
 # yarn v3
 .pnp.*
 .yarn/*
@@ -137,7 +135,48 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
-# Vite files
+# Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-.vite/
+
+.DS_Store
+
+.remember
+
+.firecrawl
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Electron
+release/
+out/
+*.dmg
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.exe
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.json
+
+# Playwright MCP
+.playwright-mcp/
+
+# BMad
+.bmad/

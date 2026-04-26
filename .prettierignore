@@ -1,0 +1,21 @@
+# Ignore everything by default (whitelist mode)
+*
+
+# Allow source directories
+!src/
+!electron/
+
+# Allow config files in root
+!*.js
+!*.ts
+!*.jsx
+!*.tsx
+!*.json
+!*.css
+
+# Still ignore node_modules and build outputs
+node_modules/
+dist/
+out/
+build/
+_bmad-output/
