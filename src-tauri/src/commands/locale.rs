@@ -6,7 +6,7 @@ pub fn locale_get() -> IpcResult<String> {
 }
 
 #[tauri::command]
-pub fn locale_set(locale: String) -> IpcResult<()> {
+pub fn locale_set(_locale: String) -> IpcResult<()> {
     IpcResult::success(())
 }
 

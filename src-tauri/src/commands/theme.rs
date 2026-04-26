@@ -6,7 +6,7 @@ pub fn theme_get() -> IpcResult<String> {
 }
 
 #[tauri::command]
-pub fn theme_set(theme: String) -> IpcResult<()> {
+pub fn theme_set(_theme: String) -> IpcResult<()> {
     IpcResult::success(())
 }
 

@@ -9,6 +9,6 @@ pub fn icloud_sync_status() -> IpcResult<serde_json::Value> {
 }
 
 #[tauri::command]
-pub fn icloud_resolve_conflict(skill_id: String, resolution: String) -> IpcResult<()> {
+pub fn icloud_resolve_conflict(_skill_id: String, _resolution: String) -> IpcResult<()> {
     IpcResult::success(())
 }

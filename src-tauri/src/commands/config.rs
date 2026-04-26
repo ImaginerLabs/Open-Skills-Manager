@@ -11,6 +11,6 @@ pub fn config_get() -> IpcResult<serde_json::Value> {
 }
 
 #[tauri::command]
-pub fn config_set(config: serde_json::Value) -> IpcResult<()> {
+pub fn config_set(_config: serde_json::Value) -> IpcResult<()> {
     IpcResult::success(())
 }

@@ -11,11 +11,11 @@ pub fn global_get(id: String) -> IpcResult<serde_json::Value> {
 }
 
 #[tauri::command]
-pub fn global_delete(id: String) -> IpcResult<()> {
+pub fn global_delete(_id: String) -> IpcResult<()> {
     IpcResult::success(())
 }
 
 #[tauri::command]
-pub fn global_pull(id: String) -> IpcResult<()> {
+pub fn global_pull(_id: String) -> IpcResult<()> {
     IpcResult::success(())
 }
