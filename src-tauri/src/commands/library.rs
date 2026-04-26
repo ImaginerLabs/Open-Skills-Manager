@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::io::Write;
+use std::io::{self, Write};
 use zip::ZipWriter;
 use zip::write::FileOptions;
+use zip::read::ZipArchive;
 
 use super::AppError;
 
@@ -403,6 +404,11 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         ).code(), &format!("Source path does not exist: {}", path));
     }
 
+    // Handle zip files
+    if source.extension().map(|e| e == "zip").unwrap_or(false) {
+        return import_from_zip(&source, category_id, group_id);
+    }
+
     let skill_md = if source.is_file() && source.file_name().map(|n| n.to_string_lossy() == "SKILL.md").unwrap_or(false) {
         source.clone()
     } else if source.is_dir() {
@@ -478,34 +484,224 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
     IpcResult::success(skill)
 }
 
-#[tauri::command]
-pub fn library_export(id: String, format: String) -> IpcResult<String> {
+fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Option<String>) -> IpcResult<LibrarySkill> {
+    // Open zip file
+    let file = match fs::File::open(zip_path) {
+        Ok(f) => f,
+        Err(e) => return IpcResult::error(AppError::E100FileNotFound(
+            zip_path.to_string_lossy().to_string()
+        ).code(), &format!("Failed to open zip file: {}", e)),
+    };
+
+    // Create temp directory
+    let temp_dir = match tempfile::tempdir() {
+        Ok(d) => d,
+        Err(e) => return IpcResult::error(AppError::E101CreateDirFailed(
+            "Temp directory".to_string()
+        ).code(), &format!("Failed to create temp directory: {}", e)),
+    };
+
+    // Extract zip
+    let mut archive = match ZipArchive::new(file) {
+        Ok(a) => a,
+        Err(e) => return IpcResult::error(AppError::E002InvalidInput(
+            "Invalid zip file".to_string()
+        ).code(), &format!("Failed to read zip archive: {}", e)),
+    };
+
+    for i in 0..archive.len() {
+        let mut file = match archive.by_index(i) {
+            Ok(f) => f,
+            Err(e) => return IpcResult::error(AppError::E002InvalidInput(
+                "Corrupted zip entry".to_string()
+            ).code(), &format!("Failed to read zip entry {}: {}", i, e)),
+        };
+
+        let outpath = match file.enclosed_name() {
+            Some(p) => temp_dir.path().join(p),
+            None => continue,
+        };
+
+        if file.name().ends_with('/') {
+            if let Err(e) = fs::create_dir_all(&outpath) {
+                return IpcResult::error(AppError::E101CreateDirFailed(
+                    outpath.to_string_lossy().to_string()
+                ).code(), &format!("Failed to create directory: {}", e));
+            }
+        } else {
+            if let Some(p) = outpath.parent() {
+                if let Err(e) = fs::create_dir_all(p) {
+                    return IpcResult::error(AppError::E101CreateDirFailed(
+                        p.to_string_lossy().to_string()
+                    ).code(), &format!("Failed to create parent directory: {}", e));
+                }
+            }
+            let mut outfile = match fs::File::create(&outpath) {
+                Ok(f) => f,
+                Err(e) => return IpcResult::error(AppError::E102WriteFailed(
+                    outpath.to_string_lossy().to_string()
+                ).code(), &format!("Failed to create file: {}", e)),
+            };
+            if let Err(e) = io::copy(&mut file, &mut outfile) {
+                return IpcResult::error(AppError::E102WriteFailed(
+                    outpath.to_string_lossy().to_string()
+                ).code(), &format!("Failed to write file: {}", e));
+            }
+        }
+    }
+
+    // Find SKILL.md in extracted contents
+    let skill_md_path = find_skill_md(temp_dir.path());
+    let skill_md = match skill_md_path {
+        Some(p) => p,
+        None => return IpcResult::error(AppError::E100FileNotFound(
+            "SKILL.md".to_string()
+        ).code(), "No SKILL.md found in the zip file"),
+    };
+
+    // Get the skill folder (parent of SKILL.md)
+    let skill_folder = skill_md.parent().unwrap_or(temp_dir.path());
+
+    // Determine folder name
+    let folder_name = skill_folder.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| format!("skill-{}", chrono::Utc::now().timestamp()));
+
+    // Copy to library
     let library_path = get_library_path();
+    if let Err(e) = fs::create_dir_all(&library_path) {
+        return IpcResult::error(AppError::E101CreateDirFailed(
+            format!("Library directory: {}", e)
+        ).code(), &format!("Failed to create library directory: {}", e));
+    }
+
+    let dest = library_path.join(&folder_name);
+    if let Err(e) = copy_dir_all(skill_folder, &dest) {
+        return IpcResult::error(AppError::E105CopyFailed(
+            format!("Skill directory: {}", e)
+        ).code(), &format!("Failed to copy skill: {}", e));
+    }
+
+    // temp_dir is automatically cleaned up when dropped
+
+    let metadata = parse_skill_md(&dest.join("SKILL.md"));
+    let (size, file_count) = count_files(&dest);
+
+    let skill = LibrarySkill {
+        id: generate_id(),
+        name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or(folder_name.clone()),
+        folder_name: folder_name.clone(),
+        version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
+        description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
+        path: dest.to_string_lossy().to_string(),
+        skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
+        skill_md_content: None,
+        category_id,
+        group_id,
+        imported_at: chrono::Utc::now().to_rfc3339(),
+        updated_at: None,
+        size,
+        file_count,
+        has_resources: has_resources(&dest),
+        deployments: vec![],
+    };
+
+    IpcResult::success(skill)
+}
+
+fn find_skill_md(dir: &Path) -> Option<PathBuf> {
+    if dir.join("SKILL.md").exists() {
+        return Some(dir.join("SKILL.md"));
+    }
+
+    for entry in fs::read_dir(dir).ok()? {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_skill_md(&path) {
+                return Some(found);
+            }
+        }
+    }
+
+    None
+}
+
+#[tauri::command]
+pub fn library_export(id: String, format: String, dest_path: Option<String>) -> IpcResult<String> {
+    let library_path = get_library_path();
+
+    // Find skill folder by id
+    let mut skill_folder: Option<PathBuf> = None;
+    let mut folder_name = String::new();
 
     if let Ok(entries) = fs::read_dir(&library_path) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                if folder_name == id || path.to_string_lossy().contains(&id) {
-                    let export_path = if format == "zip" {
-                        // For zip export, return the path to a temp zip file
-                        let temp_dir = std::env::temp_dir();
-                        let zip_path = temp_dir.join(format!("{}.zip", folder_name));
-                        // In a real implementation, we'd create the zip here
-                        zip_path.to_string_lossy().to_string()
-                    } else {
-                        path.to_string_lossy().to_string()
-                    };
-                    return IpcResult::success(export_path);
+                let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                if name == id || path.to_string_lossy().contains(&id) {
+                    skill_folder = Some(path);
+                    folder_name = name;
+                    break;
                 }
             }
         }
     }
 
-    IpcResult::error(AppError::E203SkillNotFound(
-        format!("Skill not found: {}", id)
-    ).code(), &format!("Skill not found: {}", id))
+    let skill_path = match skill_folder {
+        Some(p) => p,
+        None => return IpcResult::error(
+            AppError::E203SkillNotFound(format!("Skill not found: {}", id)).code(),
+            &format!("Skill not found: {}", id)
+        ),
+    };
+
+    if format == "zip" {
+        let dest = match dest_path {
+            Some(p) => p,
+            None => return IpcResult::error(
+                "E002",
+                "Destination path required for zip export"
+            ),
+        };
+
+        let dest_buf = PathBuf::from(&dest);
+
+        // Create zip file
+        let file = match fs::File::create(&dest_buf) {
+            Ok(f) => f,
+            Err(e) => return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip file: {}", e)).code(),
+                &format!("Failed to create zip file: {}", e)
+            ),
+        };
+
+        let mut zip = ZipWriter::new(file);
+        let options = FileOptions::<()>::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        // Add skill folder contents to zip
+        if let Err(e) = add_dir_to_zip(&mut zip, &skill_path, &folder_name, options) {
+            return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip archive: {}", e)).code(),
+                &format!("Failed to add skill to zip: {}", e)
+            );
+        }
+
+        // Finalize zip
+        if let Err(e) = zip.finish() {
+            return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip finalization: {}", e)).code(),
+                &format!("Failed to finalize zip: {}", e)
+            );
+        }
+
+        IpcResult::success(dest)
+    } else {
+        // Folder format - return the path to the skill folder
+        IpcResult::success(skill_path.to_string_lossy().to_string())
+    }
 }
 
 #[tauri::command]
