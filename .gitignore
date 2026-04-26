@@ -180,3 +180,9 @@ Desktop.ini
 
 # BMad
 .bmad/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.py
+.Python
