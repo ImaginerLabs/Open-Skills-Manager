@@ -49,6 +49,7 @@ impl<T> IpcResult<T> {
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LibrarySkill {
     pub id: String,
     pub name: String,
@@ -70,6 +71,7 @@ pub struct LibrarySkill {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Deployment {
     pub id: String,
     pub skill_id: String,
@@ -80,6 +82,7 @@ pub struct Deployment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Category {
     pub id: String,
     pub name: String,
@@ -92,6 +95,7 @@ pub struct Category {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Group {
     pub id: String,
     pub category_id: String,
@@ -102,6 +106,7 @@ pub struct Group {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SkillMetadata {
     pub name: String,
     pub version: String,
@@ -130,6 +135,46 @@ fn get_categories_path() -> PathBuf {
         .join("Application Support")
         .join("claude-code-skills-manager")
         .join("categories.json")
+}
+
+fn get_skill_metadata_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+    PathBuf::from(&home)
+        .join("Library")
+        .join("Application Support")
+        .join("claude-code-skills-manager")
+        .join("skill_metadata.json")
+}
+
+/// Persistent metadata for each skill (survives app restart)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SkillMetadataEntry {
+    id: String,
+    folder_name: String,
+    category_id: Option<String>,
+    group_id: Option<String>,
+    imported_at: String,
+}
+
+fn load_skill_metadata() -> std::collections::HashMap<String, SkillMetadataEntry> {
+    let path = get_skill_metadata_path();
+    if path.exists() {
+        fs::read_to_string(&path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default()
+    } else {
+        std::collections::HashMap::new()
+    }
+}
+
+fn save_skill_metadata(metadata: &std::collections::HashMap<String, SkillMetadataEntry>) -> Result<(), String> {
+    let path = get_skill_metadata_path();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(metadata).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| e.to_string())
 }
 
 fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
@@ -277,7 +322,11 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
         return IpcResult::success(vec![]);
     }
 
+    // Load persisted metadata (IDs, category assignments)
+    let mut persisted_metadata = load_skill_metadata();
     let mut skills = Vec::new();
+    let mut updated_metadata = std::collections::HashMap::new();
+    let now = chrono::Utc::now().to_rfc3339();
 
     if let Ok(entries) = fs::read_dir(&library_path) {
         for entry in entries.flatten() {
@@ -285,23 +334,40 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
             if path.is_dir() {
                 let skill_md = path.join("SKILL.md");
                 if skill_md.exists() {
+                    let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
 
+                    // Use persisted ID and category if available, otherwise create new
+                    let (id, category_id, group_id, imported_at) = if let Some(entry) = persisted_metadata.remove(&folder_name) {
+                        (entry.id, entry.category_id, entry.group_id, entry.imported_at)
+                    } else {
+                        (generate_id(), None, None, now.clone())
+                    };
+
+                    // Store for persistence
+                    updated_metadata.insert(folder_name.clone(), SkillMetadataEntry {
+                        id: id.clone(),
+                        folder_name: folder_name.clone(),
+                        category_id: category_id.clone(),
+                        group_id: group_id.clone(),
+                        imported_at: imported_at.clone(),
+                    });
+
                     let skill = LibrarySkill {
-                        id: generate_id(),
+                        id,
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| {
                             path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or("Unknown".to_string())
                         }),
-                        folder_name: path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default(),
+                        folder_name,
                         version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
                         description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
                         path: path.to_string_lossy().to_string(),
                         skill_md_path: skill_md.to_string_lossy().to_string(),
                         skill_md_content: None,
-                        category_id: None,
-                        group_id: None,
-                        imported_at: chrono::Utc::now().to_rfc3339(),
+                        category_id,
+                        group_id,
+                        imported_at,
                         updated_at: None,
                         size,
                         file_count,
@@ -314,14 +380,23 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
         }
     }
 
+    // Save updated metadata (removes entries for deleted skills)
+    if let Err(e) = save_skill_metadata(&updated_metadata) {
+        eprintln!("Warning: Failed to save skill metadata: {}", e);
+    }
+
     IpcResult::success(skills)
 }
 
 #[tauri::command]
 pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
-    // In a real implementation, we'd look up by ID in a database
-    // For now, scan the library and find by folder name (simplified)
     let library_path = get_library_path();
+    let persisted_metadata = load_skill_metadata();
+
+    // Find the folder_name for this ID from persisted metadata
+    let folder_name_from_id = persisted_metadata.iter()
+        .find(|(_, entry)| entry.id == id)
+        .map(|(_, entry)| entry.folder_name.clone());
 
     if let Ok(entries) = fs::read_dir(&library_path) {
         for entry in entries.flatten() {
@@ -329,17 +404,27 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
             if path.is_dir() {
                 let skill_md = path.join("SKILL.md");
                 if skill_md.exists() {
-                    // Simplified: match by folder name
                     let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                    if folder_name == id || path.to_string_lossy().contains(&id) {
+
+                    // Match by ID (via persisted metadata) or folder name (fallback)
+                    let is_match = folder_name_from_id.as_ref() == Some(&folder_name)
+                        || folder_name == id
+                        || path.to_string_lossy().contains(&id);
+
+                    if is_match {
                         let metadata = parse_skill_md(&skill_md);
                         let (size, file_count) = count_files(&path);
-
-                        // Read SKILL.md content
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
 
+                        // Get persisted category/group info
+                        let (skill_id, category_id, group_id, imported_at) = if let Some(entry) = persisted_metadata.get(&folder_name) {
+                            (entry.id.clone(), entry.category_id.clone(), entry.group_id.clone(), entry.imported_at.clone())
+                        } else {
+                            (id, None, None, chrono::Utc::now().to_rfc3339())
+                        };
+
                         let skill = LibrarySkill {
-                            id,
+                            id: skill_id,
                             name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
                             folder_name: folder_name.clone(),
                             version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
@@ -347,9 +432,9 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
                             path: path.to_string_lossy().to_string(),
                             skill_md_path: skill_md.to_string_lossy().to_string(),
                             skill_md_content,
-                            category_id: None,
-                            group_id: None,
-                            imported_at: chrono::Utc::now().to_rfc3339(),
+                            category_id,
+                            group_id,
+                            imported_at,
                             updated_at: None,
                             size,
                             file_count,
@@ -371,18 +456,32 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
 #[tauri::command]
 pub fn library_delete(id: String) -> IpcResult<()> {
     let library_path = get_library_path();
+    let persisted_metadata = load_skill_metadata();
+
+    // Find folder_name from persisted ID
+    let folder_name_from_id = persisted_metadata.iter()
+        .find(|(_, entry)| entry.id == id)
+        .map(|(_, entry)| entry.folder_name.clone());
 
     if let Ok(entries) = fs::read_dir(&library_path) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
                 let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                if folder_name == id || path.to_string_lossy().contains(&id) {
+                if folder_name_from_id.as_ref() == Some(&folder_name) || folder_name == id || path.to_string_lossy().contains(&id) {
                     if let Err(e) = fs::remove_dir_all(&path) {
                         return IpcResult::error(AppError::E104DeleteFailed(
                             format!("Skill: {}", e)
                         ).code(), &format!("Failed to delete skill: {}", e));
                     }
+
+                    // Remove from persisted metadata
+                    let mut persisted_metadata = load_skill_metadata();
+                    persisted_metadata.remove(&folder_name);
+                    if let Err(e) = save_skill_metadata(&persisted_metadata) {
+                        eprintln!("Warning: Failed to update skill metadata after delete: {}", e);
+                    }
+
                     return IpcResult::success(());
                 }
             }
@@ -461,9 +560,11 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
 
     let metadata = parse_skill_md(&dest.join("SKILL.md"));
     let (size, file_count) = count_files(&dest);
+    let imported_at = chrono::Utc::now().to_rfc3339();
+    let skill_id = generate_id();
 
     let skill = LibrarySkill {
-        id: generate_id(),
+        id: skill_id.clone(),
         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or(folder_name.clone()),
         folder_name: folder_name.clone(),
         version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
@@ -471,15 +572,28 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         path: dest.to_string_lossy().to_string(),
         skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
         skill_md_content: None,
-        category_id,
-        group_id,
-        imported_at: chrono::Utc::now().to_rfc3339(),
+        category_id: category_id.clone(),
+        group_id: group_id.clone(),
+        imported_at: imported_at.clone(),
         updated_at: None,
         size,
         file_count,
         has_resources: has_resources(&dest),
         deployments: vec![],
     };
+
+    // Persist skill metadata
+    let mut persisted_metadata = load_skill_metadata();
+    persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
+        id: skill_id,
+        folder_name: folder_name.clone(),
+        category_id,
+        group_id,
+        imported_at,
+    });
+    if let Err(e) = save_skill_metadata(&persisted_metadata) {
+        eprintln!("Warning: Failed to save skill metadata after import: {}", e);
+    }
 
     IpcResult::success(skill)
 }
@@ -586,9 +700,11 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
 
     let metadata = parse_skill_md(&dest.join("SKILL.md"));
     let (size, file_count) = count_files(&dest);
+    let imported_at = chrono::Utc::now().to_rfc3339();
+    let skill_id = generate_id();
 
     let skill = LibrarySkill {
-        id: generate_id(),
+        id: skill_id.clone(),
         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or(folder_name.clone()),
         folder_name: folder_name.clone(),
         version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
@@ -596,15 +712,28 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
         path: dest.to_string_lossy().to_string(),
         skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
         skill_md_content: None,
-        category_id,
-        group_id,
-        imported_at: chrono::Utc::now().to_rfc3339(),
+        category_id: category_id.clone(),
+        group_id: group_id.clone(),
+        imported_at: imported_at.clone(),
         updated_at: None,
         size,
         file_count,
         has_resources: has_resources(&dest),
         deployments: vec![],
     };
+
+    // Persist skill metadata
+    let mut persisted_metadata = load_skill_metadata();
+    persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
+        id: skill_id,
+        folder_name: folder_name.clone(),
+        category_id,
+        group_id,
+        imported_at,
+    });
+    if let Err(e) = save_skill_metadata(&persisted_metadata) {
+        eprintln!("Warning: Failed to save skill metadata after zip import: {}", e);
+    }
 
     IpcResult::success(skill)
 }
@@ -630,8 +759,14 @@ fn find_skill_md(dir: &Path) -> Option<PathBuf> {
 #[tauri::command]
 pub fn library_export(id: String, format: String, dest_path: Option<String>) -> IpcResult<String> {
     let library_path = get_library_path();
+    let persisted_metadata = load_skill_metadata();
 
-    // Find skill folder by id
+    // Find folder_name from persisted ID
+    let folder_name_from_id = persisted_metadata.iter()
+        .find(|(_, entry)| entry.id == id)
+        .map(|(_, entry)| entry.folder_name.clone());
+
+    // Find skill folder by id (via persisted metadata) or folder name
     let mut skill_folder: Option<PathBuf> = None;
     let mut folder_name = String::new();
 
@@ -640,7 +775,7 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                if name == id || path.to_string_lossy().contains(&id) {
+                if folder_name_from_id.as_ref() == Some(&name) || name == id || path.to_string_lossy().contains(&id) {
                     skill_folder = Some(path);
                     folder_name = name;
                     break;
@@ -708,6 +843,13 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<String> {
     let library_path = get_library_path();
     let dest = PathBuf::from(&dest_path);
+    let persisted_metadata = load_skill_metadata();
+
+    // Build ID -> folder_name mapping
+    let id_to_folder: std::collections::HashMap<String, String> = persisted_metadata
+        .iter()
+        .map(|(_, entry)| (entry.id.clone(), entry.folder_name.clone()))
+        .collect();
 
     // Create zip file
     let file = match fs::File::create(&dest) {
@@ -724,13 +866,16 @@ pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<St
     let mut exported_count = 0;
 
     for id in &ids {
-        // Find skill folder by id (folder_name or path match)
+        // Find folder_name from persisted ID
+        let folder_name_from_id = id_to_folder.get(id).cloned();
+
+        // Find skill folder by id (via persisted metadata) or folder name
         if let Ok(entries) = fs::read_dir(&library_path) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
                     let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                    if folder_name == *id || path.to_string_lossy().contains(id) {
+                    if folder_name_from_id.as_ref() == Some(&folder_name) || folder_name == *id || path.to_string_lossy().contains(id) {
                         // Add skill folder to zip
                         if let Err(e) = add_dir_to_zip(&mut zip, &path, &folder_name, options) {
                             return IpcResult::error(AppError::E102WriteFailed(
@@ -790,7 +935,41 @@ fn add_dir_to_zip<W: std::io::Write + std::io::Seek>(
 
 #[tauri::command]
 pub fn library_categories_list() -> IpcResult<Vec<Category>> {
-    IpcResult::success(load_categories())
+    let categories = load_categories();
+    let skill_metadata = load_skill_metadata();
+
+    // Count skills for each category and group
+    let mut category_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    let mut group_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+
+    for (_, entry) in skill_metadata.iter() {
+        if let Some(cat_id) = &entry.category_id {
+            *category_counts.entry(cat_id.clone()).or_insert(0) += 1;
+        }
+        if let Some(grp_id) = &entry.group_id {
+            *group_counts.entry(grp_id.clone()).or_insert(0) += 1;
+        }
+    }
+
+    // Update categories with actual counts
+    let updated_categories = categories.into_iter().map(|cat| {
+        let cat_count = category_counts.get(&cat.id).copied().unwrap_or(0);
+        let updated_groups = cat.groups.into_iter().map(|grp| {
+            let grp_count = group_counts.get(&grp.id).copied().unwrap_or(0);
+            Group {
+                skill_count: grp_count,
+                ..grp
+            }
+        }).collect();
+
+        Category {
+            skill_count: cat_count,
+            groups: updated_groups,
+            ..cat
+        }
+    }).collect();
+
+    IpcResult::success(updated_categories)
 }
 
 #[tauri::command]
@@ -954,10 +1133,28 @@ pub fn library_groups_delete(category_id: String, group_id: String) -> IpcResult
 // ============================================================================
 
 #[tauri::command]
-pub fn library_organize(_skill_id: String, _category_id: Option<String>, _group_id: Option<String>) -> IpcResult<()> {
-    // In a real implementation, this would update a database or metadata file
-    // For now, we'll just return success
-    // The frontend will handle updating the store
+pub fn library_organize(skill_id: String, category_id: Option<String>, group_id: Option<String>) -> IpcResult<()> {
+    // Find the folder_name for this skill_id
+    let persisted_metadata = load_skill_metadata();
+
+    let folder_name = persisted_metadata.iter()
+        .find(|(_, entry)| entry.id == skill_id)
+        .map(|(_, entry)| entry.folder_name.clone());
+
+    if let Some(folder) = folder_name {
+        // Update the metadata entry
+        let mut persisted_metadata = load_skill_metadata();
+        if let Some(entry) = persisted_metadata.get_mut(&folder) {
+            entry.category_id = category_id;
+            entry.group_id = group_id;
+
+            if let Err(e) = save_skill_metadata(&persisted_metadata) {
+                return IpcResult::error(AppError::E102WriteFailed(
+                    format!("Skill metadata: {}", e)
+                ).code(), &format!("Failed to save skill organization: {}", e));
+            }
+        }
+    }
 
     IpcResult::success(())
 }
