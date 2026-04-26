@@ -1,0 +1,85 @@
+{
+  "skill_name": "team-orchestrator",
+  "evals": [
+    {
+      "id": 1,
+      "name": "simple-parallel-modules",
+      "prompt": "Create the user module, product module, and order module for an e-commerce API. Each module should have types, CRUD operations, and basic validation.",
+      "expected_output": "Should decompose into 3 parallel tasks (user, product, order modules) plus a final integration task. Should identify that modules are independent and can run concurrently.",
+      "assertions": [
+        {
+          "name": "identifies-parallel-opportunity",
+          "description": "Recognizes that user, product, order modules are independent and can run in parallel"
+        },
+        {
+          "name": "creates-execution-plan",
+          "description": "Generates a structured execution plan with phases and agent assignments"
+        },
+        {
+          "name": "asks-for-confirmation",
+          "description": "Presents plan and asks user for approval before executing"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "shared-utilities-pattern",
+      "prompt": "Build an API layer with authentication middleware, logging middleware, and three route handlers (users, products, orders). The middlewares should be reusable across all routes.",
+      "expected_output": "Should identify auth and logging as shared utilities (Phase 1), routes as dependent on utilities (Phase 2), and tests as final phase. Should mention utility agents for shared components.",
+      "assertions": [
+        {
+          "name": "identifies-utility-tasks",
+          "description": "Recognizes auth and logging middleware as shared utilities that should be created first"
+        },
+        {
+          "name": "correct-dependency-order",
+          "description": "Plans utilities before routes, routes before tests"
+        },
+        {
+          "name": "mentions-utility-agents",
+          "description": "Suggests spawning utility agents for shared middleware components"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "team-rotation-trigger",
+      "prompt": "Implement a full user management system including: data models, business logic services, API routes, frontend components, and comprehensive tests. This is a large multi-phase task.",
+      "expected_output": "Should identify this as a multi-phase task requiring team rotation. Should mention rotating agents between phases to prevent context overflow.",
+      "assertions": [
+        {
+          "name": "identifies-multi-phase",
+          "description": "Recognizes this as a complex multi-phase task (data, logic, API, frontend, tests)"
+        },
+        {
+          "name": "mentions-rotation",
+          "description": "Suggests team rotation between phases to reset context"
+        },
+        {
+          "name": "context-handoff-protocol",
+          "description": "Mentions passing context via files (not conversation) between phases"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "dependency-analysis",
+      "prompt": "I need to implement: a configuration module, a database connection module that uses the config, a user repository that uses the database, and user routes that use the repository.",
+      "expected_output": "Should build correct dependency graph: config -> database -> repository -> routes. Should execute in sequential order based on dependencies.",
+      "assertions": [
+        {
+          "name": "correct-dependency-graph",
+          "description": "Builds correct dependency chain: config -> database -> repository -> routes"
+        },
+        {
+          "name": "sequential-execution-plan",
+          "description": "Plans sequential execution due to dependency chain"
+        },
+        {
+          "name": "explains-dependencies",
+          "description": "Explains why each task depends on its predecessor"
+        }
+      ]
+    }
+  ]
+}
