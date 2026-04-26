@@ -1,15 +1,27 @@
 {
   "identifier": "default",
-  "description": "Fully working permissions",
+  "description": "Default capabilities for the main window",
+  "windows": ["main"],
   "permissions": [
     "core:default",
-    "core:path:default",
-    "core:window:default",
-    "core:event:default",
-    "core:app:default",
     "dialog:default",
-    "fs:default",
-    "shell:default",
-    "opener:default"
+    "opener:default",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-meta",
+    "fs:allow-home-read",
+    "fs:allow-home-write",
+    "fs:allow-home-meta",
+    "fs:allow-temp-read",
+    "fs:allow-temp-write",
+    "fs:allow-resource-read",
+    "fs:scope-appdata",
+    "fs:scope-appdata-recursive",
+    "fs:scope-home",
+    "fs:scope-home-recursive",
+    "fs:scope-temp",
+    "fs:scope-temp-recursive",
+    "fs:scope-resource",
+    "fs:scope-resource-recursive"
   ]
 }
