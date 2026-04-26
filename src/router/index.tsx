@@ -1,15 +1,13 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout/MainLayout';
 import { Library } from '../pages/Library';
+import { Global } from '../pages/Global';
+import { ProjectSkillsView } from '../components/features/ProjectSkillsView';
 import { ToastContainer, ConfirmDialog } from '../components/ui';
 
 // Placeholder pages - will be implemented in later epics
 function SkillDetailPage(): React.ReactElement {
   return <div>Skill Detail Page</div>;
-}
-
-function GlobalPage(): React.ReactElement {
-  return <div>Global Skills Page</div>;
 }
 
 function ProjectsPage(): React.ReactElement {
@@ -49,7 +47,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'global',
-        element: <GlobalPage />,
+        element: <Global />,
       },
       {
         path: 'projects',
@@ -57,7 +55,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'projects/:projectId',
-        element: <ProjectsPage />,
+        element: <ProjectSkillsView />,
       },
       {
         path: 'settings',

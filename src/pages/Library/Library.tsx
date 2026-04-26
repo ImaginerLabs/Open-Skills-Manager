@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
 import { Plus, FolderOpen, MagnifyingGlass, TextAa, Calendar, Database, ArrowsDownUp } from '@phosphor-icons/react';
-import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
+import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
 import { SkillCard } from '../../components/features/SkillCard';
 import { SkillDetail } from '../../components/features/SkillDetail';
 import { SkillListSkeleton } from '../../components/common/Skeletons/SkillListSkeleton';
@@ -9,6 +9,7 @@ import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog, type ExportFormat } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
+import { DeployDialog } from '../../components/features/DeployDialog';
 import { libraryService } from '../../services/libraryService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useUIStore } from '../../stores/uiStore';
@@ -31,6 +32,7 @@ export function Library(): React.ReactElement {
     setSkills,
     selectSkill,
     removeSkill,
+    addDeployment,
     setLoading,
     setError,
     startExport,
@@ -54,6 +56,8 @@ export function Library(): React.ReactElement {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
   const [showExportProgress, setShowExportProgress] = useState(false);
+  const [showDeployDialog, setShowDeployDialog] = useState(false);
+  const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -147,7 +151,17 @@ export function Library(): React.ReactElement {
   }, [skills]);
 
   const handleDeploySkill = useCallback((skill: LibrarySkill) => {
-    console.log('Deploy skill:', skill.name);
+    setDeploySkill(skill);
+    setShowDeployDialog(true);
+  }, []);
+
+  const handleDeployConfirm = useCallback((skillId: string, deployment: Deployment) => {
+    addDeployment(skillId, deployment);
+  }, [addDeployment]);
+
+  const handleDeployClose = useCallback(() => {
+    setShowDeployDialog(false);
+    setDeploySkill(null);
   }, []);
 
   const handleCloseDetail = useCallback(() => {
@@ -463,6 +477,13 @@ export function Library(): React.ReactElement {
       <ExportProgress
         isOpen={showExportProgress}
         onClose={handleExportProgressClose}
+      />
+
+      <DeployDialog
+        open={showDeployDialog}
+        skill={deploySkill}
+        onClose={handleDeployClose}
+        onDeploy={handleDeployConfirm}
       />
     </div>
   );

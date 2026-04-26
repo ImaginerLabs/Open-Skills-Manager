@@ -3,7 +3,6 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Globe,
-  FolderOpen,
   Gear,
   MagnifyingGlass,
   Cloud,
@@ -11,6 +10,7 @@ import {
   CaretDown,
 } from '@phosphor-icons/react';
 import { CategoryManager, ALL_CATEGORY_ID } from '../../features/CategoryManager';
+import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
@@ -295,15 +295,9 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                     <Globe size={18} />
                     <span>Global Skills</span>
                   </NavLink>
-                  <NavLink
-                    to="/projects"
-                    className={({ isActive }) =>
-                      [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')
-                    }
-                  >
-                    <FolderOpen size={18} />
-                    <span>Projects</span>
-                  </NavLink>
+                  <div className={styles.projectSection}>
+                    <ProjectListContainer />
+                  </div>
                 </div>
               )}
             </div>
