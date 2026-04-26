@@ -51,6 +51,36 @@ export function validateFolderName(name: string): boolean {
   return /^[a-zA-Z0-9_-]+$/.test(name);
 }
 
+/**
+ * Process dropped file paths from Tauri's onDragDropEvent
+ * This is the correct way to handle drag-drop in Tauri apps
+ */
+export function processDroppedPaths(paths: string[]): ImportItem[] {
+  const items: ImportItem[] = [];
+
+  for (const path of paths) {
+    const parts = path.split(/[/\\]/);
+    const name = parts[parts.length - 1] ?? 'Unknown';
+    const isZip = name.toLowerCase().endsWith('.zip');
+    const displayName = isZip ? name.replace(/\.zip$/i, '') : name;
+
+    items.push({
+      id: crypto.randomUUID(),
+      path,
+      name: displayName,
+      type: isZip ? 'zip' : 'folder',
+      status: 'pending',
+    });
+  }
+
+  return items;
+}
+
+/**
+ * @deprecated Use processDroppedPaths instead for Tauri apps
+ * This function is kept for backwards compatibility but may not work correctly
+ * because HTML5 FileList doesn't have reliable path information in Tauri
+ */
 export function processDroppedFiles(files: FileList): ImportItem[] {
   const items: ImportItem[] = [];
 

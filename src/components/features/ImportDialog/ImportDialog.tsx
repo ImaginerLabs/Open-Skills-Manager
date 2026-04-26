@@ -1,12 +1,13 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { FolderOpen, FileArchive, X, Trash, Warning } from '@phosphor-icons/react';
+import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { libraryService } from '@/services/libraryService';
 import { DuplicateHandlerDialog } from './DuplicateHandlerDialog';
-import { selectFolders, selectZipFiles, validateFolderName, processDroppedFiles } from './importUtils';
+import { selectFolders, selectZipFiles, validateFolderName, processDroppedPaths } from './importUtils';
 import styles from './ImportDialog.module.scss';
 
 export interface ImportDialogProps {
@@ -48,9 +49,39 @@ export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogPro
     existing: DuplicateSkill;
   } | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const addSkill = useLibraryStore((state) => state.addSkill);
-  const removeSkill = useLibraryStore((state) => state.removeSkill);
-  const existingSkills = useLibraryStore((state) => state.skills);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const addSkill = useLibraryStore((state) => state?.addSkill);
+  const removeSkill = useLibraryStore((state) => state?.removeSkill);
+  const skills = useLibraryStore((state) => state?.skills);
+  const existingSkills = Array.isArray(skills) ? skills : [];
+
+  // Tauri native drag-drop event listener
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupDragDrop = async () => {
+      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+        if (!isOpen) return;
+
+        if (event.payload.type === 'over') {
+          setIsDragOver(true);
+        } else if (event.payload.type === 'drop') {
+          setIsDragOver(false);
+          const newItems = processDroppedPaths(event.payload.paths);
+          setItems((prev) => [...prev, ...newItems]);
+        } else {
+          // cancel
+          setIsDragOver(false);
+        }
+      });
+    };
+
+    setupDragDrop();
+
+    return () => {
+      unlisten?.();
+    };
+  }, [isOpen]);
 
   const handleSelectFolder = useCallback(async () => {
     const newItems = await selectFolders();
@@ -73,21 +104,13 @@ export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogPro
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dropZoneRef.current?.classList.add(styles.active ?? '');
+    setIsDragOver(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dropZoneRef.current?.classList.remove(styles.active ?? '');
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZoneRef.current?.classList.remove(styles.active ?? '');
-    const newItems = processDroppedFiles(e.dataTransfer.files);
-    setItems((prev) => [...prev, ...newItems]);
+    setIsDragOver(false);
   }, []);
 
   const handleDuplicateAction = useCallback(
@@ -239,10 +262,9 @@ export function ImportDialog({ isOpen, onClose, onImportStart }: ImportDialogPro
 
           <div
             ref={dropZoneRef}
-            className={styles.dropZone}
+            className={`${styles.dropZone}${isDragOver ? ` ${styles.active}` : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
           >
             <span className={styles.dropIcon}>
               <FolderOpen size={24} weight="duotone" />
