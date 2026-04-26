@@ -7,6 +7,13 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: vi.fn(),
 }));
 
+// Mock Tauri webview API
+vi.mock('@tauri-apps/api/webview', () => ({
+  getCurrentWebview: vi.fn(() => ({
+    onDragDropEvent: vi.fn(() => Promise.resolve(vi.fn())),
+  })),
+}));
+
 // Mock library service
 vi.mock('@/services/libraryService', () => ({
   libraryService: {
