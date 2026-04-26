@@ -189,3 +189,13 @@ __pycache__/
 
 # BMad output
 _bmad-output/
+
+# Tauri
+src-tauri/target/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+*.config.js
+*.config.d.ts
+
+.vscode
