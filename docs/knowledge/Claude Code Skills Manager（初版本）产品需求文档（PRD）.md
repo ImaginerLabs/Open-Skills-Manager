@@ -1646,6 +1646,116 @@ fn set_protection_complete(path: &Path) -> Result<()> {
 | NFR-A2 | Offline capability | Full local management without network |
 | NFR-A3 | Error recovery | Automatic state restoration after crash |
 
+#### NFR-A1: Crash Session Tracking
+
+**Session Tracking Mechanism:**
+
+| Event | Action | Data Recorded |
+|-------|--------|---------------|
+| App launch | Record session_start | timestamp, sessionId |
+| App quit | Record session_end | timestamp, duration |
+| App crash | Detect unclean session | Mark session as crashed |
+
+**Crash-Free Rate Calculation:**
+
+```
+crash-free rate = (total sessions - crashed sessions) / total sessions * 100
+Target: > 99.9% (SC-3)
+```
+
+**IPC Commands:**
+
+| Command | Direction | Description |
+|---------|-----------|-------------|
+| `session_start()` | Frontend → Rust | Initialize new session, returns sessionId |
+| `session_end(sessionId)` | Frontend → Rust | Mark session as cleanly ended |
+
+**Session Storage:**
+
+| Property | Value |
+|----------|-------|
+| Storage path | `~/Library/Application Support/CSM/sessions.json` |
+| Format | `{ sessions: SessionRecord[], lastCrash: Date }` |
+| Retention | Last 30 days of data |
+
+**SessionRecord Interface:**
+
+```typescript
+interface SessionRecord {
+  id: string;
+  startTime: Date;
+  endTime?: Date;        // undefined if crashed
+  durationMs?: number;
+  crashed: boolean;
+  crashType?: 'panic' | 'freeze' | 'kill';
+}
+```
+
+#### NFR-A3: State Recovery Mechanism
+
+**IPC Commands Reference:**
+
+| Command | Reference |
+|---------|-----------|
+| `state_snapshot` | Defined in Section 9.3 |
+| `state_restore` | Defined in Section 9.3 |
+
+**AppState Interface Reference:** Defined in Section 10.10
+
+**State Snapshot Strategy:**
+
+| Trigger | Description |
+|---------|-------------|
+| Auto-snapshot | Every 30 seconds |
+| Post-operation | After import, deploy, delete |
+| Pre-quit | Before app terminates |
+
+| Property | Value |
+|----------|-------|
+| Storage path | `~/Library/Application Support/CSM/state.json` |
+| Format | AppState JSON |
+
+**State Recovery Flow:**
+
+1. App launch → Detect if last session crashed
+2. If crashed → Load last state snapshot
+3. Show recovery dialog: "Restore previous session?"
+4. User confirms → Apply state
+5. User declines → Clear snapshot, normal startup
+
+**Recovery UI Specification:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ⚠️  App closed unexpectedly                                 │
+│                                                             │
+│  Restore your last session?                                 │
+│                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │    Restore      │  │   Start Fresh   │                  │
+│  └─────────────────┘  └─────────────────┘                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Post-Recovery Display:**
+
+- Restore active view (last opened page)
+- Restore selected skill/project
+- Restore sidebar expanded sections
+- Restore search state (query, scope)
+- Highlight last action performed
+
+**State Snapshot Content:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| activeView | string | Current view identifier |
+| selectedSkillId | string? | Selected skill UUID |
+| selectedProjectId | string? | Selected project UUID |
+| sidebarState | object | Expanded sections, selected category/group |
+| searchState | object? | Query string, search scope |
+| lastAction | string? | Last action identifier |
+
 ### 8.4 Usability
 
 | ID | Requirement | Target |
@@ -1669,6 +1779,184 @@ fn set_protection_complete(path: &Path) -> Result<()> {
 | NFR-L7 | Skeleton transition | Fade out skeleton when content ready, < 150ms transition |
 | NFR-L8 | No loading spinners | Use skeleton screens instead of spinners for content areas |
 
+#### NFR-L1: Skeleton Trigger Conditions
+
+**Trigger Conditions Mapping:**
+
+| IPC Command | Skeleton Type | Trigger |
+|-------------|---------------|---------|
+| library_list | SkillCardSkeleton | View mount / refresh |
+| global_list | SkillCardSkeleton | View mount |
+| project_skills | SkillCardSkeleton | Project selection |
+| library_get | SkillDetailSkeleton | Skill selection |
+| global_get | SkillDetailSkeleton | Skill selection |
+| project_skill_get | SkillDetailSkeleton | Skill selection |
+| search | SearchResultSkeleton | Search query submit |
+| project_list | SidebarSkeleton | App launch |
+| library_categories_list | SidebarSkeleton | App launch |
+
+**Loading State Machine:**
+
+```
+States: idle → loading → success/error → transition
+
+Loading:    显示骨架屏
+Success:    淡出骨架屏，显示内容
+Error:      淡出骨架屏，显示错误 UI
+Transition: 150ms fade animation
+```
+
+**State Machine Transitions:**
+
+| From | To | Trigger | Animation |
+|------|-----|---------|-----------|
+| idle | loading | IPC call initiated | None (instant) |
+| loading | success | IPC returns data | 150ms fade out |
+| loading | error | IPC returns error | 150ms fade out |
+| success | loading | Refresh/reload | None (instant) |
+| error | loading | Retry button clicked | None (instant) |
+
+#### NFR-L4: Sidebar Loading Specification
+
+**Sidebar Data Sources:**
+
+| Sidebar Section | IPC Source | Display Data |
+|-----------------|------------|--------------|
+| App Library | library_list | Skill count |
+| Categories | library_categories_list | Category list |
+| Groups | library_categories_list | Nested groups |
+| Global Skills | global_list | Skill count |
+| Projects | project_list | Skill count, exists status |
+
+**Sidebar Loading Flow:**
+
+1. App launch → 显示 SidebarSkeleton
+2. 并行调用: project_list, library_categories_list
+3. 数据返回 → 渲染侧边栏
+4. 过渡动画 → 骨架屏淡出
+
+**Sidebar Skeleton Structure:**
+
+```
+┌─────────────────────────────┐
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░  │  ← Library section (1 item)
+│                             │
+│  ░░░░░░░░                   │  ← Categories header
+│  ░░░░░░░░░░░░░░             │  ← Category item 1
+│  ░░░░░░░░░░░░░░             │  ← Category item 2
+│  ░░░░░░░░░░░░░░             │  ← Category item 3
+│                             │
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░  │  ← Global section (1 item)
+│                             │
+│  ░░░░░░░░                   │  ← Projects header
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░  │  ← Project item 1
+│  ░░░░░░░░░░░░░░░░░░░░░░░░░  │  ← Project item 2
+└─────────────────────────────┘
+```
+
+**Skeleton Item Counts:**
+
+| Section | Skeleton Count | Notes |
+|---------|----------------|-------|
+| Library | 1 | Single "App Library" item |
+| Categories | 3 | Placeholder category items |
+| Global | 1 | Single "Global Skills" item |
+| Projects | 2 | Placeholder project items |
+
+#### NFR-L7: Content Ready Detection
+
+**IPC Response → Content Ready Transition:**
+
+| Step | Action | Duration |
+|------|--------|----------|
+| 1 | IPC returns data | - |
+| 2 | Set loading = false | Immediate |
+| 3 | Trigger transition animation | 150ms |
+| 4 | Display actual content | After transition |
+
+**Error State Handling:**
+
+| Step | Action | Duration |
+|------|--------|----------|
+| 1 | IPC returns error | - |
+| 2 | Set error state | Immediate |
+| 3 | 骨架屏淡出 | 150ms |
+| 4 | 显示 ErrorFallback | After transition |
+
+**Loading State Interface:**
+
+```typescript
+interface LoadingState<T = unknown> {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  error?: AppError;
+  data?: T;
+  transitionMs: 150;
+}
+
+interface LoadingActions {
+  startLoading: () => void;
+  setData: (data: T) => void;
+  setError: (error: AppError) => void;
+  retry: () => void;
+}
+```
+
+**Zustand Store Integration:**
+
+```typescript
+interface SkillListState {
+  skills: LoadingState<Skill[]>;
+  fetchSkills: (scope: Scope) => Promise<void>;
+  retryFetch: () => Promise<void>;
+}
+```
+
+#### Loading Error Handling
+
+**Error State Skeleton Behavior:**
+
+| Phase | Behavior |
+|-------|----------|
+| IPC Pending | 保持骨架屏显示 |
+| Error Detected | 触发骨架屏淡出 (150ms) |
+| Error UI Ready | 显示 ErrorFallback |
+| Retry Clicked | 重新进入 loading 状态 |
+
+**Error UI Specifications:**
+
+| State | Message | Actions |
+|-------|---------|---------|
+| Empty | "No skills found" | Import 按钮 |
+| Error | 错误消息 | Retry 按钮 |
+| Network | "Network unavailable" | Retry 按钮 |
+
+**ErrorFallback Component:**
+
+```typescript
+interface ErrorFallbackProps {
+  type: 'empty' | 'error' | 'network';
+  message?: string;
+  onRetry?: () => void;
+  onImport?: () => void;
+}
+```
+
+**ErrorFallback UI:**
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│           {icon}                         │
+│                                         │
+│     {message / "No skills found"}       │
+│                                         │
+│     ┌─────────────┐ ┌─────────────┐    │
+│     │   Retry     │ │   Import    │    │
+│     └─────────────┘ └─────────────┘    │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
 ### 8.6 Operation Progress
 
 | ID | Requirement | Implementation |
@@ -1683,6 +1971,104 @@ fn set_protection_complete(path: &Path) -> Result<()> {
 | NFR-O8 | Error details | Click error count to see detailed error list |
 | NFR-O9 | Retry failed | Option to retry only failed operations |
 | NFR-O10 | Progress animation | Smooth progress bar animation, no jank |
+
+#### NFR-O6: Rollback Strategy Definition
+
+**Rollback Strategy by Operation Type:**
+
+| Operation Type | Rollback Action | Notes |
+|----------------|-----------------|-------|
+| Import | Delete imported skills from Library | Safe, reversible |
+| Deploy | Remove deployed skills from target | Destructive, ask user |
+| Export | Delete partial .zip files | Safe, no user data affected |
+
+**Rollback Decision Flow:**
+
+1. User clicks Cancel button
+2. System shows confirmation dialog: "X items already processed. Keep them or undo?"
+3. User selects: Keep / Undo All
+4. System executes corresponding action
+5. System displays result summary
+
+**Rollback IPC Command:**
+
+```typescript
+// Cancel operation with optional rollback
+operation_cancel(operationId: string, rollback: boolean): Promise<{
+  cancelled: boolean;
+  processedCount: number;
+  rolledBack: boolean;
+}>
+```
+
+#### NFR-O8: Error Details Data Model
+
+**OperationError Interface:**
+
+```typescript
+interface OperationError {
+  id: string;
+  operationId: string;
+  operationType: 'import' | 'deploy' | 'export';
+  skillName: string;
+  skillPath: string;
+  errorCode: string;          // e.g., 'E001'
+  errorMessage: string;
+  timestamp: Date;
+  recoverable: boolean;
+  retryCount: number;
+}
+```
+
+**Error Storage Mechanism:**
+
+| Property | Value |
+|----------|-------|
+| Storage Location | Memory (operation state) |
+| Lifecycle | Cleared after operation completes |
+| Export Option | Can export as JSON |
+
+**Error Details UI:**
+
+- Click error count → Expand error list
+- Each item shows: skillName, errorCode, errorMessage
+- Actions: Single item Retry button
+
+#### NFR-O9: Retry Mechanism Definition
+
+**Retry Strategy Table:**
+
+| Operation | Retry Action | Max Retries | Backoff |
+|-----------|--------------|-------------|---------|
+| Import | Re-import failed skill | 3 | None |
+| Deploy | Re-deploy failed skill | 3 | None |
+| Export | Re-export failed skill | 3 | None |
+| Network ops | Retry with exponential backoff | 5 | 1s, 2s, 4s, 8s, 16s |
+
+**Retry Flow:**
+
+1. User clicks "Retry Failed"
+2. System identifies recoverable errors
+3. System retries each failed item
+4. System updates result summary
+5. Loop until success or max retries reached
+
+**Retry IPC Command:**
+
+```typescript
+// Retry failed operations
+operation_retry(operationId: string, errorIds?: string[]): Promise<{
+  retriedCount: number;
+  successCount: number;
+  stillFailed: OperationError[];
+}>
+```
+
+**Retry UI:**
+
+- "Retry Failed" button (only for recoverable errors)
+- Options: "Retry All" vs "Retry Selected"
+- Retry progress display
 
 ### 8.7 Error Handling
 
@@ -2091,6 +2477,8 @@ impl ICloudBridge {
 
 ### 8.8 Performance Monitoring
 
+#### 8.8.1 Overview
+
 | ID | Requirement | Implementation |
 |----|-------------|----------------|
 | NFR-M1 | Startup time tracking | Log cold/warm startup time, alert if > 1.5s for 3 consecutive sessions |
@@ -2098,6 +2486,289 @@ impl ICloudBridge {
 | NFR-M3 | Operation latency | Track FR operation durations (import, deploy, search), log slow ops (> 1s) |
 | NFR-M4 | Crash reporting | Capture crash logs with context, store locally for user review |
 | NFR-M5 | Performance dashboard | Settings page shows performance metrics (startup time, memory, operations) |
+
+---
+
+#### 8.8.2 NFR-M1: Startup Time Tracking
+
+**IPC Command Reference:** `performance_get_startup` (Section 9.3)
+
+**Interface Reference:** `StartupMetrics` (Section 10.9)
+
+**Implementation Details:**
+
+| Component | Implementation |
+|-----------|----------------|
+| Start Time Recording | Rust: Record `start_time` in app initialization (`setup()` hook) |
+| End Time Recording | WebView ready event - record `end_time` when frontend signals ready |
+| Cold Start | First launch after system reboot or app termination |
+| Warm Start | Launch when app was already in memory (cached) |
+| Calculation | `duration = end_time - start_time` in milliseconds |
+
+**Alert Mechanism:**
+
+| Condition | Action |
+|-----------|--------|
+| Single session > 1.5s | Log warning (INFO level) |
+| 3 consecutive sessions > 1.5s | Trigger alert: Log (WARN level) + UI Toast notification |
+| Alert notification | "Startup performance degraded. Recent sessions: [times]" |
+
+**Data Storage:**
+
+| Property | Value |
+|----------|-------|
+| Storage Path | `~/Library/Application Support/CSM/metrics/startup.json` |
+| Format | JSON array of startup records |
+| Retention | Last 30 sessions |
+
+**Storage Schema:**
+
+```json
+{
+  "sessions": [
+    {
+      "timestamp": "2024-01-15T10:30:00Z",
+      "duration": 1250,
+      "type": "cold"
+    },
+    {
+      "timestamp": "2024-01-15T14:22:00Z",
+      "duration": 450,
+      "type": "warm"
+    }
+  ]
+}
+```
+
+---
+
+#### 8.8.3 NFR-M2: Memory Monitoring
+
+**IPC Command Reference:** `performance_get_memory` (Section 9.3)
+
+**Interface Reference:** `MemoryMetrics` (Section 10.9)
+
+**Implementation Details:**
+
+| Component | Implementation |
+|-----------|----------------|
+| Memory Source | Rust: `sysinfo` crate - `System::new_all().process_by_pid()` |
+| Sampling Interval | Every 30 seconds (configurable) |
+| Metrics Tracked | `currentMB`, `peakMB`, timestamp per sample |
+| Sampling Trigger | Background task spawned in app setup |
+
+**Alert Thresholds:**
+
+| Threshold | Value | Action |
+|-----------|-------|--------|
+| Warning | 120MB (configurable) | Log warning + UI Toast |
+| Critical | 200MB | Log error + UI Alert dialog |
+| Sustained | > Warning for 5+ samples | Highlight in Performance Dashboard |
+
+**Sampling Data Structure:**
+
+```typescript
+interface MemorySample {
+  timestamp: Date;
+  currentMB: number;
+  isWarning: boolean;
+}
+
+interface MemoryStorage {
+  samples: MemorySample[];
+  peakMB: number;
+  warningThreshold: number;
+  criticalThreshold: number;
+}
+```
+
+**Storage Path:** `~/Library/Application Support/CSM/metrics/memory.json`
+
+---
+
+#### 8.8.4 NFR-M3: Operation Latency Tracking
+
+**IPC Command Reference:** `performance_get_operations` (Section 9.3)
+
+**Interface Reference:** `OperationMetrics` (Section 10.9)
+
+**Implementation Details:**
+
+| Component | Implementation |
+|-----------|----------------|
+| Timing Wrapper | Rust: Middleware pattern wrapping IPC command handlers |
+| Measurement | Record `start_time` before operation, `end_time` after completion |
+| Data Recorded | `operation`, `duration`, `timestamp`, `success` |
+| Aggregation | Calculate `avgMs`, `p95Ms`, `slowCount` on request |
+
+**Slow Operation Definition:**
+
+| Metric | Threshold | Action |
+|--------|-----------|--------|
+| Slow Operation | > 1000ms | Log WARN with operation details |
+| Very Slow | > 3000ms | Log ERROR + record in slow operations list |
+| Operation Failure | Error thrown | Log ERROR + include in metrics |
+
+**Tracked Operations:**
+
+| Operation | Category | Expected Max |
+|-----------|----------|--------------|
+| `library_import` | Library | 500ms |
+| `library_export` | Library | 300ms |
+| `deploy_to_global` | Deployment | 200ms |
+| `deploy_to_project` | Deployment | 200ms |
+| `search` | Search | 100ms |
+| `search_with_snippets` | Search | 200ms |
+
+**Storage Schema:**
+
+```json
+{
+  "operations": {
+    "library_import": {
+      "samples": [
+        { "timestamp": "2024-01-15T10:30:00Z", "duration": 350, "success": true }
+      ],
+      "slowOps": [
+        { "timestamp": "2024-01-15T09:15:00Z", "duration": 1200 }
+      ]
+    }
+  }
+}
+```
+
+**Storage Path:** `~/Library/Application Support/CSM/metrics/operations.json`
+
+---
+
+#### 8.8.5 NFR-M4: Crash Reporting
+
+**IPC Command Reference:** `performance_get_crashes` (Section 9.3)
+
+**Interface Reference:** `CrashReport` (Section 10.9)
+
+**Implementation Details:**
+
+| Component | Implementation |
+|-----------|----------------|
+| Panic Handler | Rust: `std::panic::set_hook()` to capture panic info |
+| Error Capture | Panic message + formatted stack trace |
+| Context Capture | Serialize current `AppState` (partial) |
+| Thread Safety | Main thread + spawned tasks both captured |
+
+**Crash Storage:**
+
+| Property | Value |
+|----------|-------|
+| Storage Path | `~/Library/Application Support/CSM/crashes/` |
+| File Naming | `{timestamp}-{type}.json` (e.g., `20240115-103000-panic.json`) |
+| Retention | Last 10 crash reports (FIFO cleanup) |
+
+**Crash Report File Format:**
+
+```json
+{
+  "id": "crash-20240115-103000",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "type": "panic",
+  "message": "index out of bounds: the len is 3 but the index is 4",
+  "stackTrace": "   0: rust_begin_unwind\n   1: core::panicking::panic_fmt\n   ...",
+  "appState": {
+    "version": "1.0.0",
+    "activeView": "library",
+    "selectedSkillId": "skill-123"
+  },
+  "recovered": false
+}
+```
+
+**Next Launch Notification:**
+
+| Trigger | Condition |
+|---------|-----------|
+| Detect Crash | File exists in crashes directory with `recovered: false` |
+| Display | Modal dialog on app launch |
+| Message | "CSM unexpectedly quit last time" |
+| Actions | "View Details" button → Opens crash log viewer |
+
+---
+
+#### 8.8.6 NFR-M5: Performance Dashboard
+
+**Location:** Settings → Performance (new tab)
+
+**Dashboard Components:**
+
+| Component | Content | Refresh Rate |
+|-----------|---------|--------------|
+| Startup Time Chart | Line graph of last 7 days startup times | On load |
+| Memory Usage Curve | Real-time memory usage (last 60 samples) | 30s |
+| Operation Latency Table | Aggregated metrics per operation | On load |
+| Crash Reports List | Last 10 crash reports with details | On load |
+
+**UI Layout:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Settings > Performance                                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─ Startup Time (Last 7 Days) ────────────────────────┐    │
+│  │  ▲                                                    │    │
+│  │  │     ●──●                                          │    │
+│  │  │  ●─●     ●──●                                     │    │
+│  │  └─────────────────────────────────────────────▶     │    │
+│  │  Cold: avg 1200ms  Warm: avg 400ms  ⚠️ 2 alerts     │    │
+│  └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─ Memory Usage (Real-time) ───────────────────────────┐    │
+│  │  ▲                                                    │    │
+│  │  │              ●●●●●                                │    │
+│  │  │         ●●●●●    ●●●                              │    │
+│  │  │    ●●●●●            ●●●●                          │    │
+│  │  └─────────────────────────────────────────────▶     │    │
+│  │  Current: 85MB  Peak: 112MB  Threshold: 120MB       │    │
+│  └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─ Operation Latency ───────────────────────────────────┐   │
+│  │  Operation        │ Count │ Avg  │ P95  │ Slow      │   │
+│  │  ─────────────────┼───────┼──────┼──────┼───────────│   │
+│  │  library_import   │ 45    │ 180ms│ 350ms│ 0         │   │
+│  │  deploy_to_global │ 120   │ 95ms │ 180ms│ 0         │   │
+│  │  search           │ 890   │ 45ms │ 85ms │ 0         │   │
+│  └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─ Crash Reports ───────────────────────────────────────┐   │
+│  │  Date           │ Type  │ Message                     │   │
+│  │  ───────────────┼───────┼────────────────────────────│   │
+│  │  Jan 15, 10:30  │ panic │ index out of bounds...     │   │
+│  │  Jan 10, 14:22  │ error │ network timeout...         │   │
+│  └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│  [Clear Metrics]                    [Export Report]          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Action Buttons:**
+
+| Button | Action | Confirmation |
+|--------|--------|--------------|
+| Clear Metrics | Delete all stored metrics files | Yes, confirm dialog |
+| Export Report | Generate JSON report with all metrics | No (direct download) |
+
+**Export Report Format:**
+
+```json
+{
+  "exportedAt": "2024-01-15T15:00:00Z",
+  "appVersion": "1.0.0",
+  "startup": { /* StartupMetrics */ },
+  "memory": { /* MemoryMetrics */ },
+  "operations": { /* OperationMetrics[] */ },
+  "crashes": { /* CrashReport[] */ }
+}
+```
 
 ---
 
