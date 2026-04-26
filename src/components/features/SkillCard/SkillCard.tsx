@@ -151,11 +151,13 @@ export function SkillCard({
         </p>
 
         <div className={styles.meta}>
-          <span className={styles.version}>v{skill.version}</span>
-          {skill.hasResources && (
+          {skill.version && skill.version !== '0.0.0' && (
+            <span className={styles.version}>v{skill.version}</span>
+          )}
+          {skill.fileCount > 0 && (
             <span className={styles.resourceBadge}>
               <FolderOpen size={10} weight="fill" />
-              <span>Resources</span>
+              <span>{skill.fileCount} file{skill.fileCount !== 1 ? 's' : ''}</span>
             </span>
           )}
         </div>
