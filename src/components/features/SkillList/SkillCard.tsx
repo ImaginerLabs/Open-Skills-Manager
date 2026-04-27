@@ -165,35 +165,27 @@ export function SkillCard<T extends Skill>({
         {viewMode === 'list' ? (
           // List mode layout
           <>
-            <div className={styles.listHeader}>
-              <div className={styles.listTitleRow}>
-                <h3 className={styles.name} title={displayName}>
-                  {displayName}
-                </h3>
-                {getSourceBadge(skill, scope)}
-              </div>
-              <p className={styles.listDescription} title={skill.description}>
-                {skill.description || 'No description'}
-              </p>
-            </div>
-            <div className={styles.listMeta}>
-              <div className={styles.listInfo}>
-                {skill.fileCount > 0 && (
-                  <span className={styles.resourceBadge}>
-                    <FolderOpen size={10} weight="fill" />
-                    <span>{skill.fileCount}</span>
-                  </span>
-                )}
-                <span className={styles.size}>{formattedSize}</span>
-                <span className={styles.date}>{formattedDate}</span>
-              </div>
-              {scope === 'library' && deploymentCount > 0 && (
-                <span className={styles.deploymentBadge}>
-                  <Rocket size={12} weight="fill" />
-                  <span>{deploymentCount}</span>
-                </span>
-              )}
-            </div>
+            <h3 className={styles.listName} title={displayName}>
+              {displayName}
+            </h3>
+            {skill.fileCount > 0 && (
+              <span className={styles.fileCountBadge}>
+                <FolderOpen size={10} weight="fill" />
+                <span>{skill.fileCount}</span>
+              </span>
+            )}
+            {getSourceBadge(skill, scope)}
+            <p className={styles.listDescription} title={skill.description}>
+              {skill.description || 'No description'}
+            </p>
+            <span className={styles.size}>{formattedSize}</span>
+            <span className={styles.date}>{formattedDate}</span>
+            {scope === 'library' && deploymentCount > 0 && (
+              <span className={styles.deploymentBadge}>
+                <Rocket size={12} weight="fill" />
+                <span>{deploymentCount}</span>
+              </span>
+            )}
             <button
               type="button"
               className={styles.menuButton}

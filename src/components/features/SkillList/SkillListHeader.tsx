@@ -25,9 +25,6 @@ export function SkillListHeader({
         <span className={styles.count}>{count} skills</span>
       </div>
       <div className={styles.actions}>
-        {showViewToggle && (
-          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-        )}
         <div className={styles.searchWrapper}>
           <MagnifyingGlass size={16} className={styles.searchIcon} />
           <input
@@ -38,6 +35,9 @@ export function SkillListHeader({
             className={styles.searchInput}
           />
         </div>
+        {showViewToggle && (
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+        )}
         <button
           type="button"
           className={styles.sortButton}

@@ -33,26 +33,47 @@
 }
 
 .listMode {
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: auto auto auto 1fr auto auto auto auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: var(--space-4);
+  gap: 0 var(--space-2);
   padding: var(--space-3) var(--space-4);
 
-  .listHeader {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+  .listName {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
   }
 
-  .listTitleRow {
-    display: flex;
+  .fileCountBadge {
+    grid-column: 2;
+    grid-row: 1;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: 4px;
+    font-size: 10px;
+    color: var(--color-primary);
+    padding: 2px var(--space-2);
+    background: rgba(10, 132, 255, 0.15);
+    border-radius: var(--radius-sm);
+  }
+
+  .sourceBadge {
+    grid-column: 3;
+    grid-row: 1;
   }
 
   .listDescription {
+    grid-column: 1 / -1;
+    grid-row: 2;
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     margin: 0;
@@ -61,17 +82,28 @@
     white-space: nowrap;
   }
 
-  .listMeta {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+  .size {
+    grid-column: -4;
+    grid-row: 1;
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
   }
 
-  .listInfo {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+  .date {
+    grid-column: -3;
+    grid-row: 1;
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .deploymentBadge {
+    grid-column: -2;
+    grid-row: 1;
+  }
+
+  .menuButton {
+    grid-column: -1;
+    grid-row: 1;
   }
 
   .header {
@@ -90,8 +122,8 @@
     display: none;
   }
 
-  .menuButton {
-    flex-shrink: 0;
+  .listMeta {
+    display: none;
   }
 }
 
