@@ -3,9 +3,10 @@ import { Plus, FolderSimple } from '@phosphor-icons/react';
 import type { Group } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { useContextMenu } from '../../../hooks/useContextMenu';
-import { InlineEditInput } from './InlineEditInput';
 import { ContextMenu } from './ContextMenu';
 import { GroupItem, CategoryItem, AddCategoryButton } from './GroupItem';
+import { CreateGroupDialog } from './CreateGroupDialog';
+import { CreateCategoryDialog } from './CreateCategoryDialog';
 import styles from './CategoryManager.module.scss';
 
 // Special ID for the "All" group
@@ -18,10 +19,10 @@ export interface CategoryManagerProps {
   totalSkillsCount: number;
   onSelectGroup?: (groupId: string) => void;
   onSelectCategory?: (groupId: string, categoryId: string) => void;
-  onCreateGroup?: (name: string) => void;
+  onCreateGroup?: (name: string, icon?: string, notes?: string) => void;
   onRenameGroup?: (groupId: string, newName: string) => void;
   onDeleteGroup?: (groupId: string) => void;
-  onCreateCategory?: (groupId: string, name: string) => void;
+  onCreateCategory?: (groupId: string, name: string, icon?: string, notes?: string) => void;
   onRenameCategory?: (groupId: string, categoryId: string, newName: string) => void;
   onDeleteCategory?: (groupId: string, categoryId: string) => void;
   onOrganizeSkill?: (skillId: string, groupId: string | null, categoryId?: string) => Promise<void>;
@@ -51,8 +52,9 @@ export function CategoryManager({
 }: CategoryManagerProps): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [isCreatingCategoryFor, setIsCreatingCategoryFor] = useState<string | null>(null);
+  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+  const [showCreateCategoryDialog, setShowCreateCategoryDialog] = useState(false);
+  const [creatingCategoryForGroup, setCreatingCategoryForGroup] = useState<string | null>(null);
 
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
     useCategoryDragDrop(onOrganizeSkill);
@@ -124,28 +126,28 @@ export function CategoryManager({
   }, [contextMenu, onDeleteGroup, onDeleteCategory, closeContextMenu]);
 
   const handleCreateGroup = useCallback(
-    (name: string) => {
-      if (!name.trim()) {
-        setIsCreatingGroup(false);
-        return;
-      }
-      onCreateGroup?.(name.trim());
-      setIsCreatingGroup(false);
+    (name: string, icon?: string, notes?: string) => {
+      onCreateGroup?.(name, icon, notes);
+      setShowCreateGroupDialog(false);
     },
     [onCreateGroup]
   );
 
   const handleCreateCategory = useCallback(
-    (groupId: string, name: string) => {
-      if (!name.trim()) {
-        setIsCreatingCategoryFor(null);
-        return;
+    (name: string, icon?: string, notes?: string) => {
+      if (creatingCategoryForGroup) {
+        onCreateCategory?.(creatingCategoryForGroup, name, icon, notes);
       }
-      onCreateCategory?.(groupId, name.trim());
-      setIsCreatingCategoryFor(null);
+      setShowCreateCategoryDialog(false);
+      setCreatingCategoryForGroup(null);
     },
-    [onCreateCategory]
+    [creatingCategoryForGroup, onCreateCategory]
   );
+
+  const openCreateCategoryDialog = useCallback((groupId: string) => {
+    setCreatingCategoryForGroup(groupId);
+    setShowCreateCategoryDialog(true);
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -154,7 +156,7 @@ export function CategoryManager({
         <button
           type="button"
           className={styles.addButton}
-          onClick={() => setIsCreatingGroup(true)}
+          onClick={() => setShowCreateGroupDialog(true)}
           aria-label="Create group"
         >
           <Plus size={14} />
@@ -238,34 +240,15 @@ export function CategoryManager({
                     );
                   })}
 
-                  <AddCategoryButton onClick={() => setIsCreatingCategoryFor(group.id)} />
-
-                  {isCreatingCategoryFor === group.id && (
-                    <InlineEditInput
-                      placeholder="Category name"
-                      onSubmit={(name) => handleCreateCategory(group.id, name)}
-                      onCancel={() => setIsCreatingCategoryFor(null)}
-                      autoFocus
-                      indent
-                    />
-                  )}
+                  <AddCategoryButton onClick={() => openCreateCategoryDialog(group.id)} />
                 </div>
               </div>
             </div>
           );
         })}
 
-        {safeGroups.length === 0 && !isCreatingGroup && (
+        {safeGroups.length === 0 && !showCreateGroupDialog && (
           <p className={styles.emptyText}>No groups yet</p>
-        )}
-
-        {isCreatingGroup && (
-          <InlineEditInput
-            placeholder="Group name"
-            onSubmit={handleCreateGroup}
-            onCancel={() => setIsCreatingGroup(false)}
-            autoFocus
-          />
         )}
       </div>
 
@@ -282,6 +265,22 @@ export function CategoryManager({
           onClose={closeContextMenu}
         />
       )}
+
+      <CreateGroupDialog
+        open={showCreateGroupDialog}
+        onClose={() => setShowCreateGroupDialog(false)}
+        onCreate={handleCreateGroup}
+      />
+
+      <CreateCategoryDialog
+        open={showCreateCategoryDialog}
+        onClose={() => {
+          setShowCreateCategoryDialog(false);
+          setCreatingCategoryForGroup(null);
+        }}
+        onCreate={handleCreateCategory}
+        groupName={safeGroups.find((g) => g.id === creatingCategoryForGroup)?.name}
+      />
     </div>
   );
 }

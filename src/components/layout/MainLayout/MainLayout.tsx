@@ -117,8 +117,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   }, [selectGroup]);
 
   const handleCreateGroup = useCallback(
-    (name: string) => {
-      categoryManager.createGroup(name);
+    (name: string, icon?: string, notes?: string) => {
+      categoryManager.createGroup(name, icon, notes);
     },
     [categoryManager]
   );
@@ -142,8 +142,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   );
 
   const handleCreateCategory = useCallback(
-    (groupId: string, name: string) => {
-      categoryManager.createCategory(groupId, name);
+    (groupId: string, name: string, icon?: string, notes?: string) => {
+      categoryManager.createCategory(groupId, name, icon, notes);
     },
     [categoryManager]
   );
