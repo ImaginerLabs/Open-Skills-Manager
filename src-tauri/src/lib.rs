@@ -1,4 +1,5 @@
 mod commands;
+mod services;
 mod utils;
 
 use commands::{
@@ -58,12 +59,19 @@ pub fn run() {
             deploy::deploy_from_global,
             // Search commands
             search::search,
+            search::search_with_snippets,
             // Config commands
             config::config_get,
             config::config_set,
             // iCloud commands
             icloud::icloud_sync_status,
             icloud::icloud_resolve_conflict,
+            icloud::icloud_get_conflicts,
+            icloud::icloud_container_path,
+            icloud::icloud_quota_check,
+            icloud::icloud_get_pending_changes,
+            icloud::icloud_initialize,
+            icloud::icloud_local_cache_path,
             // Locale commands
             locale::locale_get,
             locale::locale_set,
