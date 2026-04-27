@@ -86,12 +86,25 @@
   text-align: left;
 }
 
-.categoryContainer {
-  margin-top: var(--space-2);
-  padding: 0 var(--space-1);
+.sectionContent {
   display: grid;
   grid-template-rows: 1fr;
   transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+}
+
+.sectionContentCollapsed {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+}
+
+.sectionContentInner {
+  overflow: hidden;
+}
+
+.categoryContainer {
+  margin-top: var(--space-2);
+  padding: 0 var(--space-1);
 
   &.dragOver {
     background: rgba(10, 132, 255, 0.1);
@@ -99,34 +112,60 @@
   }
 }
 
-.categoryContainerCollapsed {
-  margin-top: 0;
-  padding: 0 var(--space-1);
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
-}
-
-.categoryContainerInner {
-  overflow: hidden;
-}
-
 .scopeList {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
-  padding-left: var(--space-4);
-}
-
-.scopeListCollapsed {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
-  padding-left: var(--space-4);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-1);
 }
 
 .scopeListInner {
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.scopeItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.scopeItemLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &.active {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--color-primary);
+  }
+
+  .light &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: var(--color-text-secondary);
+  }
+}
+
+.scopeItemName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .projectSection {
@@ -139,6 +178,9 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
@@ -160,6 +202,30 @@
   .light &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
+
+  // Icon should not shrink (matches CategoryManager .icon)
+  svg {
+    flex-shrink: 0;
+    color: var(--color-text-secondary);
+  }
+
+  // Make the name span flex to align count badge position with categoryItem
+  & > span:not(.navItemSpacer):not(.count) {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// Spacer to align with categoryItem which has expandIcon (12px) + gap + icon
+.navItemSpacer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .count {
@@ -168,7 +234,6 @@
   padding: 1px var(--space-1);
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-sm);
-  margin-left: auto;
 
   .light & {
     background: rgba(0, 0, 0, 0.05);

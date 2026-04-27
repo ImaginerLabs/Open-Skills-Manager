@@ -266,49 +266,61 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                 <span className={styles.navSectionTitle}>{section.title}</span>
               </button>
 
-              {section.expanded && section.id === 'library' && (
-                <div
-                  className={[styles.categoryContainer, isDragOver && styles.dragOver].filter(Boolean).join(' ')}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e)}
-                >
-                  <CategoryManager
-                    groups={groups}
-                    selectedGroupId={selectedGroupId}
-                    selectedCategoryId={selectedCategoryId}
-                    totalSkillsCount={skills?.length ?? 0}
-                    onSelectGroup={handleSelectGroup}
-                    onSelectCategory={handleSelectCategory}
-                    onCreateGroup={handleCreateGroup}
-                    onRenameGroup={handleRenameGroup}
-                    onDeleteGroup={handleDeleteGroup}
-                    onCreateCategory={handleCreateCategory}
-                    onRenameCategory={handleRenameCategory}
-                    onDeleteCategory={handleDeleteCategory}
-                    onOrganizeSkill={handleOrganizeSkill}
-                  />
-                </div>
-              )}
+              <div
+                className={section.expanded ? styles.sectionContent : styles.sectionContentCollapsed}
+                aria-hidden={!section.expanded}
+              >
+                <div className={styles.sectionContentInner}>
+                  {section.id === 'library' && (
+                    <div
+                      className={[styles.categoryContainer, isDragOver && styles.dragOver].filter(Boolean).join(' ')}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e)}
+                    >
+                      <CategoryManager
+                        groups={groups}
+                        selectedGroupId={selectedGroupId}
+                        selectedCategoryId={selectedCategoryId}
+                        totalSkillsCount={skills?.length ?? 0}
+                        onSelectGroup={handleSelectGroup}
+                        onSelectCategory={handleSelectCategory}
+                        onCreateGroup={handleCreateGroup}
+                        onRenameGroup={handleRenameGroup}
+                        onDeleteGroup={handleDeleteGroup}
+                        onCreateCategory={handleCreateCategory}
+                        onRenameCategory={handleRenameCategory}
+                        onDeleteCategory={handleDeleteCategory}
+                        onOrganizeSkill={handleOrganizeSkill}
+                      />
+                    </div>
+                  )}
 
-              {section.expanded && section.id === 'scopes' && (
-                <div className={styles.scopeList}>
-                  <NavLink
-                    to="/global"
-                    onClick={handleSelectGlobalSkills}
-                    className={({ isActive }) =>
-                      [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')
-                    }
-                  >
-                    <Globe size={18} />
-                    <span>Global Skills</span>
-                    <span className={styles.count}>{globalSkills.length}</span>
-                  </NavLink>
-                  <div className={styles.projectSection}>
-                    <ProjectListContainer />
-                  </div>
+                  {section.id === 'scopes' && (
+                    <div className={styles.scopeList}>
+                      <div className={styles.scopeListInner}>
+                        <div className={styles.scopeItem}>
+                          <NavLink
+                            to="/global"
+                            onClick={handleSelectGlobalSkills}
+                            className={({ isActive }) =>
+                              [styles.scopeItemLink, isActive && styles.active].filter(Boolean).join(' ')
+                            }
+                          >
+                            <span className={styles.expandIcon} />
+                            <Globe size={16} />
+                            <span className={styles.scopeItemName}>Global Skills</span>
+                            <span className={styles.count}>{globalSkills.length}</span>
+                          </NavLink>
+                        </div>
+                        <div className={styles.projectSection}>
+                          <ProjectListContainer />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
 
