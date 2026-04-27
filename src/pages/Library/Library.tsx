@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
-import { SkillCard } from '../../components/features/SkillCard';
 import { SkillDetail } from '../../components/features/SkillDetail';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
@@ -269,19 +268,11 @@ export function Library(): React.ReactElement {
     setShowImportProgress(false);
   }, []);
 
-  const renderSkillCard = useCallback(
-    (skill: LibrarySkill, isSelected: boolean) => (
-      <SkillCard
-        skill={skill}
-        isSelected={isSelected}
-        onSelect={handleSelectSkill}
-        onDelete={handleDeleteSkill}
-        onExport={handleExportSkill}
-        onDeploy={handleDeploySkill}
-      />
-    ),
-    [handleSelectSkill, handleDeleteSkill, handleExportSkill, handleDeploySkill]
-  );
+  const cardActions = {
+    onDelete: handleDeleteSkill,
+    onExport: handleExportSkill,
+    onDeploy: handleDeploySkill,
+  };
 
   const hasSkills = skills.length > 0;
 
@@ -316,7 +307,8 @@ export function Library(): React.ReactElement {
           selectedSkillId={selectedSkill?.id}
           onSelect={handleSelectSkill}
           onGetSkillId={(skill) => skill.id}
-          renderCard={renderSkillCard}
+          scope="library"
+          actions={cardActions}
           isLoading={isLoading}
           emptyTitle="Your library is empty"
           emptyText="Import skills from folders or zip files to get started"

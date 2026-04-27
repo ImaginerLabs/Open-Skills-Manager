@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ArrowClockwise, DotsThree, Trash, ArrowDown, FolderOpen } from '@phosphor-icons/react';
+import { ArrowClockwise, ArrowDown, FolderOpen } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
 import { SkillListLayout, SkillListHeader, SkillList, SkillDetailPanel } from '../../components/features/SkillList';
@@ -8,11 +8,6 @@ import { globalService } from '../../services/globalService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatSize, formatDate } from '../../utils/formatters';
 import styles from './Global.module.scss';
-
-interface ContextMenuPosition {
-  x: number;
-  y: number;
-}
 
 export function Global(): React.ReactElement {
   const {
@@ -35,9 +30,6 @@ export function Global(): React.ReactElement {
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [showPullDialog, setShowPullDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 });
-  const [contextSkill, setContextSkill] = useState<GlobalSkill | null>(null);
 
   const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
 
@@ -147,29 +139,6 @@ export function Global(): React.ReactElement {
     setPullSkill(null);
   }, []);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, skill: GlobalSkill) => {
-    e.preventDefault();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
-    setContextSkill(skill);
-    setShowContextMenu(true);
-  }, []);
-
-  const handleContextMenuDelete = useCallback(() => {
-    setShowContextMenu(false);
-    if (contextSkill) {
-      handleDeleteSkill(contextSkill.id);
-    }
-    setContextSkill(null);
-  }, [contextSkill, handleDeleteSkill]);
-
-  const handleContextMenuPull = useCallback(() => {
-    setShowContextMenu(false);
-    if (contextSkill) {
-      handlePullToLibrary(contextSkill);
-    }
-    setContextSkill(null);
-  }, [contextSkill, handlePullToLibrary]);
-
   // Filter skills by search query
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return sortedSkills;
@@ -184,59 +153,13 @@ export function Global(): React.ReactElement {
 
   const hasSkills = skills.length > 0;
 
-  // Render card for SkillList
-  const renderCard = useCallback(
-    (skill: GlobalSkill, isSelected: boolean): React.ReactNode => (
-      <article
-        className={[styles.card, isSelected && styles.selected].filter(Boolean).join(' ')}
-        onContextMenu={(e) => handleContextMenu(e, skill)}
-        tabIndex={0}
-        role="button"
-        aria-label={`Global skill: ${skill.name}`}
-        aria-selected={isSelected}
-      >
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardName} title={skill.name}>
-            {skill.name}
-          </h3>
-          <button
-            type="button"
-            className={styles.cardMenuButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleContextMenu(e, skill);
-            }}
-            aria-label="Open context menu"
-          >
-            <DotsThree size={16} weight="bold" />
-          </button>
-        </div>
-
-        <p className={styles.cardDescription} title={skill.description}>
-          {skill.description || 'No description'}
-        </p>
-
-        <div className={styles.cardMeta}>
-          {skill.version && skill.version !== '0.0.0' && (
-            <span className={styles.cardVersion}>v{skill.version}</span>
-          )}
-          {skill.sourceLibrarySkillId && (
-            <span className={styles.cardSourceBadge}>From Library</span>
-          )}
-        </div>
-
-        <div className={styles.cardFooter}>
-          <div className={styles.cardInfo}>
-            <span className={styles.cardSize}>{formatSize(skill.size)}</span>
-            <span className={styles.cardDate}>
-              {skill.installedAt ? formatDate(skill.installedAt) : 'Unknown'}
-            </span>
-          </div>
-        </div>
-      </article>
-    ),
-    [handleContextMenu]
-  );
+  const cardActions = {
+    onDelete: handleDeleteSkill,
+    onPull: (skillId: string) => {
+      const skill = skills.find((s) => s.id === skillId);
+      if (skill) handlePullToLibrary(skill);
+    },
+  };
 
   // Render detail panel content
   const renderDetailContent = useCallback(() => {
@@ -307,7 +230,8 @@ export function Global(): React.ReactElement {
           selectedSkillId={selectedSkill?.id}
           onSelect={handleSelectSkill}
           onGetSkillId={(skill) => skill.id}
-          renderCard={renderCard}
+          scope="global"
+          actions={cardActions}
           isLoading={isLoading}
           emptyTitle="No global skills installed"
           emptyText="Global skills are stored in ~/.claude/skills/ and available across all projects"
@@ -348,33 +272,6 @@ export function Global(): React.ReactElement {
           </>
         )}
       </SkillDetailPanel>
-
-      {showContextMenu && (
-        <div
-          className={styles.contextMenu}
-          style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-          role="menu"
-        >
-          <button
-            type="button"
-            className={styles.menuItem}
-            onClick={handleContextMenuPull}
-            role="menuitem"
-          >
-            <ArrowDown size={16} />
-            <span>Pull to Library</span>
-          </button>
-          <button
-            type="button"
-            className={[styles.menuItem, styles.danger].filter(Boolean).join(' ')}
-            onClick={handleContextMenuDelete}
-            role="menuitem"
-          >
-            <Trash size={16} />
-            <span>Delete</span>
-          </button>
-        </div>
-      )}
 
       <PullToLibraryDialog
         isOpen={showPullDialog}
