@@ -1,4 +1,4 @@
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
+use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats, copy_dir_all, is_symlink_dir, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
 use std::fs;
 use std::path::PathBuf;
 
@@ -32,6 +32,7 @@ pub struct GlobalSkill {
     pub has_resources: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_library_skill_id: Option<String>,
+    pub is_symlink: bool,
 }
 
 #[tauri::command]
@@ -61,6 +62,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
                     let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
+                    let is_symlink = is_symlink_dir(&path);
 
                     // Get folder modification time as installed_at
                     let installed_at = fs::metadata(&path)
@@ -87,6 +89,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                         file_count,
                         has_resources: has_resources(&path),
                         source_library_skill_id: None, // TODO: Track deployment source
+                        is_symlink,
                     };
                     skills.push(skill);
                 }
@@ -119,6 +122,7 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                         let (size, file_count) = count_files(&path);
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
                         let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
+                        let is_symlink = is_symlink_dir(&path);
 
                         // Get folder modification time as installed_at
                         let installed_at = fs::metadata(&path)
@@ -145,6 +149,7 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                             file_count,
                             has_resources: has_resources(&path),
                             source_library_skill_id: None,
+                            is_symlink,
                         };
                         return IpcResult::success(skill);
                     }
@@ -185,8 +190,114 @@ pub fn global_delete(id: String) -> IpcResult<()> {
 }
 
 #[tauri::command]
-pub fn global_pull(_id: String) -> IpcResult<()> {
-    // TODO: Implement pull to library
-    // This would copy a skill from global to the library
+pub fn global_pull(id: String) -> IpcResult<()> {
+    let global_path = get_global_skills_path();
+    let library_path = get_library_path();
+
+    // Find the skill in global
+    let source_path = global_path.join(&id);
+    if !source_path.exists() {
+        // Try to find by folder name
+        let mut found_path: Option<PathBuf> = None;
+        if let Ok(entries) = fs::read_dir(&global_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let folder_name = path.file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    if folder_name == id || path.to_string_lossy().contains(&id) {
+                        found_path = Some(path);
+                        break;
+                    }
+                }
+            }
+        }
+
+        let source = match found_path {
+            Some(p) => p,
+            None => return IpcResult::error("E203", &format!("Skill not found in global: {}", id)),
+        };
+
+        let folder_name = source.file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| id.clone());
+
+        // Ensure library directory exists
+        if let Err(e) = fs::create_dir_all(&library_path) {
+            return IpcResult::error("E101", &format!("Failed to create library directory: {}", e));
+        }
+
+        let dest_path = library_path.join(&folder_name);
+
+        // Remove existing if present
+        if dest_path.exists() {
+            if let Err(e) = fs::remove_dir_all(&dest_path) {
+                return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
+            }
+        }
+
+        // Copy to library (handles symlinks properly)
+        if let Err(e) = copy_dir_all(&source, &dest_path) {
+            return IpcResult::error("E105", &format!("Failed to copy skill to library: {}", e));
+        }
+
+        // Update skill metadata
+        let skill_id = generate_id();
+        let imported_at = chrono::Utc::now().to_rfc3339();
+        let mut persisted_metadata = load_skill_metadata();
+        persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
+            id: skill_id,
+            folder_name,
+            group_id: None,
+            category_id: None,
+            imported_at,
+        });
+        if let Err(e) = save_skill_metadata(&persisted_metadata) {
+            eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
+        }
+
+        return IpcResult::success(());
+    }
+
+    // Source exists directly
+    let folder_name = source_path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| id.clone());
+
+    // Ensure library directory exists
+    if let Err(e) = fs::create_dir_all(&library_path) {
+        return IpcResult::error("E101", &format!("Failed to create library directory: {}", e));
+    }
+
+    let dest_path = library_path.join(&folder_name);
+
+    // Remove existing if present
+    if dest_path.exists() {
+        if let Err(e) = fs::remove_dir_all(&dest_path) {
+            return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
+        }
+    }
+
+    // Copy to library (handles symlinks properly)
+    if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        return IpcResult::error("E105", &format!("Failed to copy skill to library: {}", e));
+    }
+
+    // Update skill metadata
+    let skill_id = generate_id();
+    let imported_at = chrono::Utc::now().to_rfc3339();
+    let mut persisted_metadata = load_skill_metadata();
+    persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
+        id: skill_id,
+        folder_name,
+        group_id: None,
+        category_id: None,
+        imported_at,
+    });
+    if let Err(e) = save_skill_metadata(&persisted_metadata) {
+        eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
+    }
+
     IpcResult::success(())
 }

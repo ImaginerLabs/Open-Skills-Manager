@@ -650,6 +650,7 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
         file_count,
         has_resources: has_resources(&dest),
         deployments: vec![],
+        is_symlink: false, // Imported from project, always a copy
     };
 
     // Persist skill metadata
