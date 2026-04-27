@@ -198,15 +198,6 @@ export function CategoryManager({
           <span className={styles.count}>{totalSkillsCount}</span>
         </div>
 
-        {isCreatingCategory && (
-          <InlineEditInput
-            placeholder="Category name"
-            onSubmit={handleCreateCategory}
-            onCancel={() => setIsCreatingCategory(false)}
-            autoFocus
-          />
-        )}
-
         {safeCategories.map((category) => {
           const isExpanded = expandedCategories.has(category.id);
           const isSelected = selectedCategoryId === category.id && !selectedGroupId;
@@ -238,16 +229,6 @@ export function CategoryManager({
 
               {isExpanded && (
                 <div className={styles.groups}>
-                  {isCreatingGroupFor === category.id && (
-                    <InlineEditInput
-                      placeholder="Group name"
-                      onSubmit={(name) => handleCreateGroup(category.id, name)}
-                      onCancel={() => setIsCreatingGroupFor(null)}
-                      autoFocus
-                      indent
-                    />
-                  )}
-
                   {category.groups.map((group) => {
                     const isGroupSelected =
                       selectedCategoryId === category.id && selectedGroupId === group.id;
@@ -283,6 +264,16 @@ export function CategoryManager({
                   })}
 
                   <AddGroupButton onClick={() => setIsCreatingGroupFor(category.id)} />
+
+                  {isCreatingGroupFor === category.id && (
+                    <InlineEditInput
+                      placeholder="Group name"
+                      onSubmit={(name) => handleCreateGroup(category.id, name)}
+                      onCancel={() => setIsCreatingGroupFor(null)}
+                      autoFocus
+                      indent
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -291,6 +282,15 @@ export function CategoryManager({
 
         {safeCategories.length === 0 && !isCreatingCategory && (
           <p className={styles.emptyText}>No categories yet</p>
+        )}
+
+        {isCreatingCategory && (
+          <InlineEditInput
+            placeholder="Category name"
+            onSubmit={handleCreateCategory}
+            onCancel={() => setIsCreatingCategory(false)}
+            autoFocus
+          />
         )}
       </div>
 

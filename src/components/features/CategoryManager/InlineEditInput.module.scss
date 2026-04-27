@@ -1,15 +1,17 @@
 @use '../../../styles/variables' as *;
 
 .inlineInput {
-  flex: 1;
-  padding: 2px var(--space-2);
+  width: calc(100% - var(--space-6));
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-1) var(--space-3);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   font-family: var(--font-sans);
   outline: none;
+  box-sizing: border-box;
 
   .light & {
     background: rgba(0, 0, 0, 0.05);
@@ -21,5 +23,5 @@
 }
 
 .indented {
-  margin-left: var(--space-6);
+  margin-left: var(--space-3);
 }
