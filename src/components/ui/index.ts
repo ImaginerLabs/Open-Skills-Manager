@@ -6,3 +6,4 @@ export { Modal, ModalFooter, type ModalProps } from './Modal/Modal';
 export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Toast, ToastContainer, type ToastProps } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
+export { ViewToggle, type ViewToggleProps } from './ViewToggle';
