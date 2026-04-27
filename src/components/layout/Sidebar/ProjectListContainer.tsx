@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from 'react';
-import { open } from '@tauri-apps/plugin-dialog';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
+import { AddProjectDialog } from '@/components/features/ProjectDialog';
 import { useProjectStore } from '@/stores/projectStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -9,6 +9,7 @@ import { projectService } from '@/services/projectService';
 
 export function ProjectListContainer(): React.ReactElement {
   const navigate = useNavigate();
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const {
     projects,
     selectedProject,
@@ -55,35 +56,27 @@ export function ProjectListContainer(): React.ReactElement {
     [projects, selectProject, navigate]
   );
 
-  const handleAddProject = useCallback(async () => {
+  const handleAddProject = useCallback(async (path: string) => {
+    setLoading(true);
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select Project Directory',
-      });
+      const result = await projectService.add(path);
 
-      if (selected) {
-        // Tauri dialog returns string for single directory selection
-        const path = typeof selected === 'string' ? selected : null;
-        if (!path) return;
-
-        setLoading(true);
-        const result = await projectService.add(path);
-
-        if (result.success) {
-          addProject(result.data);
-          showToast('success', `Project "${result.data.name}" added`);
-        } else {
-          showToast('error', result.error.message);
-        }
-        setLoading(false);
+      if (result.success) {
+        addProject(result.data);
+        showToast('success', `Project "${result.data.name}" added`);
+      } else {
+        showToast('error', result.error.message);
       }
     } catch (e) {
       showToast('error', e instanceof Error ? e.message : 'Failed to add project');
+    } finally {
       setLoading(false);
     }
   }, [addProject, setLoading, showToast]);
+
+  const handleOpenAddDialog = useCallback(() => {
+    setShowAddDialog(true);
+  }, []);
 
   const handleRemoveProject = useCallback(
     (projectId: string) => {
@@ -119,13 +112,21 @@ export function ProjectListContainer(): React.ReactElement {
   );
 
   return (
-    <ProjectList
-      projects={projects}
-      selectedProjectId={selectedProject?.id}
-      onSelectProject={handleSelectProject}
-      onAddProject={handleAddProject}
-      onRemoveProject={handleRemoveProject}
-      isLoading={isLoading}
-    />
+    <>
+      <ProjectList
+        projects={projects}
+        selectedProjectId={selectedProject?.id}
+        onSelectProject={handleSelectProject}
+        onAddProject={handleOpenAddDialog}
+        onRemoveProject={handleRemoveProject}
+        isLoading={isLoading}
+      />
+
+      <AddProjectDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onAdd={handleAddProject}
+      />
+    </>
   );
 }
