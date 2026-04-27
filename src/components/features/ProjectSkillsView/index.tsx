@@ -4,12 +4,10 @@ import { ArrowClockwise, FolderOpen } from '@phosphor-icons/react';
 import { useProjectStore, type ProjectSkill } from '../../../stores/projectStore';
 import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
-import { SkillListLayout, SkillListHeader, SkillList, SkillDetailPanel } from '../SkillList';
+import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
 import { formatDate } from '../../../utils/formatters';
-import { SkillDetailContent } from './SkillDetailContent';
-import { SkillDetailHeader } from './SkillDetailHeader';
-import { SkillDetailActions } from './SkillDetailActions';
+import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './ProjectSkillsView.module.scss';
 
 export function ProjectSkillsView(): React.ReactElement {
@@ -19,6 +17,7 @@ export function ProjectSkillsView(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -73,9 +72,10 @@ export function ProjectSkillsView(): React.ReactElement {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [projectId, refresh]);
 
-  const handleSelectSkill = useCallback(
+  const handleOpenSkillModal = useCallback(
     async (skill: ProjectSkill) => {
       setSelectedSkill(skill);
+      setIsModalOpen(true);
       if (projectId) {
         const result = await getSkill(projectId, skill.id);
         if (result.success && result.data) {
@@ -86,7 +86,8 @@ export function ProjectSkillsView(): React.ReactElement {
     [projectId, getSkill]
   );
 
-  const handleCloseDetail = useCallback(() => {
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
     setSelectedSkill(null);
     setSkillMdContent('');
   }, []);
@@ -94,13 +95,10 @@ export function ProjectSkillsView(): React.ReactElement {
   const handleDeleteSkill = useCallback(
     async (skillId: string) => {
       if (projectId) {
-        const success = await deleteSkill(projectId, skillId);
-        if (success && selectedSkill?.id === skillId) {
-          handleCloseDetail();
-        }
+        await deleteSkill(projectId, skillId);
       }
     },
-    [projectId, deleteSkill, selectedSkill, handleCloseDetail]
+    [projectId, deleteSkill]
   );
 
   const handlePullSkill = useCallback(
@@ -198,11 +196,11 @@ export function ProjectSkillsView(): React.ReactElement {
         </div>
       )}
 
-      <div className={[styles.gridContainer, selectedSkill && styles.withDetail].filter(Boolean).join(' ')}>
+      <div className={styles.gridContainer}>
         <SkillList
           skills={filteredSkills}
-          selectedSkillId={selectedSkill?.id}
-          onSelect={handleSelectSkill}
+          selectedSkillId={undefined}
+          onSelect={() => {}}
           onGetSkillId={(skill) => skill.id}
           scope="project"
           actions={cardActions}
@@ -210,36 +208,30 @@ export function ProjectSkillsView(): React.ReactElement {
           emptyTitle="No skills in this project"
           emptyText="This project has no skills installed in .claude/skills/"
           hasSkills={hasSkills}
+          onSkillClick={handleOpenSkillModal}
         />
       </div>
 
-      <SkillDetailPanel
-        isOpen={selectedSkill !== null}
-        onClose={handleCloseDetail}
-      >
-        {selectedSkill && (
-          <>
-            <SkillDetailHeader
-              skillName={selectedSkill.name}
-              onClose={handleCloseDetail}
-              styles={styles}
-            />
-            <div className={styles.detailContent}>
-              <SkillDetailContent
-                skill={selectedSkill}
-                skillMdContent={skillMdContent}
-                styles={styles}
-              />
-            </div>
-            <SkillDetailActions
-              skill={selectedSkill}
-              onDelete={handleDeleteSkill}
-              onPull={handlePullSkill}
-              styles={styles}
-            />
-          </>
-        )}
-      </SkillDetailPanel>
+      <SkillPreviewModal
+        skill={
+          selectedSkill
+            ? ({
+                id: selectedSkill.id,
+                name: selectedSkill.name,
+                description: selectedSkill.description,
+                size: selectedSkill.size,
+                fileCount: selectedSkill.fileCount,
+                date: selectedSkill.installedAt?.toLocaleDateString(),
+                sourceLibrarySkillId: selectedSkill.sourceLibrarySkillId,
+              } satisfies SkillPreviewData)
+            : null
+        }
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        skillMdContent={skillMdContent}
+        onDelete={handleDeleteSkill}
+        onPull={handlePullSkill}
+      />
     </SkillListLayout>
   );
 }
