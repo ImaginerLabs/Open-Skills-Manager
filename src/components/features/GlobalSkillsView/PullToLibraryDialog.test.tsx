@@ -6,12 +6,20 @@ import type { GlobalSkill } from '../../../stores/globalStore';
 vi.mock('../../../services/libraryService', () => ({
   libraryService: {
     import: vi.fn(),
+    list: vi.fn(),
   },
 }));
 
 vi.mock('../../../stores/uiStore', () => ({
   useUIStore: () => ({
     showToast: vi.fn(),
+  }),
+}));
+
+vi.mock('../../../stores/libraryStore', () => ({
+  useLibraryStore: () => ({
+    setSkills: vi.fn(),
+    setLoading: vi.fn(),
   }),
 }));
 
@@ -66,7 +74,9 @@ describe('PullToLibraryDialog', () => {
     const { libraryService } = await import('../../../services/libraryService');
     const onComplete = vi.fn();
     const mockImport = vi.mocked(libraryService.import);
+    const mockList = vi.mocked(libraryService.list);
     mockImport.mockResolvedValueOnce({ success: true, data: { id: 'new-id', name: 'Test Skill' } as never });
+    mockList.mockResolvedValueOnce({ success: true, data: [] });
 
     render(
       <PullToLibraryDialog isOpen={true} skill={mockSkill} onClose={vi.fn()} onComplete={onComplete} />
@@ -86,7 +96,9 @@ describe('PullToLibraryDialog', () => {
   it('shows pulling state during operation', async () => {
     const { libraryService } = await import('../../../services/libraryService');
     const mockImport = vi.mocked(libraryService.import);
+    const mockList = vi.mocked(libraryService.list);
     mockImport.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    mockList.mockResolvedValueOnce({ success: true, data: [] });
 
     render(
       <PullToLibraryDialog isOpen={true} skill={mockSkill} onClose={vi.fn()} onComplete={vi.fn()} />
@@ -100,7 +112,9 @@ describe('PullToLibraryDialog', () => {
   it('disables buttons during pulling', async () => {
     const { libraryService } = await import('../../../services/libraryService');
     const mockImport = vi.mocked(libraryService.import);
+    const mockList = vi.mocked(libraryService.list);
     mockImport.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    mockList.mockResolvedValueOnce({ success: true, data: [] });
 
     render(
       <PullToLibraryDialog isOpen={true} skill={mockSkill} onClose={vi.fn()} onComplete={vi.fn()} />

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { FolderOpen, FileArchive, X, Trash, Warning } from '@phosphor-icons/react';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
@@ -55,7 +55,10 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
   const addSkill = useLibraryStore((state) => state?.addSkill);
   const removeSkill = useLibraryStore((state) => state?.removeSkill);
   const skills = useLibraryStore((state) => state?.skills);
-  const existingSkills = Array.isArray(skills) ? skills.filter((s): s is LibrarySkill => s != null && s.folderName != null) : [];
+  const existingSkills = useMemo(
+    () => (Array.isArray(skills) ? skills.filter((s): s is LibrarySkill => s != null && s.folderName != null) : []),
+    [skills]
+  );
 
   // Tauri native drag-drop event listener
   useEffect(() => {

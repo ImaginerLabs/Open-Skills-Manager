@@ -35,11 +35,12 @@ export function useGlobalFilters(skills: GlobalSkill[]) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'date':
+        case 'date': {
           const dateA = a.installedAt ? new Date(a.installedAt).getTime() : 0;
           const dateB = b.installedAt ? new Date(b.installedAt).getTime() : 0;
           comparison = dateA - dateB; // Oldest to newest
           break;
+        }
         case 'size':
           comparison = a.size - b.size;
           break;

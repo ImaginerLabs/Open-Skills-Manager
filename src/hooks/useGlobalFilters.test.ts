@@ -182,6 +182,7 @@ describe('useGlobalFilters', () => {
 
   it('handles skills without installedAt', () => {
     const skillsNoDate: GlobalSkill[] = mockSkills.map((s) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { installedAt: _, ...rest } = s;
       return rest;
     });
