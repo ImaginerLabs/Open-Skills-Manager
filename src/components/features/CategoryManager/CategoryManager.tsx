@@ -172,9 +172,8 @@ export function CategoryManager({
           role="button"
           tabIndex={0}
         >
-          <span className={styles.expandIcon}>
-            <FolderSimple size={16} className={styles.icon} />
-          </span>
+          <span className={styles.expandIcon} />
+          <FolderSimple size={16} className={styles.icon} />
           <span className={styles.name}>All</span>
           <span className={styles.count}>{totalSkillsCount}</span>
         </div>
@@ -202,10 +201,6 @@ export function CategoryManager({
                 onEditSubmit={handleEditSubmit}
                 onEditCancel={() => setEditing(null)}
                 onEditClick={(e) => e.stopPropagation()}
-                onMenuClick={(e) => {
-                  e.stopPropagation();
-                  handleContextMenu(e, 'category', category.id);
-                }}
               />
 
               {isExpanded && (
@@ -236,10 +231,6 @@ export function CategoryManager({
                         onEditSubmit={handleEditSubmit}
                         onEditCancel={() => setEditing(null)}
                         onEditClick={(e) => e.stopPropagation()}
-                        onMenuClick={(e) => {
-                          e.stopPropagation();
-                          handleContextMenu(e, 'group', category.id, group.id);
-                        }}
                       />
                     );
                   })}

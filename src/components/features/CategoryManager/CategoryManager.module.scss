@@ -189,6 +189,15 @@
   }
 }
 
+.groupSpacer {
+  // Align with parent category name position
+  // categoryItem: expandIcon(12px) + gap(8px) + icon(16px) = 36px
+  // groups padding-left: 24px
+  // spacer = 36 - 24 = 12px
+  width: 12px;
+  flex-shrink: 0;
+}
+
 .addGroupButton {
   display: flex;
   align-items: center;

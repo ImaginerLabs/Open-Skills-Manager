@@ -1,4 +1,4 @@
-import { FolderSimple, FolderOpen, CaretRight, CaretDown, DotsThree, Plus } from '@phosphor-icons/react';
+import { FolderSimple, FolderOpen, CaretRight, CaretDown, Plus } from '@phosphor-icons/react';
 import type { Category, Group } from '../../../stores/libraryStore';
 import { InlineEditInput } from './InlineEditInput';
 import styles from './CategoryManager.module.scss';
@@ -18,7 +18,6 @@ interface CategoryItemProps {
   onEditSubmit: () => void;
   onEditCancel: () => void;
   onEditClick: (e: React.MouseEvent) => void;
-  onMenuClick: (e: React.MouseEvent) => void;
 }
 
 export function CategoryItem({
@@ -36,7 +35,6 @@ export function CategoryItem({
   onEditSubmit,
   onEditCancel,
   onEditClick,
-  onMenuClick,
 }: CategoryItemProps): React.ReactElement {
   return (
     <div
@@ -77,14 +75,6 @@ export function CategoryItem({
           <span className={styles.count}>{category.skillCount}</span>
         </>
       )}
-      <button
-        type="button"
-        className={styles.menuButton}
-        onClick={onMenuClick}
-        aria-label="Category options"
-      >
-        <DotsThree size={14} weight="bold" />
-      </button>
     </div>
   );
 }
@@ -103,7 +93,6 @@ interface GroupItemProps {
   onEditSubmit: () => void;
   onEditCancel: () => void;
   onEditClick: (e: React.MouseEvent) => void;
-  onMenuClick: (e: React.MouseEvent) => void;
 }
 
 export function GroupItem({
@@ -120,7 +109,6 @@ export function GroupItem({
   onEditSubmit,
   onEditCancel,
   onEditClick,
-  onMenuClick,
 }: GroupItemProps): React.ReactElement {
   return (
     <div
@@ -137,6 +125,8 @@ export function GroupItem({
       role="button"
       tabIndex={0}
     >
+      {/* Spacer to align count with parent category */}
+      <span className={styles.groupSpacer} />
       {isEditing ? (
         <InlineEditInput
           value={editingValue}
@@ -152,14 +142,6 @@ export function GroupItem({
           <span className={styles.count}>{group.skillCount}</span>
         </>
       )}
-      <button
-        type="button"
-        className={styles.menuButton}
-        onClick={onMenuClick}
-        aria-label="Group options"
-      >
-        <DotsThree size={12} weight="bold" />
-      </button>
     </div>
   );
 }
