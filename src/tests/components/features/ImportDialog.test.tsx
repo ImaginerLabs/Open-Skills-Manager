@@ -141,6 +141,7 @@ describe('ImportDialog', () => {
         fileCount: 1,
         hasResources: false,
         deployments: [],
+        isSymlink: false,
       },
     });
   });

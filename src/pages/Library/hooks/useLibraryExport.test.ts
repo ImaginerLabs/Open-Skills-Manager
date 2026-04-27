@@ -28,6 +28,7 @@ describe('useLibraryExport', () => {
     fileCount: 5,
     hasResources: false,
     deployments: [],
+    isSymlink: false,
   };
 
   const showToastSpy = vi.spyOn(useUIStore.getState(), 'showToast');

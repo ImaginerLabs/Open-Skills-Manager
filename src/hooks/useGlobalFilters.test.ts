@@ -18,6 +18,7 @@ const mockSkills: GlobalSkill[] = [
     size: 1000,
     fileCount: 1,
     hasResources: false,
+    isSymlink: false,
   },
   {
     id: 'skill-2',
@@ -33,6 +34,7 @@ const mockSkills: GlobalSkill[] = [
     size: 5000,
     fileCount: 2,
     hasResources: false,
+    isSymlink: false,
   },
   {
     id: 'skill-3',
@@ -48,6 +50,7 @@ const mockSkills: GlobalSkill[] = [
     size: 10000,
     fileCount: 3,
     hasResources: false,
+    isSymlink: false,
   },
 ];
 

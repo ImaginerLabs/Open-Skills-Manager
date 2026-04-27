@@ -26,6 +26,7 @@ describe('useBatchDeploy', () => {
       fileCount: 5,
       hasResources: false,
       deployments: [],
+      isSymlink: false,
     },
     {
       id: 'skill-2',
@@ -42,6 +43,7 @@ describe('useBatchDeploy', () => {
       fileCount: 3,
       hasResources: false,
       deployments: [],
+      isSymlink: false,
     },
     {
       id: 'skill-3',
@@ -58,6 +60,7 @@ describe('useBatchDeploy', () => {
       fileCount: 2,
       hasResources: false,
       deployments: [],
+      isSymlink: false,
     },
   ];
 

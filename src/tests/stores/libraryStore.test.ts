@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useLibraryStore } from '@/stores/libraryStore';
-import type { Category, Group, LibrarySkill } from '@/stores/libraryStore';
+import type { Group, Category, LibrarySkill } from '@/stores/libraryStore';
 
 describe('libraryStore', () => {
   beforeEach(() => {
     // Reset store to initial state
     useLibraryStore.setState({
       skills: [],
-      categories: [],
       groups: [],
       selectedSkill: null,
       isLoading: false,
@@ -158,112 +157,104 @@ describe('libraryStore', () => {
     });
   });
 
-  describe('category state management', () => {
-    const mockCategory: Category = {
-      id: 'cat-1',
+  describe('group state management', () => {
+    const mockGroup: Group = {
+      id: 'grp-1',
       name: 'Development',
       icon: 'code',
       color: '#4A90D9',
-      groups: [],
+      categories: [],
       skillCount: 0,
       isCustom: true,
       createdAt: new Date(),
     };
 
-    it('should set categories', () => {
-      const { setCategories } = useLibraryStore.getState();
-      setCategories([mockCategory]);
+    it('should set groups', () => {
+      const { setGroups } = useLibraryStore.getState();
+      setGroups([mockGroup]);
 
       const state = useLibraryStore.getState();
-      expect(state.categories).toHaveLength(1);
-      expect(state.categories[0]?.name).toBe('Development');
+      expect(state.groups).toHaveLength(1);
+      expect(state.groups[0]?.name).toBe('Development');
     });
 
-    it('should add a category', () => {
-      const { addCategory } = useLibraryStore.getState();
-      addCategory(mockCategory);
+    it('should add a group', () => {
+      const { addGroup } = useLibraryStore.getState();
+      addGroup(mockGroup);
 
       const state = useLibraryStore.getState();
-      expect(state.categories).toHaveLength(1);
-      expect(state.categories[0]?.id).toBe('cat-1');
+      expect(state.groups).toHaveLength(1);
+      expect(state.groups[0]?.id).toBe('grp-1');
     });
 
-    it('should update a category', () => {
-      const { addCategory, updateCategory } = useLibraryStore.getState();
-      addCategory(mockCategory);
-      updateCategory('cat-1', { name: 'Dev Tools', color: '#FF5733' });
+    it('should update a group', () => {
+      const { addGroup, updateGroup } = useLibraryStore.getState();
+      addGroup(mockGroup);
+      updateGroup('grp-1', { name: 'Dev Tools', color: '#FF5733' });
 
       const state = useLibraryStore.getState();
-      expect(state.categories[0]?.name).toBe('Dev Tools');
-      expect(state.categories[0]?.color).toBe('#FF5733');
-      expect(state.categories[0]?.icon).toBe('code');
+      expect(state.groups[0]?.name).toBe('Dev Tools');
+      expect(state.groups[0]?.color).toBe('#FF5733');
+      expect(state.groups[0]?.icon).toBe('code');
     });
 
-    it('should remove a category', () => {
-      const { addCategory, removeCategory } = useLibraryStore.getState();
-      addCategory(mockCategory);
-      removeCategory('cat-1');
+    it('should remove a group', () => {
+      const { addGroup, removeGroup } = useLibraryStore.getState();
+      addGroup(mockGroup);
+      removeGroup('grp-1');
 
       const state = useLibraryStore.getState();
-      expect(state.categories).toHaveLength(0);
+      expect(state.groups).toHaveLength(0);
     });
   });
 
-  describe('group state management', () => {
-    const mockGroup: Group = {
-      id: 'grp-1',
-      categoryId: 'cat-1',
+  describe('category state management', () => {
+    const mockCategory: Category = {
+      id: 'cat-1',
+      groupId: 'grp-1',
       name: 'Frontend',
       skillCount: 0,
       isCustom: true,
       createdAt: new Date(),
     };
 
-    const mockCategory: Category = {
-      id: 'cat-1',
+    const mockGroup: Group = {
+      id: 'grp-1',
       name: 'Development',
-      groups: [],
+      categories: [],
       skillCount: 0,
       isCustom: true,
       createdAt: new Date(),
     };
 
-    it('should add a group to category', () => {
-      const { setCategories, addGroup } = useLibraryStore.getState();
-      setCategories([mockCategory]);
-      addGroup('cat-1', mockGroup);
-
-      const state = useLibraryStore.getState();
-      expect(state.categories[0]?.groups).toHaveLength(1);
-      expect(state.categories[0]?.groups[0]?.name).toBe('Frontend');
-    });
-
-    it('should update a group', () => {
-      const { setCategories, addGroup, updateGroup } = useLibraryStore.getState();
-      setCategories([mockCategory]);
-      addGroup('cat-1', mockGroup);
-      updateGroup('cat-1', 'grp-1', { name: 'Backend' });
-
-      const state = useLibraryStore.getState();
-      expect(state.categories[0]?.groups[0]?.name).toBe('Backend');
-    });
-
-    it('should remove a group', () => {
-      const { setCategories, addGroup, removeGroup } = useLibraryStore.getState();
-      setCategories([mockCategory]);
-      addGroup('cat-1', mockGroup);
-      removeGroup('cat-1', 'grp-1');
-
-      const state = useLibraryStore.getState();
-      expect(state.categories[0]?.groups).toHaveLength(0);
-    });
-
-    it('should set groups directly', () => {
-      const { setGroups } = useLibraryStore.getState();
+    it('should add a category to group', () => {
+      const { setGroups, addCategory } = useLibraryStore.getState();
       setGroups([mockGroup]);
+      addCategory('grp-1', mockCategory);
 
       const state = useLibraryStore.getState();
-      expect(state.groups).toHaveLength(1);
+      expect(state.groups[0]?.categories).toHaveLength(1);
+      expect(state.groups[0]?.categories[0]?.name).toBe('Frontend');
+    });
+
+    it('should update a category', () => {
+      const { setGroups, addCategory, updateCategory } = useLibraryStore.getState();
+      setGroups([mockGroup]);
+      addCategory('grp-1', mockCategory);
+      updateCategory('grp-1', 'cat-1', { name: 'Backend' });
+
+      const state = useLibraryStore.getState();
+      expect(state.groups[0]?.categories[0]?.name).toBe('Backend');
+    });
+
+    it('should remove a category', () => {
+      const { setGroups, addCategory, removeCategory } = useLibraryStore.getState();
+      setGroups([mockGroup]);
+      addCategory('grp-1', mockCategory);
+      removeCategory('grp-1', 'cat-1');
+
+      const state = useLibraryStore.getState();
+      expect(state.groups[0]?.categories).toHaveLength(0);
     });
   });
 
@@ -283,6 +274,7 @@ describe('libraryStore', () => {
       fileCount: 5,
       hasResources: false,
       deployments: [],
+      isSymlink: false,
     };
 
     it('should set skills', () => {

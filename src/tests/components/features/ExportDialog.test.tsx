@@ -56,6 +56,7 @@ const mockSkill: LibrarySkill = {
   fileCount: 5,
   hasResources: false,
   deployments: [],
+  isSymlink: false,
 };
 
 const mockSkills: LibrarySkill[] = [
@@ -75,6 +76,7 @@ const mockSkills: LibrarySkill[] = [
     fileCount: 10,
     hasResources: true,
     deployments: [],
+    isSymlink: false,
   },
   {
     id: 'skill-3',
@@ -91,6 +93,7 @@ const mockSkills: LibrarySkill[] = [
     fileCount: 3,
     hasResources: false,
     deployments: [],
+    isSymlink: false,
   },
 ];
 
