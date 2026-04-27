@@ -21,6 +21,7 @@ export interface ProjectSkill {
   description: string;
   path: string;
   skillMdPath: string;
+  skillMdContent?: string;
   projectId: string;
   installedAt?: Date;
   size: number;

@@ -128,7 +128,7 @@ fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectS
                     let (size, file_count) = count_files(&path);
 
                     let skill = ProjectSkill {
-                        id: format!("pskill-{}", uuid::Uuid::new_v4()),
+                        id: folder_name.clone(),
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
                         folder_name,
                         version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
@@ -974,7 +974,7 @@ mod tests {
         let result = project_skills(project_id.clone());
         let skill = &result.data.unwrap()[0];
 
-        assert!(skill.id.starts_with("pskill-"));
+        assert_eq!(skill.id, "complete-skill");
         assert_eq!(skill.folder_name, "complete-skill");
         assert_eq!(skill.version, "1.0.0");
         assert_eq!(skill.description, "Test skill");
