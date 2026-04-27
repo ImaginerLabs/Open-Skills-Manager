@@ -10,6 +10,7 @@ export interface Project {
   skillCount: number;
   addedAt: Date;
   lastAccessed?: Date;
+  lastScannedAt?: Date;
 }
 
 export interface ProjectSkill {

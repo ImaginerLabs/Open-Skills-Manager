@@ -49,6 +49,9 @@ pub fn run() {
             project::project_remove,
             project::project_skills,
             project::project_refresh,
+            project::project_skill_get,
+            project::project_skill_delete,
+            project::project_skill_pull,
             // Deploy commands
             deploy::deploy_to_global,
             deploy::deploy_to_project,

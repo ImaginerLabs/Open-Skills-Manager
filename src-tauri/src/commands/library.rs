@@ -168,7 +168,7 @@ pub fn load_skill_metadata() -> std::collections::HashMap<String, SkillMetadataE
     }
 }
 
-fn save_skill_metadata(metadata: &std::collections::HashMap<String, SkillMetadataEntry>) -> Result<(), String> {
+pub fn save_skill_metadata(metadata: &std::collections::HashMap<String, SkillMetadataEntry>) -> Result<(), String> {
     let path = get_skill_metadata_path();
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
