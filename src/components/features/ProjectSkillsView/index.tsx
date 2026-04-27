@@ -72,7 +72,7 @@ export function ProjectSkillsView(): React.ReactElement {
       if (projectId) {
         const result = await getSkill(projectId, skill.id);
         if (result.success && result.data) {
-          setSkillMdContent(result.data.skillMdPath ?? '');
+          setSkillMdContent(result.data.skillMdContent ?? '');
         }
       }
     },
