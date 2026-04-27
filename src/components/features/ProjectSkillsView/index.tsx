@@ -7,11 +7,6 @@ import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { SkillListLayout, SkillListHeader, SkillList, SkillDetailPanel } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
 import { formatDate } from '../../../utils/formatters';
-import {
-  ProjectSkillCard,
-  SkillContextMenu,
-  useProjectSkillContextMenu,
-} from './ProjectSkillCard';
 import { SkillDetailContent } from './SkillDetailContent';
 import { SkillDetailHeader } from './SkillDetailHeader';
 import { SkillDetailActions } from './SkillDetailActions';
@@ -24,14 +19,6 @@ export function ProjectSkillsView(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
-
-  const {
-    showContextMenu,
-    contextMenuPos,
-    contextSkill,
-    handleContextMenu,
-    closeContextMenu,
-  } = useProjectSkillContextMenu();
 
   const { isRefreshing, refreshingProjectId, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
     projectId,
@@ -129,20 +116,6 @@ export function ProjectSkillsView(): React.ReactElement {
     }
   }, [projectId, refresh]);
 
-  const handleContextMenuDelete = useCallback(() => {
-    closeContextMenu();
-    if (contextSkill) {
-      handleDeleteSkill(contextSkill.id);
-    }
-  }, [contextSkill, handleDeleteSkill, closeContextMenu]);
-
-  const handleContextMenuPull = useCallback(() => {
-    closeContextMenu();
-    if (contextSkill) {
-      handlePullSkill(contextSkill.id);
-    }
-  }, [contextSkill, handlePullSkill, closeContextMenu]);
-
   // Filter skills by search query
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return sortedSkills;
@@ -157,18 +130,10 @@ export function ProjectSkillsView(): React.ReactElement {
 
   const hasSkills = skills.length > 0;
 
-  // Render card for SkillList
-  const renderCard = useCallback(
-    (skill: ProjectSkill, isSelected: boolean): React.ReactNode => (
-      <ProjectSkillCard
-        skill={skill}
-        isSelected={isSelected}
-        onContextMenu={handleContextMenu}
-        styles={styles}
-      />
-    ),
-    [handleContextMenu]
-  );
+  const cardActions = {
+    onDelete: handleDeleteSkill,
+    onPull: handlePullSkill,
+  };
 
   if (!project) {
     return (
@@ -240,7 +205,8 @@ export function ProjectSkillsView(): React.ReactElement {
           selectedSkillId={selectedSkill?.id}
           onSelect={handleSelectSkill}
           onGetSkillId={(skill) => skill.id}
-          renderCard={renderCard}
+          scope="project"
+          actions={cardActions}
           isLoading={isRefreshing && skills.length === 0}
           emptyTitle="No skills in this project"
           emptyText="This project has no skills installed in .claude/skills/"
@@ -275,16 +241,6 @@ export function ProjectSkillsView(): React.ReactElement {
           </>
         )}
       </SkillDetailPanel>
-
-      {showContextMenu && (
-        <SkillContextMenu
-          isOpen={showContextMenu}
-          position={contextMenuPos}
-          onDelete={handleContextMenuDelete}
-          onPull={handleContextMenuPull}
-          styles={styles}
-        />
-      )}
     </SkillListLayout>
   );
 }
