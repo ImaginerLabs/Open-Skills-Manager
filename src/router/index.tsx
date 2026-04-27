@@ -5,6 +5,7 @@ import { Global } from '../pages/Global/Global';
 import { Settings } from '../pages/Settings/Settings';
 import { ProjectSkillsView } from '../components/features/ProjectSkillsView';
 import { ToastContainer, ConfirmDialog } from '../components/ui';
+import { useThemeEffect } from '../hooks/useThemeEffect';
 
 // Placeholder pages - will be implemented in later epics
 function SkillDetailPage(): React.ReactElement {
@@ -16,6 +17,9 @@ function ProjectsPage(): React.ReactElement {
 }
 
 function RootLayout(): React.ReactElement {
+  // Apply theme based on settings
+  useThemeEffect();
+
   return (
     <>
       <MainLayout />
