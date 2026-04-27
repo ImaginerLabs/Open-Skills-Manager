@@ -33,7 +33,7 @@ const mockSkill: GlobalSkill = {
   skillMdPath: '/Users/test/.claude/skills/test-skill/SKILL.md',
   skillMdLines: 50,
   skillMdChars: 1200,
-  installedAt: new Date('2024-01-01'),
+  installedAt: '2024-01-01T00:00:00Z',
   size: 10240,
   fileCount: 5,
   hasResources: false,
