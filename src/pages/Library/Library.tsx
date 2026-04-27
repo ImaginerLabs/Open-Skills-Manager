@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FixedSizeGrid as Grid } from 'react-window';
-import { Plus, FolderOpen, MagnifyingGlass, TextAa, Calendar, Database, ArrowsDownUp } from '@phosphor-icons/react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
 import { SkillCard } from '../../components/features/SkillCard';
 import { SkillDetail } from '../../components/features/SkillDetail';
-import { SkillListSkeleton } from '../../components/common/Skeletons/SkillListSkeleton';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog, type ExportFormat } from '../../components/features/ExportDialog';
@@ -13,13 +11,13 @@ import { DeployDialog } from '../../components/features/DeployDialog';
 import { libraryService } from '../../services/libraryService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useUIStore } from '../../stores/uiStore';
-import { SkillCell } from './SkillCell';
+import {
+  SkillListLayout,
+  SkillListHeader,
+  SkillList,
+  SkillDetailPanel,
+} from '../../components/features/SkillList';
 import styles from './Library.module.scss';
-
-const CARD_WIDTH = 280;
-const CARD_HEIGHT = 160;
-const GAP = 16;
-const SIDEBAR_WIDTH = 420;
 
 export function Library(): React.ReactElement {
   const {
@@ -49,8 +47,6 @@ export function Library(): React.ReactElement {
   const { showToast } = useUIStore();
 
   const [skillMdContent, setSkillMdContent] = useState<string>('');
-  const [containerWidth, setContainerWidth] = useState(1200);
-  const [containerHeight, setContainerHeight] = useState(800);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showImportProgress, setShowImportProgress] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -58,8 +54,6 @@ export function Library(): React.ReactElement {
   const [showExportProgress, setShowExportProgress] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
-
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     searchQuery,
@@ -90,28 +84,6 @@ export function Library(): React.ReactElement {
 
     loadSkills();
   }, [setSkills, setLoading, setError]);
-
-  useEffect(() => {
-    const updateDimensions = () => {
-      const el = document.querySelector(`.${styles.gridContainer}`);
-      if (el) {
-        setContainerWidth(el.clientWidth);
-        setContainerHeight(el.clientHeight);
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
-
-  const columnCount = useMemo(() => {
-    return Math.max(1, Math.floor((containerWidth + GAP) / (CARD_WIDTH + GAP)));
-  }, [containerWidth]);
-
-  const rowCount = useMemo(() => {
-    return Math.ceil(filteredSkills.length / columnCount);
-  }, [filteredSkills.length, columnCount]);
 
   const handleSelectSkill = useCallback(
     async (skill: LibrarySkill) => {
@@ -176,13 +148,11 @@ export function Library(): React.ReactElement {
 
     try {
       if (format === 'zip' && skillsToExport.length > 1) {
-        // Batch export for multiple skills
         const ids = skillsToExport.map((s) => s.id);
         const firstSkill = skillsToExport[0];
         updateExportProgress(1, firstSkill?.name ?? 'Unknown');
         const result = await libraryService.exportBatch(ids, 'skills-export.zip');
         if (result === null) {
-          // User cancelled save dialog
           setShowExportProgress(false);
           resetExport();
           return;
@@ -193,13 +163,11 @@ export function Library(): React.ReactElement {
         const lastSkill = skillsToExport[skillsToExport.length - 1];
         updateExportProgress(skillsToExport.length, lastSkill?.name ?? 'Unknown');
       } else {
-        // Single export or folder format
         for (let i = 0; i < skillsToExport.length; i++) {
           const skill = skillsToExport[i]!;
           updateExportProgress(i + 1, skill.name);
           const result = await libraryService.export(skill.id, format, skill.name);
           if (result === null) {
-            // User cancelled save dialog
             setShowExportProgress(false);
             resetExport();
             return;
@@ -244,7 +212,6 @@ export function Library(): React.ReactElement {
     const failedItems: Array<{ name: string; error: string; code: string }> = [];
 
     for (let i = 0; i < paths.length; i++) {
-      // Check for cancellation
       const currentProgress = useLibraryStore.getState().importProgress;
       if (currentProgress.status === 'cancelled') {
         break;
@@ -276,7 +243,6 @@ export function Library(): React.ReactElement {
       }
     }
 
-    // Check final status to determine how to complete
     const finalProgress = useLibraryStore.getState().importProgress;
     const wasCancelled = finalProgress.status === 'cancelled';
 
@@ -295,10 +261,6 @@ export function Library(): React.ReactElement {
   }, [cancelImport]);
 
   const handleRetryFailed = useCallback(async (_failedItems: Array<{ name: string; error: string; code: string }>) => {
-    // Map failed items back to paths (using the name as folder path hint)
-    // Note: We need to re-import from the original paths, but we only have names here
-    // For retry, we'll need to re-open the import dialog or store original paths
-    // For now, we show the import dialog again for the user to select the failed items
     setShowImportProgress(false);
     setShowImportDialog(true);
   }, []);
@@ -307,66 +269,40 @@ export function Library(): React.ReactElement {
     setShowImportProgress(false);
   }, []);
 
-  const isEmpty = filteredSkills.length === 0 && !isLoading;
+  const renderSkillCard = useCallback(
+    (skill: LibrarySkill, isSelected: boolean) => (
+      <SkillCard
+        skill={skill}
+        isSelected={isSelected}
+        onSelect={handleSelectSkill}
+        onDelete={handleDeleteSkill}
+        onExport={handleExportSkill}
+        onDeploy={handleDeploySkill}
+      />
+    ),
+    [handleSelectSkill, handleDeleteSkill, handleExportSkill, handleDeploySkill]
+  );
+
   const hasSkills = skills.length > 0;
-  const effectiveWidth = selectedSkill ? containerWidth - SIDEBAR_WIDTH : containerWidth;
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleSection}>
-          <h1 className={styles.title}>Library</h1>
-          <span className={styles.count}>{skills.length} skills</span>
-        </div>
-        <div className={styles.actions}>
-          <div className={styles.searchWrapper}>
-            <MagnifyingGlass size={16} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Filter skills..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.searchInput}
-            />
-          </div>
-          <button
-            type="button"
-            className={styles.sortButton}
-            onClick={toggleSortDirection}
-            title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
-          >
-            <ArrowsDownUp size={16} />
-          </button>
-          <button
-            type="button"
-            className={[styles.sortOptionButton, sortBy === 'name' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setSortBy('name')}
-            title="Sort by name"
-          >
-            <TextAa size={16} />
-          </button>
-          <button
-            type="button"
-            className={[styles.sortOptionButton, sortBy === 'date' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setSortBy('date')}
-            title="Sort by date"
-          >
-            <Calendar size={16} />
-          </button>
-          <button
-            type="button"
-            className={[styles.sortOptionButton, sortBy === 'size' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setSortBy('size')}
-            title="Sort by size"
-          >
-            <Database size={16} />
-          </button>
+    <SkillListLayout className={styles.page}>
+      <SkillListHeader
+        title="Library"
+        count={skills.length}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        sortDirection={sortDirection}
+        onToggleSortDirection={toggleSortDirection}
+        actions={
           <button type="button" className={styles.importButton} onClick={handleOpenImport}>
             <Plus size={18} />
             <span>Import</span>
           </button>
-        </div>
-      </header>
+        }
+      />
 
       {error && (
         <div className={styles.error}>
@@ -374,83 +310,31 @@ export function Library(): React.ReactElement {
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        className={[styles.gridContainer, selectedSkill && styles.withDetail].filter(Boolean).join(' ')}
-      >
-        {isLoading ? (
-          <SkillListSkeleton count={12} />
-        ) : isEmpty ? (
-          <div className={styles.empty}>
-            <FolderOpen size={48} weight="thin" className={styles.emptyIcon} />
-            {hasSkills ? (
-              <>
-                <h2 className={styles.emptyTitle}>No matching skills</h2>
-                <p className={styles.emptyText}>
-                  Try adjusting your search or filters
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className={styles.emptyTitle}>Your library is empty</h2>
-                <p className={styles.emptyText}>
-                  Import skills from folders or zip files to get started
-                </p>
-                <button type="button" className={styles.importButton} onClick={handleOpenImport}>
-                  <Plus size={18} />
-                  <span>Import your first skill</span>
-                </button>
-              </>
-            )}
-          </div>
-        ) : filteredSkills.length > 100 ? (
-          <Grid
-            columnCount={columnCount}
-            columnWidth={CARD_WIDTH + GAP}
-            height={containerHeight}
-            rowCount={rowCount}
-            rowHeight={CARD_HEIGHT + GAP}
-            width={effectiveWidth}
-          >
-            {(props) => (
-              <SkillCell
-                {...props}
-                filteredSkills={filteredSkills}
-                columnCount={columnCount}
-                selectedSkillId={selectedSkill?.id}
-                onSelect={handleSelectSkill}
-                onDelete={handleDeleteSkill}
-                onExport={handleExportSkill}
-                onDeploy={handleDeploySkill}
-              />
-            )}
-          </Grid>
-        ) : (
-          <div className={styles.grid}>
-            {filteredSkills.map((skill) => (
-              <SkillCard
-                key={skill.id}
-                skill={skill}
-                isSelected={selectedSkill?.id === skill.id}
-                onSelect={handleSelectSkill}
-                onDelete={handleDeleteSkill}
-                onExport={handleExportSkill}
-                onDeploy={handleDeploySkill}
-              />
-            ))}
-          </div>
-        )}
+      <div className={styles.listContainer}>
+        <SkillList
+          skills={filteredSkills}
+          selectedSkillId={selectedSkill?.id}
+          onSelect={handleSelectSkill}
+          onGetSkillId={(skill) => skill.id}
+          renderCard={renderSkillCard}
+          isLoading={isLoading}
+          emptyTitle="Your library is empty"
+          emptyText="Import skills from folders or zip files to get started"
+          hasSkills={hasSkills}
+        />
       </div>
 
-      {selectedSkill && (
-        <SkillDetail
-          skill={selectedSkill}
-          skillMdContent={skillMdContent}
-          onClose={handleCloseDetail}
-          onDeploy={handleDeploySkill}
-          onExport={handleExportSkill}
-        />
-      )}
+      <SkillDetailPanel isOpen={selectedSkill !== null} onClose={handleCloseDetail}>
+        {selectedSkill && (
+          <SkillDetail
+            skill={selectedSkill}
+            skillMdContent={skillMdContent}
+            onClose={handleCloseDetail}
+            onDeploy={handleDeploySkill}
+            onExport={handleExportSkill}
+          />
+        )}
+      </SkillDetailPanel>
 
       <ImportDialog
         isOpen={showImportDialog}
@@ -474,10 +358,7 @@ export function Library(): React.ReactElement {
         onExportStart={handleExportStart}
       />
 
-      <ExportProgress
-        isOpen={showExportProgress}
-        onClose={handleExportProgressClose}
-      />
+      <ExportProgress isOpen={showExportProgress} onClose={handleExportProgressClose} />
 
       <DeployDialog
         open={showDeployDialog}
@@ -485,6 +366,6 @@ export function Library(): React.ReactElement {
         onClose={handleDeployClose}
         onDeploy={handleDeployConfirm}
       />
-    </div>
+    </SkillListLayout>
   );
 }
