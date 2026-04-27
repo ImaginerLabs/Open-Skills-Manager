@@ -25,7 +25,7 @@ export interface ProjectSkill {
   skillMdLines: number;
   skillMdChars: number;
   projectId: string;
-  installedAt?: Date;
+  installedAt: string;
   size: number;
   fileCount: number;
   hasResources: boolean;

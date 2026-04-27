@@ -12,7 +12,7 @@ export interface GlobalSkill {
   skillMdContent?: string;
   skillMdLines: number;
   skillMdChars: number;
-  installedAt?: Date;
+  installedAt?: string;
   size: number;
   fileCount: number;
   hasResources: boolean;
