@@ -24,6 +24,7 @@ export interface SkillListHeaderProps {
   sortDirection: SortDirection;
   onToggleSortDirection: () => void;
   actions?: React.ReactNode;
+  showViewToggle?: boolean;
 }
 
 export interface SkillCardActions<T extends Skill> {
@@ -47,7 +48,6 @@ export interface SkillListProps<T extends Skill> {
   emptyTitle: string;
   emptyText: string;
   hasSkills: boolean;
-  showViewToggle?: boolean | undefined;
   onSkillClick?: ((skill: T) => void) | undefined;
 }
 

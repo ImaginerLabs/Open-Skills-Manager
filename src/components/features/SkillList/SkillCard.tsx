@@ -162,51 +162,97 @@ export function SkillCard<T extends Skill>({
           }
         }}
       >
-        <div className={styles.header}>
-          <h3 className={styles.name} title={displayName}>
-            {displayName}
-          </h3>
-          <button
-            type="button"
-            className={styles.menuButton}
-            onClick={handleMenuButtonClick}
-            aria-label="Open context menu"
-          >
-            <DotsThree size={16} weight="bold" />
-          </button>
-        </div>
+        {viewMode === 'list' ? (
+          // List mode layout
+          <>
+            <div className={styles.listHeader}>
+              <div className={styles.listTitleRow}>
+                <h3 className={styles.name} title={displayName}>
+                  {displayName}
+                </h3>
+                {getSourceBadge(skill, scope)}
+              </div>
+              <p className={styles.listDescription} title={skill.description}>
+                {skill.description || 'No description'}
+              </p>
+            </div>
+            <div className={styles.listMeta}>
+              <div className={styles.listInfo}>
+                {skill.fileCount > 0 && (
+                  <span className={styles.resourceBadge}>
+                    <FolderOpen size={10} weight="fill" />
+                    <span>{skill.fileCount}</span>
+                  </span>
+                )}
+                <span className={styles.size}>{formattedSize}</span>
+                <span className={styles.date}>{formattedDate}</span>
+              </div>
+              {scope === 'library' && deploymentCount > 0 && (
+                <span className={styles.deploymentBadge}>
+                  <Rocket size={12} weight="fill" />
+                  <span>{deploymentCount}</span>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className={styles.menuButton}
+              onClick={handleMenuButtonClick}
+              aria-label="Open context menu"
+            >
+              <DotsThree size={16} weight="bold" />
+            </button>
+          </>
+        ) : (
+          // Grid mode layout (original)
+          <>
+            <div className={styles.header}>
+              <h3 className={styles.name} title={displayName}>
+                {displayName}
+              </h3>
+              <button
+                type="button"
+                className={styles.menuButton}
+                onClick={handleMenuButtonClick}
+                aria-label="Open context menu"
+              >
+                <DotsThree size={16} weight="bold" />
+              </button>
+            </div>
 
-        <p className={styles.description} title={skill.description}>
-          {skill.description || 'No description'}
-        </p>
+            <p className={styles.description} title={skill.description}>
+              {skill.description || 'No description'}
+            </p>
 
-        <div className={styles.meta}>
-          {skill.fileCount > 0 && (
-            <span className={styles.resourceBadge}>
-              <FolderOpen size={10} weight="fill" />
-              <span>{skill.fileCount} file{skill.fileCount !== 1 ? 's' : ''}</span>
-            </span>
-          )}
-          {skill.skillMdLines > 0 && (
-            <span className={styles.docBadge} title={`${skill.skillMdChars.toLocaleString()} characters`}>
-              <span>{skill.skillMdLines} line{skill.skillMdLines !== 1 ? 's' : ''}</span>
-            </span>
-          )}
-          {getSourceBadge(skill, scope)}
-        </div>
+            <div className={styles.meta}>
+              {skill.fileCount > 0 && (
+                <span className={styles.resourceBadge}>
+                  <FolderOpen size={10} weight="fill" />
+                  <span>{skill.fileCount} file{skill.fileCount !== 1 ? 's' : ''}</span>
+                </span>
+              )}
+              {skill.skillMdLines > 0 && (
+                <span className={styles.docBadge} title={`${skill.skillMdChars.toLocaleString()} characters`}>
+                  <span>{skill.skillMdLines} line{skill.skillMdLines !== 1 ? 's' : ''}</span>
+                </span>
+              )}
+              {getSourceBadge(skill, scope)}
+            </div>
 
-        <div className={styles.footer}>
-          <div className={styles.info}>
-            <span className={styles.size}>{formattedSize}</span>
-            <span className={styles.date}>{formattedDate}</span>
-          </div>
-          {scope === 'library' && deploymentCount > 0 && (
-            <span className={styles.deploymentBadge}>
-              <Rocket size={12} weight="fill" />
-              <span>{deploymentCount}</span>
-            </span>
-          )}
-        </div>
+            <div className={styles.footer}>
+              <div className={styles.info}>
+                <span className={styles.size}>{formattedSize}</span>
+                <span className={styles.date}>{formattedDate}</span>
+              </div>
+              {scope === 'library' && deploymentCount > 0 && (
+                <span className={styles.deploymentBadge}>
+                  <Rocket size={12} weight="fill" />
+                  <span>{deploymentCount}</span>
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </article>
 
       {showContextMenu && (

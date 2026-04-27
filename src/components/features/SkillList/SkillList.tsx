@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { FolderOpen } from '@phosphor-icons/react';
 import { SkillListSkeleton } from '../../common/Skeletons/SkillListSkeleton';
-import { ViewToggle } from '../../ui/ViewToggle';
 import { useUIStore } from '@/stores';
 import type { Skill, SkillListProps } from './types';
 import { SkillListItem } from './SkillListItem';
@@ -20,18 +19,18 @@ export function SkillList<T extends Skill>({
   emptyTitle,
   emptyText,
   hasSkills,
-  showViewToggle = true,
   onSkillClick,
 }: SkillListProps<T>): React.ReactElement {
-  const { viewMode, setViewMode } = useUIStore();
+  const { viewMode } = useUIStore();
   const isEmpty = skills.length === 0 && !isLoading;
 
+  // Use viewMode as part of key to trigger re-animation on toggle
   const itemsWithDelay = useMemo(() => {
     return skills.map((skill, index) => ({
       skill,
       delay: getAnimationDelay(index),
     }));
-  }, [skills]);
+  }, [skills, viewMode]); // Add viewMode dependency to re-trigger animation
 
   if (isLoading) {
     return <SkillListSkeleton count={12} />;
@@ -57,12 +56,7 @@ export function SkillList<T extends Skill>({
   }
 
   return (
-    <div className={viewMode === 'list' ? styles.listGrid : styles.grid}>
-      {showViewToggle && (
-        <div className={styles.viewToggleContainer}>
-          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-        </div>
-      )}
+    <div key={viewMode} className={viewMode === 'list' ? styles.listGrid : styles.grid}>
       {itemsWithDelay.map(({ skill, delay }) => {
         const handleClick = onSkillClick ? () => onSkillClick(skill) : undefined;
         return (

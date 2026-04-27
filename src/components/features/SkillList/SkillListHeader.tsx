@@ -1,4 +1,6 @@
 import { MagnifyingGlass, TextAa, Calendar, Database, ArrowsDownUp } from '@phosphor-icons/react';
+import { ViewToggle } from '../../ui/ViewToggle';
+import { useUIStore } from '@/stores';
 import type { SkillListHeaderProps } from './types';
 import styles from './SkillList.module.scss';
 
@@ -12,7 +14,10 @@ export function SkillListHeader({
   sortDirection,
   onToggleSortDirection,
   actions,
+  showViewToggle = true,
 }: SkillListHeaderProps): React.ReactElement {
+  const { viewMode, setViewMode } = useUIStore();
+
   return (
     <header className={styles.header}>
       <div className={styles.titleSection}>
@@ -20,6 +25,9 @@ export function SkillListHeader({
         <span className={styles.count}>{count} skills</span>
       </div>
       <div className={styles.actions}>
+        {showViewToggle && (
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+        )}
         <div className={styles.searchWrapper}>
           <MagnifyingGlass size={16} className={styles.searchIcon} />
           <input
