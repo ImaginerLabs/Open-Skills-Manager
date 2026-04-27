@@ -1,17 +1,27 @@
 @use '../../styles/variables' as *;
 @use '../../styles/glassmorphism' as glass;
 
+// Page Layout - consistent with Library and Global
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  max-width: 800px;
+  height: 100%;
 }
 
+// Header - matches SkillListHeader style
 .header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleSection {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
 }
 
 .title {
@@ -23,10 +33,20 @@
 
 .subtitle {
   font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin: 0;
+  color: var(--color-text-tertiary);
 }
 
+// Content Container - scrollable like Library/Global
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// Section Cards
 .section {
   @include glass.glass-medium;
   border-radius: var(--radius-lg);
@@ -38,6 +58,8 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sectionIcon {
@@ -45,7 +67,7 @@
 }
 
 .sectionTitle {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   margin: 0;
@@ -56,10 +78,9 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border);
 
-  &:last-child {
-    border-bottom: none;
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-subtle);
   }
 }
 
@@ -67,6 +88,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
 }
 
 .settingName {
@@ -84,21 +107,24 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .select {
   padding: var(--space-2) var(--space-3);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: border-color var(--duration-fast) ease;
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+  min-width: 120px;
 
   &:focus {
     outline: none;
     border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
   }
 
   .light & {

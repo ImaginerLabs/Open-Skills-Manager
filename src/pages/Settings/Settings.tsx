@@ -56,98 +56,102 @@ export function Settings(): React.ReactElement {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Settings</h1>
-        <p className={styles.subtitle}>Manage application preferences and sync settings</p>
+        <div className={styles.titleSection}>
+          <h1 className={styles.title}>Settings</h1>
+          <span className={styles.subtitle}>Manage application preferences</span>
+        </div>
       </header>
 
-      <section className={styles.section}>
-        <header className={styles.sectionHeader}>
-          <PaintBrush size={18} className={styles.sectionIcon} />
-          <h2 className={styles.sectionTitle}>Appearance</h2>
-        </header>
+      <div className={styles.content}>
+        <section className={styles.section}>
+          <header className={styles.sectionHeader}>
+            <PaintBrush size={18} className={styles.sectionIcon} />
+            <h2 className={styles.sectionTitle}>Appearance</h2>
+          </header>
 
-        <div className={styles.settingRow}>
-          <div className={styles.settingLabel}>
-            <span className={styles.settingName}>Theme</span>
-            <span className={styles.settingDescription}>Choose the application color scheme</span>
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Theme</span>
+              <span className={styles.settingDescription}>Choose the application color scheme</span>
+            </div>
+            <div className={styles.settingValue}>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
+                className={styles.select}
+              >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
           </div>
-          <div className={styles.settingValue}>
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
-              className={styles.select}
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className={styles.section}>
-        <header className={styles.sectionHeader}>
-          <Translate size={18} className={styles.sectionIcon} />
-          <h2 className={styles.sectionTitle}>Language</h2>
-        </header>
+        <section className={styles.section}>
+          <header className={styles.sectionHeader}>
+            <Translate size={18} className={styles.sectionIcon} />
+            <h2 className={styles.sectionTitle}>Language</h2>
+          </header>
 
-        <div className={styles.settingRow}>
-          <div className={styles.settingLabel}>
-            <span className={styles.settingName}>Interface Language</span>
-            <span className={styles.settingDescription}>Select the display language</span>
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Interface Language</span>
+              <span className={styles.settingDescription}>Select the display language</span>
+            </div>
+            <div className={styles.settingValue}>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as 'auto' | 'en' | 'zh-CN')}
+                className={styles.select}
+              >
+                <option value="auto">Auto</option>
+                <option value="en">English</option>
+                <option value="zh-CN">中文 (简体)</option>
+              </select>
+            </div>
           </div>
-          <div className={styles.settingValue}>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as 'auto' | 'en' | 'zh-CN')}
-              className={styles.select}
-            >
-              <option value="auto">Auto</option>
-              <option value="en">English</option>
-              <option value="zh-CN">中文 (简体)</option>
-            </select>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <ICloudSettings
-        status={status}
-        lastSyncTime={lastSyncTime ?? undefined}
-        storageUsed={storageUsed}
-        storageTotal={storageTotal}
-        containerPath={containerPath}
-        isLoading={isLoading}
-        error={error}
-        onForceSync={handleForceSync}
-        onViewInFinder={handleViewInFinder}
-      />
+        <ICloudSettings
+          status={status}
+          lastSyncTime={lastSyncTime ?? undefined}
+          storageUsed={storageUsed}
+          storageTotal={storageTotal}
+          containerPath={containerPath}
+          isLoading={isLoading}
+          error={error}
+          onForceSync={handleForceSync}
+          onViewInFinder={handleViewInFinder}
+        />
 
-      <section className={styles.section}>
-        <header className={styles.sectionHeader}>
-          <Gear size={18} className={styles.sectionIcon} />
-          <h2 className={styles.sectionTitle}>About</h2>
-        </header>
+        <section className={styles.section}>
+          <header className={styles.sectionHeader}>
+            <Gear size={18} className={styles.sectionIcon} />
+            <h2 className={styles.sectionTitle}>About</h2>
+          </header>
 
-        <div className={styles.settingRow}>
-          <div className={styles.settingLabel}>
-            <span className={styles.settingName}>Version</span>
-            <span className={styles.settingDescription}>Claude Code Skills Manager</span>
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Version</span>
+              <span className={styles.settingDescription}>Claude Code Skills Manager</span>
+            </div>
+            <div className={styles.settingValue}>
+              <span className={styles.settingName}>1.0.0</span>
+            </div>
           </div>
-          <div className={styles.settingValue}>
-            <span className={styles.settingName}>1.0.0</span>
-          </div>
-        </div>
 
-        <div className={styles.settingRow}>
-          <div className={styles.settingLabel}>
-            <span className={styles.settingName}>Storage Usage</span>
-            <span className={styles.settingDescription}>Local storage for skills and settings</span>
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Storage Usage</span>
+              <span className={styles.settingDescription}>Local storage for skills and settings</span>
+            </div>
+            <div className={styles.settingValue}>
+              <span className={styles.settingName}>{formatBytes(storageUsed)}</span>
+            </div>
           </div>
-          <div className={styles.settingValue}>
-            <span className={styles.settingName}>{formatBytes(storageUsed)}</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
