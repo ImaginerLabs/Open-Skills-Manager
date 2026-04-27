@@ -10,6 +10,8 @@ export interface GlobalSkill {
   path: string;
   skillMdPath: string;
   skillMdContent?: string;
+  skillMdLines: number;
+  skillMdChars: number;
   installedAt?: Date;
   size: number;
   fileCount: number;

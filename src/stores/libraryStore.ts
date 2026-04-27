@@ -10,6 +10,8 @@ export interface LibrarySkill {
   path: string;
   skillMdPath: string;
   skillMdContent?: string;
+  skillMdLines: number;
+  skillMdChars: number;
   categoryId?: string;
   groupId?: string;
   importedAt: Date;
