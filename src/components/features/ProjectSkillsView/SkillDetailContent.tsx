@@ -21,9 +21,6 @@ export function SkillDetailContent({
     <>
       <div className={styles.detailMetadata}>
         <div className={styles.detailMetaItem}>
-          <span>v{skill.version}</span>
-        </div>
-        <div className={styles.detailMetaItem}>
           <span>{formattedDate}</span>
         </div>
         <div className={styles.detailMetaItem}>

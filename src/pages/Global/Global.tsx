@@ -176,9 +176,6 @@ export function Global(): React.ReactElement {
       <>
         <div className={styles.detailMetadata}>
           <div className={styles.detailMetaItem}>
-            <span>v{selectedSkill.version}</span>
-          </div>
-          <div className={styles.detailMetaItem}>
             <span>{formattedDate}</span>
           </div>
           <div className={styles.detailMetaItem}>
@@ -269,7 +266,7 @@ export function Global(): React.ReactElement {
         {selectedSkill && (
           <>
             <div className={styles.detailHeader}>
-              <h2 className={styles.detailTitle}>{selectedSkill.name}</h2>
+              <h2 className={styles.detailTitle}>{selectedSkill.name.replace(/^["']|["']$/g, '')}</h2>
               <button
                 type="button"
                 className={styles.closeButton}

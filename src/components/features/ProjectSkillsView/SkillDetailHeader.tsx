@@ -12,9 +12,10 @@ export function SkillDetailHeader({
   onClose,
   styles,
 }: SkillDetailHeaderProps): ReactElement {
+  const displayName = skillName.replace(/^["']|["']$/g, '');
   return (
     <div className={styles.detailHeader}>
-      <h2 className={styles.detailTitle}>{skillName}</h2>
+      <h2 className={styles.detailTitle}>{displayName}</h2>
       <button
         type="button"
         className={styles.closeButton}

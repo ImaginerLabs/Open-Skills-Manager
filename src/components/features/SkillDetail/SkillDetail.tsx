@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { X, FolderOpen, FileText, Clock, Tag, Rocket, Export } from '@phosphor-icons/react';
+import { X, FolderOpen, FileText, Clock, Rocket, Export } from '@phosphor-icons/react';
 import type { LibrarySkill } from '../../../stores/libraryStore';
 import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillDetail.module.scss';
@@ -72,7 +72,7 @@ export function SkillDetail({
       aria-label="Skill details"
     >
       <header className={styles.header}>
-        <h2 className={styles.title}>{skill.name}</h2>
+        <h2 className={styles.title}>{skill.name.replace(/^["']|["']$/g, '')}</h2>
         <button
           type="button"
           className={styles.closeButton}
@@ -85,10 +85,6 @@ export function SkillDetail({
 
       <div className={styles.content}>
         <section className={styles.metadata}>
-          <div className={styles.metaItem}>
-            <Tag size={14} />
-            <span>v{skill.version}</span>
-          </div>
           <div className={styles.metaItem}>
             <Clock size={14} />
             <span>{formattedDate}</span>

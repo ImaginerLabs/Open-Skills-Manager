@@ -67,7 +67,7 @@ export function ConflictPreview({
     <div className={styles.previewContainer}>
       <div className={styles.previewHeader}>
         <Files size={16} weight="duotone" />
-        <span>{skillName}</span>
+        <span>{skillName.replace(/^["']|["']$/g, '')}</span>
       </div>
       <div className={styles.versionsGrid}>
         {renderVersionCard(

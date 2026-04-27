@@ -33,9 +33,8 @@ export function DuplicateHandlerDialog({
 
       <div className={styles.duplicatePreview}>
         <div className={styles.previewLabel}>Existing skill:</div>
-        <div className={styles.previewName}>{duplicateInfo.existing.name}</div>
+        <div className={styles.previewName}>{duplicateInfo.existing.name.replace(/^["']|["']$/g, '')}</div>
         <div className={styles.previewMeta}>
-          <span>v{duplicateInfo.existing.version}</span>
           <span>{duplicateInfo.existing.folderName}</span>
         </div>
       </div>
