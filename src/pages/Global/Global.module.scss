@@ -9,7 +9,7 @@
 // Grid Container
 .gridContainer {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   padding: var(--space-6);
   transition: padding-right var(--duration-slow) var(--ease-out-expo);
 
