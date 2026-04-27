@@ -234,7 +234,15 @@ export function Library(): React.ReactElement {
                 description: selectedSkill.description,
                 size: selectedSkill.size,
                 fileCount: selectedSkill.fileCount,
-                date: selectedSkill.updatedAt?.toLocaleDateString() ?? selectedSkill.importedAt.toLocaleDateString(),
+                date: selectedSkill.updatedAt
+                  ? typeof selectedSkill.updatedAt === 'string'
+                    ? selectedSkill.updatedAt
+                    : selectedSkill.updatedAt.toLocaleDateString()
+                  : selectedSkill.importedAt
+                    ? typeof selectedSkill.importedAt === 'string'
+                      ? selectedSkill.importedAt
+                      : selectedSkill.importedAt.toLocaleDateString()
+                    : undefined,
               } satisfies SkillPreviewData)
             : null
         }
