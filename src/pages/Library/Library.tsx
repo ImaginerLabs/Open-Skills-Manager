@@ -4,18 +4,20 @@ import { useLibraryStore, type LibrarySkill, type Deployment } from '../../store
 import { SkillDetail } from '../../components/features/SkillDetail';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
-import { ExportDialog, type ExportFormat } from '../../components/features/ExportDialog';
+import { ExportDialog } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
 import { DeployDialog } from '../../components/features/DeployDialog';
 import { libraryService } from '../../services/libraryService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
-import { useUIStore } from '../../stores/uiStore';
 import {
   SkillListLayout,
   SkillListHeader,
   SkillList,
   SkillDetailPanel,
 } from '../../components/features/SkillList';
+import { useLibraryDialogs } from './hooks/useLibraryDialogs';
+import { useLibraryExport } from './hooks/useLibraryExport';
+import { useLibraryImport } from './hooks/useLibraryImport';
 import styles from './Library.module.scss';
 
 export function Library(): React.ReactElement {
@@ -32,26 +34,38 @@ export function Library(): React.ReactElement {
     addDeployment,
     setLoading,
     setError,
-    startExport,
-    updateExportProgress,
-    completeExport,
-    setExportError,
-    resetExport,
-    startImport,
-    updateImportProgress,
-    completeImport,
-    cancelImport,
   } = useLibraryStore();
 
-  const { showToast } = useUIStore();
+  const {
+    showImportDialog,
+    showExportDialog,
+    showDeployDialog,
+    showExportProgress,
+    showImportProgress,
+    setImportDialog,
+    setExportDialog,
+    setDeployDialog,
+    setExportProgress,
+    setImportProgress,
+  } = useLibraryDialogs();
+
+  const { handleExportStart } = useLibraryExport();
+  const { handleImportStart, handleImportCancel } = useLibraryImport(
+    (show) => setImportProgress(show),
+    () => setImportDialog(false)
+  );
+
+  const onExportStart = useCallback(
+    async (format: Parameters<typeof handleExportStart>[0], skillsToExport: LibrarySkill[]) => {
+      setExportDialog(false);
+      setExportProgress(true);
+      await handleExportStart(format, skillsToExport);
+    },
+    [handleExportStart, setExportDialog, setExportProgress]
+  );
 
   const [skillMdContent, setSkillMdContent] = useState<string>('');
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showImportProgress, setShowImportProgress] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
-  const [showExportProgress, setShowExportProgress] = useState(false);
-  const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
 
   const {
@@ -117,156 +131,50 @@ export function Library(): React.ReactElement {
     const skill = skills.find((s) => s.id === skillId);
     if (skill) {
       setExportSkills([skill]);
-      setShowExportDialog(true);
+      setExportDialog(true);
     }
-  }, [skills]);
+  }, [skills, setExportDialog]);
 
   const handleDeploySkill = useCallback((skill: LibrarySkill) => {
     setDeploySkill(skill);
-    setShowDeployDialog(true);
-  }, []);
+    setDeployDialog(true);
+  }, [setDeployDialog]);
 
   const handleDeployConfirm = useCallback((skillId: string, deployment: Deployment) => {
     addDeployment(skillId, deployment);
   }, [addDeployment]);
 
   const handleDeployClose = useCallback(() => {
-    setShowDeployDialog(false);
+    setDeployDialog(false);
     setDeploySkill(null);
-  }, []);
+  }, [setDeployDialog]);
 
   const handleCloseDetail = useCallback(() => {
     selectSkill(null);
     setSkillMdContent('');
   }, [selectSkill]);
 
-  const handleExportStart = useCallback(async (format: ExportFormat, skillsToExport: LibrarySkill[]) => {
-    setShowExportDialog(false);
-    setShowExportProgress(true);
-    startExport(skillsToExport.length);
-
-    try {
-      if (format === 'zip' && skillsToExport.length > 1) {
-        const ids = skillsToExport.map((s) => s.id);
-        const firstSkill = skillsToExport[0];
-        updateExportProgress(1, firstSkill?.name ?? 'Unknown');
-        const result = await libraryService.exportBatch(ids, 'skills-export.zip');
-        if (result === null) {
-          setShowExportProgress(false);
-          resetExport();
-          return;
-        }
-        if (!result.success) {
-          throw new Error(result.error?.message || 'Export failed');
-        }
-        const lastSkill = skillsToExport[skillsToExport.length - 1];
-        updateExportProgress(skillsToExport.length, lastSkill?.name ?? 'Unknown');
-      } else {
-        for (let i = 0; i < skillsToExport.length; i++) {
-          const skill = skillsToExport[i]!;
-          updateExportProgress(i + 1, skill.name);
-          const result = await libraryService.export(skill.id, format, skill.name);
-          if (result === null) {
-            setShowExportProgress(false);
-            resetExport();
-            return;
-          }
-          if (!result.success) {
-            throw new Error(result.error?.message || 'Export failed');
-          }
-        }
-      }
-      completeExport();
-      showToast('success', `Exported ${skillsToExport.length} skill${skillsToExport.length !== 1 ? 's' : ''} successfully`);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Export failed';
-      setExportError(message);
-      showToast('error', message);
-    }
-  }, [startExport, updateExportProgress, completeExport, setExportError, showToast, resetExport]);
-
   const handleExportClose = useCallback(() => {
-    setShowExportDialog(false);
+    setExportDialog(false);
     setExportSkills([]);
-  }, []);
+  }, [setExportDialog]);
 
   const handleExportProgressClose = useCallback(() => {
-    setShowExportProgress(false);
-  }, []);
-
-  const handleOpenImport = useCallback(() => {
-    setShowImportDialog(true);
-  }, []);
+    setExportProgress(false);
+  }, [setExportProgress]);
 
   const handleImportClose = useCallback(() => {
-    setShowImportDialog(false);
-  }, []);
-
-  const handleImportStart = useCallback(async (paths: string[], categoryId?: string, groupId?: string) => {
-    setShowImportProgress(true);
-    startImport(paths.length);
-
-    let successful = 0;
-    let failed = 0;
-    const failedItems: Array<{ name: string; error: string; code: string }> = [];
-
-    for (let i = 0; i < paths.length; i++) {
-      const currentProgress = useLibraryStore.getState().importProgress;
-      if (currentProgress.status === 'cancelled') {
-        break;
-      }
-
-      const path = paths[i]!;
-      const name = path.split('/').pop() || path;
-      updateImportProgress(i + 1, name);
-
-      try {
-        const result = await libraryService.import({ path, categoryId, groupId });
-        if (result.success) {
-          successful++;
-        } else {
-          failed++;
-          failedItems.push({
-            name,
-            error: result.error.message,
-            code: result.error.code,
-          });
-        }
-      } catch (e) {
-        failed++;
-        failedItems.push({
-          name,
-          error: e instanceof Error ? e.message : 'Import failed',
-          code: 'IMPORT_ERROR',
-        });
-      }
-    }
-
-    const finalProgress = useLibraryStore.getState().importProgress;
-    const wasCancelled = finalProgress.status === 'cancelled';
-
-    completeImport(successful, failed, wasCancelled ? paths.length - successful - failed : 0, failedItems);
-
-    if (successful > 0) {
-      const listResult = await libraryService.list();
-      if (listResult.success) {
-        setSkills(listResult.data);
-      }
-    }
-  }, [startImport, updateImportProgress, completeImport, setSkills]);
-
-  const handleImportCancel = useCallback(() => {
-    cancelImport();
-  }, [cancelImport]);
+    setImportDialog(false);
+  }, [setImportDialog]);
 
   const handleRetryFailed = useCallback(async (_failedItems: Array<{ name: string; error: string; code: string }>) => {
-    setShowImportProgress(false);
-    setShowImportDialog(true);
-  }, []);
+    setImportProgress(false);
+    setImportDialog(true);
+  }, [setImportProgress, setImportDialog]);
 
   const handleImportProgressClose = useCallback(() => {
-    setShowImportProgress(false);
-  }, []);
+    setImportProgress(false);
+  }, [setImportProgress]);
 
   const cardActions = {
     onDelete: handleDeleteSkill,
@@ -288,7 +196,7 @@ export function Library(): React.ReactElement {
         sortDirection={sortDirection}
         onToggleSortDirection={toggleSortDirection}
         actions={
-          <button type="button" className={styles.importButton} onClick={handleOpenImport}>
+          <button type="button" className={styles.importButton} onClick={() => setImportDialog(true)}>
             <Plus size={18} />
             <span>Import</span>
           </button>
@@ -347,7 +255,7 @@ export function Library(): React.ReactElement {
         isOpen={showExportDialog}
         skills={exportSkills}
         onClose={handleExportClose}
-        onExportStart={handleExportStart}
+        onExportStart={onExportStart}
       />
 
       <ExportProgress isOpen={showExportProgress} onClose={handleExportProgressClose} />

@@ -1,94 +1,24 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
-
-export interface LibrarySkill {
-  id: string;
-  name: string;
-  folderName: string;
-  version: string;
-  description: string;
-  path: string;
-  skillMdPath: string;
-  skillMdContent?: string;
-  skillMdLines: number;
-  skillMdChars: number;
-  categoryId?: string;
-  groupId?: string;
-  importedAt: Date;
-  updatedAt?: Date;
-  size: number;
-  fileCount: number;
-  hasResources: boolean;
-  deployments: Deployment[];
-}
-
-export interface Deployment {
-  id: string;
-  skillId: string;
-  targetScope: 'global' | 'project';
-  targetPath: string;
-  projectName?: string | undefined;
-  deployedAt: Date;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  icon?: string;
-  color?: string;
-  groups: Group[];
-  skillCount: number;
-  isCustom: boolean;
-  createdAt: Date;
-}
-
-export interface Group {
-  id: string;
-  categoryId: string;
-  name: string;
-  skillCount: number;
-  isCustom: boolean;
-  createdAt: Date;
-}
-
-export type ImportStatus = 'idle' | 'importing' | 'completed' | 'cancelled' | 'error';
-export type ExportStatus = 'idle' | 'exporting' | 'completed' | 'cancelled' | 'error';
-
-export interface ImportProgress {
-  current: number;
-  total: number;
-  currentSkillName: string;
-  status: ImportStatus;
-  successful: number;
-  failed: number;
-  skipped: number;
-  failedItems: Array<{ name: string; error: string; code: string }>;
-}
-
-export interface ExportProgress {
-  current: number;
-  total: number;
-  currentSkillName: string;
-  status: ExportStatus;
-}
-
-const initialImportProgress: ImportProgress = {
-  current: 0,
-  total: 0,
-  currentSkillName: '',
-  status: 'idle',
-  successful: 0,
-  failed: 0,
-  skipped: 0,
-  failedItems: [],
-};
-
-const initialExportProgress: ExportProgress = {
-  current: 0,
-  total: 0,
-  currentSkillName: '',
-  status: 'idle',
-};
+import type {
+  LibrarySkill,
+  Deployment,
+  Category,
+  Group,
+  ImportProgress,
+  ExportProgress,
+} from '@/types/skill';
+export type {
+  LibrarySkill,
+  Deployment,
+  Category,
+  Group,
+  ImportStatus,
+  ExportStatus,
+  ImportProgress,
+  ExportProgress,
+} from '@/types/skill';
+import { initialImportProgress, initialExportProgress } from './libraryStore.initial';
 
 interface LibraryState {
   skills: LibrarySkill[];
