@@ -41,6 +41,15 @@
   }
 }
 
+.expandIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
 .icon {
   color: var(--color-text-secondary);
   flex-shrink: 0;
@@ -48,6 +57,7 @@
 
 .missingIcon {
   color: var(--color-warning);
+  flex-shrink: 0;
 }
 
 .name {
@@ -68,34 +78,6 @@
   border-radius: var(--radius-sm);
 
   .light & {
-    background: rgba(0, 0, 0, 0.05);
-  }
-}
-
-.menuButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  opacity: 0;
-  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease,
-    opacity var(--duration-fast) ease;
-
-  .projectItem:hover & {
-    opacity: 1;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--color-text-primary);
-  }
-
-  .light &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
 }

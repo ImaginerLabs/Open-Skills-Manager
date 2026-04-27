@@ -17,7 +17,7 @@ export function AddProjectButton({
       disabled={disabled}
       aria-label="Add project"
     >
-      <Plus size={16} />
+      <Plus size={12} />
       <span>Add project</span>
     </button>
   );

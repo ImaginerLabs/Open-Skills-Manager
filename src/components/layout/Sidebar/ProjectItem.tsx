@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { FolderOpen, Warning, DotsThree } from '@phosphor-icons/react';
+import { FolderOpen, Warning } from '@phosphor-icons/react';
 import type { Project } from '@/stores/projectStore';
 import styles from './ProjectItem.module.scss';
 import contextMenuStyles from '@/components/features/CategoryManager/ContextMenu.module.scss';
@@ -56,25 +56,16 @@ export function ProjectItem({
         onKeyDown={(e) => e.key === 'Enter' && handleClick()}
         aria-label={`Project ${project.name}${!project.exists ? ' (missing)' : ''}`}
       >
+        <span className={styles.expandIcon} />
         {project.exists ? (
-          <FolderOpen size={18} className={styles.icon} />
+          <FolderOpen size={16} className={styles.icon} />
         ) : (
-          <Warning size={18} className={styles.missingIcon} />
+          <Warning size={16} className={styles.missingIcon} />
         )}
         <span className={styles.name}>{project.name}</span>
         {project.exists && (
           <span className={styles.count}>{project.skillCount}</span>
         )}
-        <button
-          className={styles.menuButton}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(true);
-          }}
-          aria-label="Project options"
-        >
-          <DotsThree size={16} weight="bold" />
-        </button>
       </div>
 
       {showMenu && (
