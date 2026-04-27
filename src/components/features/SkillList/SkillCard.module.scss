@@ -14,20 +14,6 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-
-  // Staggered entrance animation
-  animation: card-enter var(--duration-normal) var(--ease-out-expo) backwards;
-
-  @keyframes card-enter {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }
 
 .selected {
@@ -107,13 +93,42 @@
 
 .version {
   font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
+  font-weight: var(--font-medium);
   padding: 2px var(--space-2);
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-sm);
 
-  .light {
+  .light & {
     background: rgba(0, 0, 0, 0.05);
+  }
+
+  // Stable version (1.x.x+)
+  &.version-stable {
+    color: var(--color-success);
+    background: rgba(48, 209, 88, 0.15);
+  }
+
+  // Beta version (contains beta/rc)
+  &.version-beta {
+    color: var(--color-primary);
+    background: rgba(10, 132, 255, 0.15);
+  }
+
+  // Alpha version (contains alpha or 0.x.x)
+  &.version-alpha {
+    color: var(--color-warning);
+    background: rgba(255, 159, 10, 0.15);
+  }
+
+  // Dev version (contains dev/snapshot)
+  &.version-dev {
+    color: var(--color-text-secondary);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  // Unknown version
+  &.version-unknown {
+    color: var(--color-text-tertiary);
   }
 }
 
@@ -125,6 +140,32 @@
   color: var(--color-primary);
   padding: 2px var(--space-2);
   background: rgba(10, 132, 255, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.docBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  padding: 2px var(--space-2);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+
+  .light & {
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-success);
+  padding: 2px var(--space-2);
+  background: rgba(48, 209, 88, 0.15);
   border-radius: var(--radius-sm);
 }
 
