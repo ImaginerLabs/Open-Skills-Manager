@@ -17,6 +17,7 @@ export interface GlobalSkill {
   fileCount: number;
   hasResources: boolean;
   sourceLibrarySkillId?: string;
+  isSymlink: boolean;
 }
 
 interface GlobalState {

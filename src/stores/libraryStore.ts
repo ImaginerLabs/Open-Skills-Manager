@@ -22,11 +22,10 @@ import { initialImportProgress, initialExportProgress } from './libraryStore.ini
 
 interface LibraryState {
   skills: LibrarySkill[];
-  categories: Category[];
   groups: Group[];
   selectedSkill: LibrarySkill | null;
-  selectedCategoryId: string | undefined;
   selectedGroupId: string | undefined;
+  selectedCategoryId: string | undefined;
   isLoading: boolean;
   error: string | null;
   importProgress: ImportProgress;
@@ -39,16 +38,15 @@ interface LibraryActions {
   removeSkill: (id: string) => void;
   updateSkill: (id: string, updates: Partial<LibrarySkill>) => void;
   selectSkill: (skill: LibrarySkill | null) => void;
-  selectCategory: (categoryId: string | undefined) => void;
   selectGroup: (groupId: string | undefined) => void;
-  setCategories: (categories: Category[]) => void;
-  addCategory: (category: Category) => void;
-  updateCategory: (id: string, updates: Partial<Category>) => void;
-  removeCategory: (id: string) => void;
-  addGroup: (categoryId: string, group: Group) => void;
-  updateGroup: (categoryId: string, groupId: string, updates: Partial<Group>) => void;
-  removeGroup: (categoryId: string, groupId: string) => void;
+  selectCategory: (categoryId: string | undefined) => void;
   setGroups: (groups: Group[]) => void;
+  addGroup: (group: Group) => void;
+  updateGroup: (id: string, updates: Partial<Group>) => void;
+  removeGroup: (id: string) => void;
+  addCategory: (groupId: string, category: Category) => void;
+  updateCategory: (groupId: string, categoryId: string, updates: Partial<Category>) => void;
+  removeCategory: (groupId: string, categoryId: string) => void;
   updateDeployments: (skillId: string, deployments: Deployment[]) => void;
   addDeployment: (skillId: string, deployment: Deployment) => void;
   removeDeployment: (skillId: string, deploymentId: string) => void;
@@ -78,11 +76,10 @@ export const useLibraryStore = create<LibraryStore>()(
       (set) => ({
         // Initial state
         skills: [],
-        categories: [],
         groups: [],
         selectedSkill: null,
-        selectedCategoryId: undefined,
         selectedGroupId: undefined,
+        selectedCategoryId: undefined,
         isLoading: false,
         error: null,
         importProgress: initialImportProgress,
@@ -97,42 +94,41 @@ export const useLibraryStore = create<LibraryStore>()(
             skills: state.skills.map((s) => (s.id === id ? { ...s, ...updates } : s)),
           })),
         selectSkill: (skill) => set({ selectedSkill: skill }),
-        selectCategory: (categoryId) => set({ selectedCategoryId: categoryId, selectedGroupId: undefined }),
-        selectGroup: (groupId) => set({ selectedGroupId: groupId }),
-        setCategories: (categories) => set({ categories }),
-        addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
-        updateCategory: (id, updates) =>
-          set((state) => ({
-            categories: state.categories.map((c) => (c.id === id ? { ...c, ...updates } : c)),
-          })),
-        removeCategory: (id) =>
-          set((state) => ({ categories: state.categories.filter((c) => c.id !== id) })),
-        addGroup: (categoryId, group) =>
-          set((state) => ({
-            categories: state.categories.map((c) =>
-              c.id === categoryId ? { ...c, groups: [...c.groups, group] } : c
-            ),
-          })),
-        updateGroup: (categoryId, groupId, updates) =>
-          set((state) => ({
-            categories: state.categories.map((c) =>
-              c.id === categoryId
-                ? {
-                    ...c,
-                    groups: c.groups.map((g) => (g.id === groupId ? { ...g, ...updates } : g)),
-                  }
-                : c
-            ),
-          })),
-        removeGroup: (categoryId, groupId) =>
-          set((state) => ({
-            categories: state.categories.map((c) =>
-              c.id === categoryId
-                ? { ...c, groups: c.groups.filter((g) => g.id !== groupId) }
-                : c
-            ),
-          })),
+        selectGroup: (groupId) => set({ selectedGroupId: groupId, selectedCategoryId: undefined }),
+        selectCategory: (categoryId) => set({ selectedCategoryId: categoryId }),
         setGroups: (groups) => set({ groups }),
+        addGroup: (group) => set((state) => ({ groups: [...state.groups, group] })),
+        updateGroup: (id, updates) =>
+          set((state) => ({
+            groups: state.groups.map((g) => (g.id === id ? { ...g, ...updates } : g)),
+          })),
+        removeGroup: (id) =>
+          set((state) => ({ groups: state.groups.filter((g) => g.id !== id) })),
+        addCategory: (groupId, category) =>
+          set((state) => ({
+            groups: state.groups.map((g) =>
+              g.id === groupId ? { ...g, categories: [...g.categories, category] } : g
+            ),
+          })),
+        updateCategory: (groupId, categoryId, updates) =>
+          set((state) => ({
+            groups: state.groups.map((g) =>
+              g.id === groupId
+                ? {
+                    ...g,
+                    categories: g.categories.map((c) => (c.id === categoryId ? { ...c, ...updates } : c)),
+                  }
+                : g
+            ),
+          })),
+        removeCategory: (groupId, categoryId) =>
+          set((state) => ({
+            groups: state.groups.map((g) =>
+              g.id === groupId
+                ? { ...g, categories: g.categories.filter((c) => c.id !== categoryId) }
+                : g
+            ),
+          })),
         updateDeployments: (skillId, deployments) =>
           set((state) => ({
             skills: state.skills.map((s) =>
@@ -220,7 +216,6 @@ export const useLibraryStore = create<LibraryStore>()(
         name: 'library-storage',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
-          categories: state.categories,
           groups: state.groups,
         }),
         onRehydrateStorage: () => (state) => {
@@ -228,9 +223,6 @@ export const useLibraryStore = create<LibraryStore>()(
           if (state) {
             if (!Array.isArray(state.skills)) {
               state.skills = [];
-            }
-            if (!Array.isArray(state.categories)) {
-              state.categories = [];
             }
             if (!Array.isArray(state.groups)) {
               state.groups = [];

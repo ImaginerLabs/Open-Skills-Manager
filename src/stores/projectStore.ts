@@ -30,6 +30,7 @@ export interface ProjectSkill {
   fileCount: number;
   hasResources: boolean;
   sourceLibrarySkillId?: string;
+  isSymlink: boolean;
 }
 
 interface ProjectState {
@@ -88,7 +89,10 @@ export const useProjectStore = create<ProjectStore>()(
               selectedProject: state.selectedProject?.id === id ? null : state.selectedProject,
             };
           }),
-        selectProject: (project) => set({ selectedProject: project }),
+        selectProject: (project) => {
+          console.log('[projectStore] selectProject:', project?.id ?? 'null');
+          set({ selectedProject: project });
+        },
         setProjectSkills: (projectId, skills) =>
           set((state) => {
             const newMap = new Map(state.projectSkills);
