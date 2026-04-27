@@ -1,33 +1,33 @@
 import { useState, useCallback } from 'react';
 
 interface DragState {
-  categoryId: string;
-  groupId?: string | undefined;
+  groupId: string;
+  categoryId?: string | undefined;
   skillId: string;
   skillName: string;
 }
 
 interface UseDragDropResult {
   dragOverState: DragState | null;
-  handleDragOver: (e: React.DragEvent, categoryId: string, groupId?: string) => void;
+  handleDragOver: (e: React.DragEvent, groupId: string, categoryId?: string) => void;
   handleDragLeave: () => void;
   handleDrop: (
     e: React.DragEvent,
-    categoryId: string,
-    groupId?: string
+    groupId: string,
+    categoryId?: string
   ) => Promise<void>;
 }
 
 export function useCategoryDragDrop(
-  onOrganizeSkill?: (skillId: string, categoryId: string | null, groupId?: string) => Promise<void>
+  onOrganizeSkill?: (skillId: string, groupId: string | null, categoryId?: string) => Promise<void>
 ): UseDragDropResult {
   const [dragOverState, setDragOverState] = useState<DragState | null>(null);
 
   const handleDragOver = useCallback(
-    (e: React.DragEvent, categoryId: string, groupId?: string) => {
+    (e: React.DragEvent, groupId: string, categoryId?: string) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      setDragOverState({ categoryId, groupId, skillId: '', skillName: '' });
+      setDragOverState({ groupId, categoryId, skillId: '', skillName: '' });
     },
     []
   );
@@ -37,7 +37,7 @@ export function useCategoryDragDrop(
   }, []);
 
   const handleDrop = useCallback(
-    async (e: React.DragEvent, categoryId: string, groupId?: string) => {
+    async (e: React.DragEvent, groupId: string, categoryId?: string) => {
       e.preventDefault();
       setDragOverState(null);
 
@@ -46,7 +46,7 @@ export function useCategoryDragDrop(
 
       try {
         const { skillId } = JSON.parse(data) as { skillId: string; skillName: string };
-        await onOrganizeSkill?.(skillId, categoryId, groupId);
+        await onOrganizeSkill?.(skillId, groupId, categoryId);
       } catch (error) {
         console.error('Failed to organize skill:', error);
       }

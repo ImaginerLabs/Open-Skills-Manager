@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 
 interface ContextMenuState {
-  type: 'category' | 'group';
-  categoryId: string;
-  groupId?: string | undefined;
+  type: 'group' | 'category';
+  groupId: string;
+  categoryId?: string | undefined;
   x: number;
   y: number;
 }
@@ -12,9 +12,9 @@ interface UseContextMenuResult {
   contextMenu: ContextMenuState | null;
   handleContextMenu: (
     e: React.MouseEvent,
-    type: 'category' | 'group',
-    categoryId: string,
-    groupId?: string
+    type: 'group' | 'category',
+    groupId: string,
+    categoryId?: string
   ) => void;
   closeContextMenu: () => void;
 }
@@ -23,13 +23,13 @@ export function useContextMenu(): UseContextMenuResult {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent, type: 'category' | 'group', categoryId: string, groupId?: string) => {
+    (e: React.MouseEvent, type: 'group' | 'category', groupId: string, categoryId?: string) => {
       e.preventDefault();
       e.stopPropagation();
       setContextMenu({
         type,
-        categoryId,
         groupId,
+        categoryId,
         x: e.clientX,
         y: e.clientY,
       });

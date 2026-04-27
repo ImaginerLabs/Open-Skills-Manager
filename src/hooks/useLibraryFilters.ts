@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { LibrarySkill } from '../stores/libraryStore';
-import { ALL_CATEGORY_ID } from '../components/features/CategoryManager/CategoryManager';
+import { ALL_GROUP_ID } from '../components/features/CategoryManager/CategoryManager';
 
 type SortOption = 'name' | 'date' | 'size';
 type SortDirection = 'asc' | 'desc';
@@ -18,7 +18,7 @@ interface UseLibraryFiltersResult {
 
 export function useLibraryFilters(
   skills: LibrarySkill[],
-  selectedCategoryId: string | null | undefined
+  selectedGroupId: string | null | undefined
 ): UseLibraryFiltersResult {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
@@ -40,9 +40,9 @@ export function useLibraryFilters(
       );
     }
 
-    // Filter by category, but skip filtering for "All" category
-    if (selectedCategoryId && selectedCategoryId !== ALL_CATEGORY_ID) {
-      result = result.filter((skill) => skill.categoryId === selectedCategoryId);
+    // Filter by group, but skip filtering for "All" group
+    if (selectedGroupId && selectedGroupId !== ALL_GROUP_ID) {
+      result = result.filter((skill) => skill.groupId === selectedGroupId);
     }
 
     result.sort((a, b) => {
@@ -63,7 +63,7 @@ export function useLibraryFilters(
     });
 
     return result;
-  }, [skills, searchQuery, selectedCategoryId, sortBy, sortDirection]);
+  }, [skills, searchQuery, selectedGroupId, sortBy, sortDirection]);
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
