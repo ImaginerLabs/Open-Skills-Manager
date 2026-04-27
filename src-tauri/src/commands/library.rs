@@ -117,7 +117,7 @@ pub struct SkillMetadata {
 // Helper Functions
 // ============================================================================
 
-fn get_library_path() -> PathBuf {
+pub fn get_library_path() -> PathBuf {
     // Default to iCloud container or local app support
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     PathBuf::from(&home)
@@ -148,15 +148,15 @@ fn get_skill_metadata_path() -> PathBuf {
 
 /// Persistent metadata for each skill (survives app restart)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct SkillMetadataEntry {
-    id: String,
-    folder_name: String,
-    category_id: Option<String>,
-    group_id: Option<String>,
-    imported_at: String,
+pub struct SkillMetadataEntry {
+    pub id: String,
+    pub folder_name: String,
+    pub category_id: Option<String>,
+    pub group_id: Option<String>,
+    pub imported_at: String,
 }
 
-fn load_skill_metadata() -> std::collections::HashMap<String, SkillMetadataEntry> {
+pub fn load_skill_metadata() -> std::collections::HashMap<String, SkillMetadataEntry> {
     let path = get_skill_metadata_path();
     if path.exists() {
         fs::read_to_string(&path)
@@ -177,7 +177,7 @@ fn save_skill_metadata(metadata: &std::collections::HashMap<String, SkillMetadat
     fs::write(&path, json).map_err(|e| e.to_string())
 }
 
-fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
+pub fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
     let content = fs::read_to_string(path).ok()?;
 
     // Parse frontmatter
@@ -209,7 +209,7 @@ fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
     }
 }
 
-fn count_files(dir: &Path) -> (u64, u32) {
+pub fn count_files(dir: &Path) -> (u64, u32) {
     let mut total_size = 0u64;
     let mut file_count = 0u32;
 
@@ -232,7 +232,7 @@ fn count_files(dir: &Path) -> (u64, u32) {
     (total_size, file_count)
 }
 
-fn has_resources(dir: &Path) -> bool {
+pub fn has_resources(dir: &Path) -> bool {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let name = entry.file_name();
@@ -1163,7 +1163,7 @@ pub fn library_organize(skill_id: String, category_id: Option<String>, group_id:
 // Helper: Copy directory recursively
 // ============================================================================
 
-fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+pub fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
 
     for entry in fs::read_dir(src)? {

@@ -4,6 +4,7 @@ import { Modal } from '../../ui/Modal/Modal';
 import { Button } from '../../ui/Button/Button';
 import type { GlobalSkill } from '../../../stores/globalStore';
 import { libraryService } from '../../../services/libraryService';
+import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import styles from './GlobalSkillsView.module.scss';
 
@@ -22,6 +23,7 @@ export function PullToLibraryDialog({
 }: PullToLibraryDialogProps): React.ReactElement | null {
   const [isPulling, setIsPulling] = useState(false);
   const { showToast } = useUIStore();
+  const { setSkills, setLoading } = useLibraryStore();
 
   const handlePull = useCallback(async () => {
     if (!skill) return;
@@ -31,6 +33,15 @@ export function PullToLibraryDialog({
       const result = await libraryService.import({ path: skill.path });
       if (result.success) {
         showToast('success', `Skill "${skill.name}" pulled to Library`);
+
+        // Refresh Library list
+        setLoading(true);
+        const listResult = await libraryService.list();
+        if (listResult.success) {
+          setSkills(listResult.data);
+        }
+        setLoading(false);
+
         onComplete();
       } else {
         showToast('error', `Failed to pull: ${result.error.message}`);
@@ -41,7 +52,7 @@ export function PullToLibraryDialog({
     } finally {
       setIsPulling(false);
     }
-  }, [skill, showToast, onComplete]);
+  }, [skill, showToast, setSkills, setLoading, onComplete]);
 
   if (!skill) return null;
 
