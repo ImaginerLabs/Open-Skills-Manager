@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ArrowClockwise, ArrowDown, FolderOpen } from '@phosphor-icons/react';
+import { ArrowClockwise } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
-import { SkillListLayout, SkillListHeader, SkillList, SkillDetailPanel } from '../../components/features/SkillList';
+import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
+import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
 import { globalService } from '../../services/globalService';
 import { useUIStore } from '../../stores/uiStore';
-import { formatSize, formatDate } from '../../utils/formatters';
+import { formatDate } from '../../utils/formatters';
 import styles from './Global.module.scss';
 
 export function Global(): React.ReactElement {
@@ -27,11 +28,13 @@ export function Global(): React.ReactElement {
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [showPullDialog, setShowPullDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewSkill, setPreviewSkill] = useState<SkillPreviewData | null>(null);
+  const [skillMdContent, setSkillMdContent] = useState<string>('');
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
   const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
@@ -84,10 +87,23 @@ export function Global(): React.ReactElement {
         const result = await globalService.get(skill.id);
         if (result.success && result.data) {
           setSkillMdContent(result.data.skillMdContent || '');
+        } else {
+          setSkillMdContent('');
         }
       } catch {
         setSkillMdContent('');
       }
+      const previewData: SkillPreviewData = {
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        size: skill.size,
+        fileCount: skill.fileCount,
+        date: skill.installedAt ? skill.installedAt.toLocaleDateString() : undefined,
+        sourceLibrarySkillId: skill.sourceLibrarySkillId,
+      };
+      setPreviewSkill(previewData);
+      setPreviewModalOpen(true);
     },
     [selectSkill]
   );
@@ -133,9 +149,11 @@ export function Global(): React.ReactElement {
     setShowPullDialog(true);
   }, []);
 
-  const handleCloseDetail = useCallback(() => {
-    selectSkill(null);
+  const handleClosePreview = useCallback(() => {
+    setPreviewModalOpen(false);
+    setPreviewSkill(null);
     setSkillMdContent('');
+    selectSkill(null);
   }, [selectSkill]);
 
   const handlePullComplete = useCallback(() => {
@@ -164,36 +182,6 @@ export function Global(): React.ReactElement {
       if (skill) handlePullToLibrary(skill);
     },
   };
-
-  // Render detail panel content
-  const renderDetailContent = useCallback(() => {
-    if (!selectedSkill) return null;
-
-    const formattedDate = selectedSkill.installedAt ? formatDate(selectedSkill.installedAt) : 'Unknown';
-    const formattedSize = formatSize(selectedSkill.size);
-
-    return (
-      <>
-        <div className={styles.detailMetadata}>
-          <div className={styles.detailMetaItem}>
-            <span>{formattedDate}</span>
-          </div>
-          <div className={styles.detailMetaItem}>
-            <span>{formattedSize}</span>
-          </div>
-          <div className={styles.detailMetaItem}>
-            <span>{selectedSkill.fileCount} files</span>
-          </div>
-        </div>
-
-        <div className={styles.detailMarkdown}>
-          <pre className={styles.detailMarkdownContent}>
-            {skillMdContent || 'No SKILL.md content available'}
-          </pre>
-        </div>
-      </>
-    );
-  }, [selectedSkill, skillMdContent]);
 
   // Render refresh button with tooltip
   const renderRefreshButton = () => {
@@ -244,7 +232,7 @@ export function Global(): React.ReactElement {
         </div>
       )}
 
-      <div className={[styles.gridContainer, selectedSkill && styles.withDetail].filter(Boolean).join(' ')}>
+      <div className={styles.gridContainer}>
         <SkillList
           skills={filteredSkills}
           selectedSkillId={selectedSkill?.id}
@@ -259,39 +247,12 @@ export function Global(): React.ReactElement {
         />
       </div>
 
-      <SkillDetailPanel
-        isOpen={selectedSkill !== null}
-        onClose={handleCloseDetail}
-      >
-        {selectedSkill && (
-          <>
-            <div className={styles.detailHeader}>
-              <h2 className={styles.detailTitle}>{selectedSkill.name.replace(/^["']|["']$/g, '')}</h2>
-              <button
-                type="button"
-                className={styles.closeButton}
-                onClick={handleCloseDetail}
-                aria-label="Close details"
-              >
-                <FolderOpen size={20} />
-              </button>
-            </div>
-            <div className={styles.detailContent}>
-              {renderDetailContent()}
-            </div>
-            <div className={styles.detailFooter}>
-              <button
-                type="button"
-                className={styles.pullButton}
-                onClick={() => handlePullToLibrary(selectedSkill)}
-              >
-                <ArrowDown size={16} />
-                <span>Pull to Library</span>
-              </button>
-            </div>
-          </>
-        )}
-      </SkillDetailPanel>
+      <SkillPreviewModal
+        isOpen={previewModalOpen}
+        onClose={handleClosePreview}
+        skill={previewSkill}
+        skillMdContent={skillMdContent}
+      />
 
       <PullToLibraryDialog
         isOpen={showPullDialog}
