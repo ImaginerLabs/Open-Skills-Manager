@@ -188,15 +188,42 @@ pub fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
         let mut name = "Unknown".to_string();
         let mut version = "0.0.0".to_string();
         let mut description = "".to_string();
+        let mut in_multiline_description = false;
+        let mut desc_lines: Vec<String> = Vec::new();
 
         for line in frontmatter.lines() {
+            // Handle multiline description (YAML block scalar with |)
+            if in_multiline_description {
+                // End multiline when we hit another key or empty line followed by key
+                if line.starts_with("name:") || line.starts_with("version:") {
+                    in_multiline_description = false;
+                    description = desc_lines.join(" ").trim().to_string();
+                    desc_lines.clear();
+                } else if !line.is_empty() {
+                    // Collect content lines, stripping leading whitespace
+                    desc_lines.push(line.trim().to_string());
+                }
+                continue;
+            }
+
             if let Some(value) = line.strip_prefix("name:") {
                 name = value.trim().to_string();
             } else if let Some(value) = line.strip_prefix("version:") {
                 version = value.trim().to_string();
             } else if let Some(value) = line.strip_prefix("description:") {
-                description = value.trim().to_string();
+                let trimmed = value.trim();
+                if trimmed == "|" {
+                    // Start multiline description
+                    in_multiline_description = true;
+                } else {
+                    description = trimmed.to_string();
+                }
             }
+        }
+
+        // Handle case where multiline description ends at frontmatter boundary
+        if in_multiline_description && !desc_lines.is_empty() {
+            description = desc_lines.join(" ").trim().to_string();
         }
 
         Some(SkillMetadata { name, version, description })

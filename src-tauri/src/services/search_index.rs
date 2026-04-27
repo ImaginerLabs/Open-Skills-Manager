@@ -415,17 +415,41 @@ fn tokenize(text: &str) -> Vec<String> {
 fn parse_skill_md_content(content: &str) -> (String, String) {
     let mut name = String::new();
     let mut description = String::new();
+    let mut in_multiline_description = false;
+    let mut desc_lines: Vec<String> = Vec::new();
 
     if content.starts_with("---") {
         if let Some(end) = content.find("\n---\n") {
             let frontmatter = &content[4..end];
 
             for line in frontmatter.lines() {
+                // Handle multiline description (YAML block scalar with |)
+                if in_multiline_description {
+                    if line.starts_with("name:") || line.starts_with("version:") {
+                        in_multiline_description = false;
+                        description = desc_lines.join(" ").trim().to_string();
+                        desc_lines.clear();
+                    } else if !line.is_empty() {
+                        desc_lines.push(line.trim().to_string());
+                    }
+                    continue;
+                }
+
                 if let Some(value) = line.strip_prefix("name:") {
                     name = value.trim().to_string();
                 } else if let Some(value) = line.strip_prefix("description:") {
-                    description = value.trim().to_string();
+                    let trimmed = value.trim();
+                    if trimmed == "|" {
+                        in_multiline_description = true;
+                    } else {
+                        description = trimmed.to_string();
+                    }
                 }
+            }
+
+            // Handle case where multiline description ends at frontmatter boundary
+            if in_multiline_description && !desc_lines.is_empty() {
+                description = desc_lines.join(" ").trim().to_string();
             }
         }
     }
@@ -539,6 +563,14 @@ mod tests {
         let (name, desc) = parse_skill_md_content(content);
         assert_eq!(name, "My Skill");
         assert_eq!(desc, "A test skill");
+    }
+
+    #[test]
+    fn test_parse_skill_md_content_multiline() {
+        let content = "---\nname: smart-commit\nversion: 1.0.0\ndescription: |\n  Intelligent git commit assistant that analyzes uncommitted changes.\n\n  TRIGGER when: user says \"commit\".\n---\n\nContent here";
+        let (name, desc) = parse_skill_md_content(content);
+        assert_eq!(name, "smart-commit");
+        assert_eq!(desc, "Intelligent git commit assistant that analyzes uncommitted changes. TRIGGER when: user says \"commit\".");
     }
 
     #[test]
