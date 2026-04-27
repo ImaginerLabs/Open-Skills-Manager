@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
-import { SkillDetail } from '../../components/features/SkillDetail';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
 import { DeployDialog } from '../../components/features/DeployDialog';
+import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { libraryService } from '../../services/libraryService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import {
   SkillListLayout,
   SkillListHeader,
   SkillList,
-  SkillDetailPanel,
 } from '../../components/features/SkillList';
 import { useLibraryDialogs } from './hooks/useLibraryDialogs';
 import { useLibraryExport } from './hooks/useLibraryExport';
@@ -224,17 +223,23 @@ export function Library(): React.ReactElement {
         />
       </div>
 
-      <SkillDetailPanel isOpen={selectedSkill !== null} onClose={handleCloseDetail}>
-        {selectedSkill && (
-          <SkillDetail
-            skill={selectedSkill}
-            skillMdContent={skillMdContent}
-            onClose={handleCloseDetail}
-            onDeploy={handleDeploySkill}
-            onExport={handleExportSkill}
-          />
-        )}
-      </SkillDetailPanel>
+      <SkillPreviewModal
+        isOpen={selectedSkill !== null}
+        onClose={handleCloseDetail}
+        skill={
+          selectedSkill
+            ? ({
+                id: selectedSkill.id,
+                name: selectedSkill.name,
+                description: selectedSkill.description,
+                size: selectedSkill.size,
+                fileCount: selectedSkill.fileCount,
+                date: selectedSkill.updatedAt?.toLocaleDateString() ?? selectedSkill.importedAt.toLocaleDateString(),
+              } satisfies SkillPreviewData)
+            : null
+        }
+        skillMdContent={skillMdContent}
+      />
 
       <ImportDialog
         isOpen={showImportDialog}
