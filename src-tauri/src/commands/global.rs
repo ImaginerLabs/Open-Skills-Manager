@@ -1,4 +1,4 @@
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources};
+use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
 use std::fs;
 use std::path::PathBuf;
 
@@ -23,6 +23,8 @@ pub struct GlobalSkill {
     pub skill_md_path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill_md_content: Option<String>,
+    pub skill_md_lines: u32,
+    pub skill_md_chars: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_at: Option<String>,
     pub size: u64,
@@ -59,6 +61,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
 
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
+                    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
                     let skill = GlobalSkill {
                         id: folder_name.clone(),
@@ -69,6 +72,8 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                         path: path.to_string_lossy().to_string(),
                         skill_md_path: skill_md.to_string_lossy().to_string(),
                         skill_md_content: None,
+                        skill_md_lines,
+                        skill_md_chars,
                         installed_at: Some(now.clone()),
                         size,
                         file_count,
@@ -105,6 +110,7 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                         let metadata = parse_skill_md(&skill_md);
                         let (size, file_count) = count_files(&path);
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
+                        let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
                         let skill = GlobalSkill {
                             id: id.clone(),
@@ -115,6 +121,8 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                             path: path.to_string_lossy().to_string(),
                             skill_md_path: skill_md.to_string_lossy().to_string(),
                             skill_md_content,
+                            skill_md_lines,
+                            skill_md_chars,
                             installed_at: Some(chrono::Utc::now().to_rfc3339()),
                             size,
                             file_count,

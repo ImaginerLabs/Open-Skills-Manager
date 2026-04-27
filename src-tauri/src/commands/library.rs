@@ -60,6 +60,8 @@ pub struct LibrarySkill {
     pub skill_md_path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill_md_content: Option<String>,
+    pub skill_md_lines: u32,
+    pub skill_md_chars: u32,
     pub category_id: Option<String>,
     pub group_id: Option<String>,
     pub imported_at: String,
@@ -236,6 +238,17 @@ pub fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
     }
 }
 
+/// Count lines and characters in a SKILL.md file
+pub fn count_skill_md_stats(path: &Path) -> (u32, u32) {
+    if let Ok(content) = fs::read_to_string(path) {
+        let lines = content.lines().count() as u32;
+        let chars = content.chars().count() as u32;
+        (lines, chars)
+    } else {
+        (0, 0)
+    }
+}
+
 pub fn count_files(dir: &Path) -> (u64, u32) {
     let mut total_size = 0u64;
     let mut file_count = 0u32;
@@ -381,6 +394,8 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                         imported_at: imported_at.clone(),
                     });
 
+                    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
+
                     let skill = LibrarySkill {
                         id,
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| {
@@ -392,6 +407,8 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                         path: path.to_string_lossy().to_string(),
                         skill_md_path: skill_md.to_string_lossy().to_string(),
                         skill_md_content: None,
+                        skill_md_lines,
+                        skill_md_chars,
                         category_id,
                         group_id,
                         imported_at,
@@ -442,6 +459,7 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
                         let metadata = parse_skill_md(&skill_md);
                         let (size, file_count) = count_files(&path);
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
+                        let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
                         // Get persisted category/group info
                         let (skill_id, category_id, group_id, imported_at) = if let Some(entry) = persisted_metadata.get(&folder_name) {
@@ -459,6 +477,8 @@ pub fn library_get(id: String) -> IpcResult<LibrarySkill> {
                             path: path.to_string_lossy().to_string(),
                             skill_md_path: skill_md.to_string_lossy().to_string(),
                             skill_md_content,
+                            skill_md_lines,
+                            skill_md_chars,
                             category_id,
                             group_id,
                             imported_at,
@@ -587,6 +607,7 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
 
     let metadata = parse_skill_md(&dest.join("SKILL.md"));
     let (size, file_count) = count_files(&dest);
+    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&dest.join("SKILL.md"));
     let imported_at = chrono::Utc::now().to_rfc3339();
     let skill_id = generate_id();
 
@@ -599,6 +620,8 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         path: dest.to_string_lossy().to_string(),
         skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
         skill_md_content: None,
+        skill_md_lines,
+        skill_md_chars,
         category_id: category_id.clone(),
         group_id: group_id.clone(),
         imported_at: imported_at.clone(),
@@ -727,6 +750,7 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
 
     let metadata = parse_skill_md(&dest.join("SKILL.md"));
     let (size, file_count) = count_files(&dest);
+    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&dest.join("SKILL.md"));
     let imported_at = chrono::Utc::now().to_rfc3339();
     let skill_id = generate_id();
 
@@ -739,6 +763,8 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
         path: dest.to_string_lossy().to_string(),
         skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
         skill_md_content: None,
+        skill_md_lines,
+        skill_md_chars,
         category_id: category_id.clone(),
         group_id: group_id.clone(),
         imported_at: imported_at.clone(),

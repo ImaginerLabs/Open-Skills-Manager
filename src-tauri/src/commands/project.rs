@@ -1,4 +1,4 @@
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources};
+use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
 use super::AppError;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -37,6 +37,8 @@ pub struct ProjectSkill {
     pub skill_md_path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill_md_content: Option<String>,
+    pub skill_md_lines: u32,
+    pub skill_md_chars: u32,
     pub size: u64,
     pub file_count: u32,
     pub has_resources: bool,
@@ -126,6 +128,7 @@ fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectS
 
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
+                    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
                     let skill = ProjectSkill {
                         id: folder_name.clone(),
@@ -136,6 +139,8 @@ fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectS
                         path: path.to_string_lossy().to_string(),
                         skill_md_path: skill_md.to_string_lossy().to_string(),
                         skill_md_content: None,
+                        skill_md_lines,
+                        skill_md_chars,
                         size,
                         file_count,
                         has_resources: has_resources(&path),
@@ -422,6 +427,7 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
                         let metadata = parse_skill_md(&skill_md);
                         let (size, file_count) = count_files(&path);
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
+                        let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
                         let skill = ProjectSkill {
                             id: skill_id.clone(),
@@ -432,6 +438,8 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
                             path: path.to_string_lossy().to_string(),
                             skill_md_path: skill_md.to_string_lossy().to_string(),
                             skill_md_content,
+                            skill_md_lines,
+                            skill_md_chars,
                             size,
                             file_count,
                             has_resources: has_resources(&path),
@@ -592,6 +600,7 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
     let skill_md = dest.join("SKILL.md");
     let metadata = parse_skill_md(&skill_md);
     let (size, file_count) = count_files(&dest);
+    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
     let imported_at = chrono::Utc::now().to_rfc3339();
     let skill_id_new = format!("skill-{}", uuid::Uuid::new_v4());
 
@@ -608,6 +617,8 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
         path: dest.to_string_lossy().to_string(),
         skill_md_path: skill_md.to_string_lossy().to_string(),
         skill_md_content: None,
+        skill_md_lines,
+        skill_md_chars,
         category_id: category_id.clone(),
         group_id: group_id.clone(),
         imported_at: imported_at.clone(),
