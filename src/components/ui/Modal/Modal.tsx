@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { ReactNode, HTMLAttributes, MouseEvent } from 'react';
 import { X } from '@phosphor-icons/react';
 import styles from './Modal.module.scss';
@@ -22,7 +23,7 @@ export function Modal({ open, onClose, title, children, className, ...props }: M
     }
   };
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={handleOverlayClick}>
       <div className={[styles.content, className].filter(Boolean).join(' ')} {...props}>
         {title && (
@@ -35,7 +36,8 @@ export function Modal({ open, onClose, title, children, className, ...props }: M
         )}
         <div className={styles.body}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
