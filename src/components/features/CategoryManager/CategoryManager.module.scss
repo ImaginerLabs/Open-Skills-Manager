@@ -100,6 +100,11 @@
   width: 12px;
   height: 12px;
   color: var(--color-text-tertiary);
+  transition: transform var(--duration-normal) var(--ease-out-expo);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
 }
 
 .icon {
@@ -123,6 +128,7 @@
   padding: 1px var(--space-1);
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-sm);
+  margin-left: auto;
 
   .light & {
     background: rgba(0, 0, 0, 0.05);
@@ -159,11 +165,26 @@
 }
 
 .groups {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+  padding-left: var(--space-6);
+  margin-top: var(--space-1);
+}
+
+.groupsCollapsed {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+  padding-left: var(--space-6);
+  margin-top: 0;
+}
+
+.groupsInner {
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-left: var(--space-6);
-  margin-top: var(--space-1);
 }
 
 .groupItem {

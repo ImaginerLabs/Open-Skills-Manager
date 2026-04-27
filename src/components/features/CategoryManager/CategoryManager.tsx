@@ -1,97 +1,97 @@
 import { useState, useCallback } from 'react';
 import { Plus, FolderSimple } from '@phosphor-icons/react';
-import type { Category } from '../../../stores/libraryStore';
+import type { Group } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { useContextMenu } from '../../../hooks/useContextMenu';
 import { InlineEditInput } from './InlineEditInput';
 import { ContextMenu } from './ContextMenu';
-import { CategoryItem, GroupItem, AddGroupButton } from './CategoryItem';
+import { GroupItem, CategoryItem, AddCategoryButton } from './GroupItem';
 import styles from './CategoryManager.module.scss';
 
-// Special ID for the "All" category
-export const ALL_CATEGORY_ID = 'cat-all';
+// Special ID for the "All" group
+export const ALL_GROUP_ID = 'grp-all';
 
 export interface CategoryManagerProps {
-  categories: Category[];
-  selectedCategoryId?: string | undefined;
+  groups: Group[];
   selectedGroupId?: string | undefined;
+  selectedCategoryId?: string | undefined;
   totalSkillsCount: number;
-  onSelectCategory?: (categoryId: string) => void;
-  onSelectGroup?: (categoryId: string, groupId: string) => void;
-  onCreateCategory?: (name: string) => void;
-  onRenameCategory?: (categoryId: string, newName: string) => void;
-  onDeleteCategory?: (categoryId: string) => void;
-  onCreateGroup?: (categoryId: string, name: string) => void;
-  onRenameGroup?: (categoryId: string, groupId: string, newName: string) => void;
-  onDeleteGroup?: (categoryId: string, groupId: string) => void;
-  onOrganizeSkill?: (skillId: string, categoryId: string | null, groupId?: string) => Promise<void>;
+  onSelectGroup?: (groupId: string) => void;
+  onSelectCategory?: (groupId: string, categoryId: string) => void;
+  onCreateGroup?: (name: string) => void;
+  onRenameGroup?: (groupId: string, newName: string) => void;
+  onDeleteGroup?: (groupId: string) => void;
+  onCreateCategory?: (groupId: string, name: string) => void;
+  onRenameCategory?: (groupId: string, categoryId: string, newName: string) => void;
+  onDeleteCategory?: (groupId: string, categoryId: string) => void;
+  onOrganizeSkill?: (skillId: string, groupId: string | null, categoryId?: string) => Promise<void>;
 }
 
 interface EditingState {
-  type: 'category' | 'group';
-  categoryId: string;
-  groupId?: string | undefined;
+  type: 'group' | 'category';
+  groupId: string;
+  categoryId?: string | undefined;
   value: string;
 }
 
 export function CategoryManager({
-  categories,
-  selectedCategoryId,
+  groups,
   selectedGroupId,
+  selectedCategoryId,
   totalSkillsCount,
-  onSelectCategory,
   onSelectGroup,
-  onCreateCategory,
-  onRenameCategory,
-  onDeleteCategory,
+  onSelectCategory,
   onCreateGroup,
   onRenameGroup,
   onDeleteGroup,
+  onCreateCategory,
+  onRenameCategory,
+  onDeleteCategory,
   onOrganizeSkill,
 }: CategoryManagerProps): React.ReactElement {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
-  const [isCreatingGroupFor, setIsCreatingGroupFor] = useState<string | null>(null);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [isCreatingCategoryFor, setIsCreatingCategoryFor] = useState<string | null>(null);
 
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
     useCategoryDragDrop(onOrganizeSkill);
 
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
-  // Ensure categories is always an array (defensive against corrupted localStorage)
-  const safeCategories = Array.isArray(categories) ? categories : [];
+  // Ensure groups is always an array (defensive against corrupted localStorage)
+  const safeGroups = Array.isArray(groups) ? groups : [];
 
-  const toggleCategory = useCallback((categoryId: string) => {
-    setExpandedCategories((prev) => {
+  const toggleGroup = useCallback((groupId: string) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
+      if (next.has(groupId)) {
+        next.delete(groupId);
       } else {
-        next.add(categoryId);
+        next.add(groupId);
       }
       return next;
     });
   }, []);
 
-  const handleCategoryClick = useCallback(
-    (categoryId: string) => {
-      toggleCategory(categoryId);
-      onSelectCategory?.(categoryId);
+  const handleGroupClick = useCallback(
+    (groupId: string) => {
+      toggleGroup(groupId);
+      onSelectGroup?.(groupId);
     },
-    [toggleCategory, onSelectCategory]
+    [toggleGroup, onSelectGroup]
   );
 
-  const handleGroupClick = useCallback(
-    (categoryId: string, groupId: string) => {
-      onSelectGroup?.(categoryId, groupId);
+  const handleCategoryClick = useCallback(
+    (groupId: string, categoryId: string) => {
+      onSelectCategory?.(groupId, categoryId);
     },
-    [onSelectGroup]
+    [onSelectCategory]
   );
 
   const startEditing = useCallback(
-    (type: 'category' | 'group', categoryId: string, groupId?: string, currentValue?: string) => {
-      setEditing({ type, categoryId, groupId, value: currentValue || '' });
+    (type: 'group' | 'category', groupId: string, categoryId?: string, currentValue?: string) => {
+      setEditing({ type, groupId, categoryId, value: currentValue || '' });
       closeContextMenu();
     },
     [closeContextMenu]
@@ -99,76 +99,76 @@ export function CategoryManager({
 
   const handleEditSubmit = useCallback(() => {
     if (!editing) return;
-    const { type, categoryId, groupId, value } = editing;
+    const { type, groupId, categoryId, value } = editing;
     if (!value.trim()) {
       setEditing(null);
       return;
     }
-    if (type === 'category') {
-      onRenameCategory?.(categoryId, value.trim());
-    } else if (groupId) {
-      onRenameGroup?.(categoryId, groupId, value.trim());
+    if (type === 'group') {
+      onRenameGroup?.(groupId, value.trim());
+    } else if (categoryId) {
+      onRenameCategory?.(groupId, categoryId, value.trim());
     }
     setEditing(null);
-  }, [editing, onRenameCategory, onRenameGroup]);
+  }, [editing, onRenameGroup, onRenameCategory]);
 
   const handleDelete = useCallback(() => {
     if (!contextMenu) return;
-    const { type, categoryId, groupId } = contextMenu;
-    if (type === 'category') {
-      onDeleteCategory?.(categoryId);
-    } else if (groupId) {
-      onDeleteGroup?.(categoryId, groupId);
+    const { type, groupId, categoryId } = contextMenu;
+    if (type === 'group') {
+      onDeleteGroup?.(groupId);
+    } else if (categoryId) {
+      onDeleteCategory?.(groupId, categoryId);
     }
     closeContextMenu();
-  }, [contextMenu, onDeleteCategory, onDeleteGroup, closeContextMenu]);
-
-  const handleCreateCategory = useCallback(
-    (name: string) => {
-      if (!name.trim()) {
-        setIsCreatingCategory(false);
-        return;
-      }
-      onCreateCategory?.(name.trim());
-      setIsCreatingCategory(false);
-    },
-    [onCreateCategory]
-  );
+  }, [contextMenu, onDeleteGroup, onDeleteCategory, closeContextMenu]);
 
   const handleCreateGroup = useCallback(
-    (categoryId: string, name: string) => {
+    (name: string) => {
       if (!name.trim()) {
-        setIsCreatingGroupFor(null);
+        setIsCreatingGroup(false);
         return;
       }
-      onCreateGroup?.(categoryId, name.trim());
-      setIsCreatingGroupFor(null);
+      onCreateGroup?.(name.trim());
+      setIsCreatingGroup(false);
     },
     [onCreateGroup]
+  );
+
+  const handleCreateCategory = useCallback(
+    (groupId: string, name: string) => {
+      if (!name.trim()) {
+        setIsCreatingCategoryFor(null);
+        return;
+      }
+      onCreateCategory?.(groupId, name.trim());
+      setIsCreatingCategoryFor(null);
+    },
+    [onCreateCategory]
   );
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <span className={styles.title}>Categories</span>
+        <span className={styles.title}>Groups</span>
         <button
           type="button"
           className={styles.addButton}
-          onClick={() => setIsCreatingCategory(true)}
-          aria-label="Create category"
+          onClick={() => setIsCreatingGroup(true)}
+          aria-label="Create group"
         >
           <Plus size={14} />
         </button>
       </div>
 
       <div className={styles.list}>
-        {/* "All" category - special virtual category */}
+        {/* "All" group - special virtual group */}
         <div
           className={[
             styles.categoryItem,
-            selectedCategoryId === ALL_CATEGORY_ID && !selectedGroupId && styles.selected,
+            selectedGroupId === ALL_GROUP_ID && !selectedCategoryId && styles.selected,
           ].filter(Boolean).join(' ')}
-          onClick={() => onSelectCategory?.(ALL_CATEGORY_ID)}
+          onClick={() => onSelectGroup?.(ALL_GROUP_ID)}
           role="button"
           tabIndex={0}
         >
@@ -178,56 +178,59 @@ export function CategoryManager({
           <span className={styles.count}>{totalSkillsCount}</span>
         </div>
 
-        {safeCategories.map((category) => {
-          const isExpanded = expandedCategories.has(category.id);
-          const isSelected = selectedCategoryId === category.id && !selectedGroupId;
-          const isEditing = editing?.type === 'category' && editing.categoryId === category.id;
-          const isDragOver = dragOverState?.categoryId === category.id && !dragOverState.groupId;
+        {safeGroups.map((group) => {
+          const isExpanded = expandedGroups.has(group.id);
+          const isSelected = selectedGroupId === group.id && !selectedCategoryId;
+          const isEditing = editing?.type === 'group' && editing.groupId === group.id;
+          const isDragOver = dragOverState?.groupId === group.id && !dragOverState.categoryId;
 
           return (
-            <div key={category.id} className={styles.categoryWrapper}>
-              <CategoryItem
-                category={category}
+            <div key={group.id} className={styles.categoryWrapper}>
+              <GroupItem
+                group={group}
                 isExpanded={isExpanded}
                 isSelected={isSelected}
                 isEditing={isEditing}
                 isDragOver={isDragOver}
                 editingValue={editing?.value || ''}
-                onCategoryClick={() => handleCategoryClick(category.id)}
-                onContextMenu={(e) => handleContextMenu(e, 'category', category.id)}
-                onDragOver={(e) => handleDragOver(e, category.id)}
+                onGroupClick={() => handleGroupClick(group.id)}
+                onContextMenu={(e) => handleContextMenu(e, 'group', group.id)}
+                onDragOver={(e) => handleDragOver(e, group.id)}
                 onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, category.id)}
+                onDrop={(e) => handleDrop(e, group.id)}
                 onEditSubmit={handleEditSubmit}
                 onEditCancel={() => setEditing(null)}
                 onEditClick={(e) => e.stopPropagation()}
               />
 
-              {isExpanded && (
-                <div className={styles.groups}>
-                  {category.groups.map((group) => {
-                    const isGroupSelected =
-                      selectedCategoryId === category.id && selectedGroupId === group.id;
-                    const isGroupEditing =
-                      editing?.type === 'group' &&
-                      editing.categoryId === category.id &&
-                      editing.groupId === group.id;
-                    const isGroupDragOver =
-                      dragOverState?.categoryId === category.id && dragOverState.groupId === group.id;
+              <div
+                className={isExpanded ? styles.groups : styles.groupsCollapsed}
+                aria-hidden={!isExpanded}
+              >
+                <div className={styles.groupsInner}>
+                  {group.categories.map((category) => {
+                    const isCategorySelected =
+                      selectedGroupId === group.id && selectedCategoryId === category.id;
+                    const isCategoryEditing =
+                      editing?.type === 'category' &&
+                      editing.groupId === group.id &&
+                      editing.categoryId === category.id;
+                    const isCategoryDragOver =
+                      dragOverState?.groupId === group.id && dragOverState.categoryId === category.id;
 
                     return (
-                      <GroupItem
-                        key={group.id}
-                        group={group}
-                        isSelected={isGroupSelected}
-                        isEditing={isGroupEditing}
-                        isDragOver={isGroupDragOver}
+                      <CategoryItem
+                        key={category.id}
+                        category={category}
+                        isSelected={isCategorySelected}
+                        isEditing={isCategoryEditing}
+                        isDragOver={isCategoryDragOver}
                         editingValue={editing?.value || ''}
-                        onGroupClick={() => handleGroupClick(category.id, group.id)}
-                        onContextMenu={(e) => handleContextMenu(e, 'group', category.id, group.id)}
-                        onDragOver={(e) => handleDragOver(e, category.id, group.id)}
+                        onCategoryClick={() => handleCategoryClick(group.id, category.id)}
+                        onContextMenu={(e) => handleContextMenu(e, 'category', group.id, category.id)}
+                        onDragOver={(e) => handleDragOver(e, group.id, category.id)}
                         onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, category.id, group.id)}
+                        onDrop={(e) => handleDrop(e, group.id, category.id)}
                         onEditSubmit={handleEditSubmit}
                         onEditCancel={() => setEditing(null)}
                         onEditClick={(e) => e.stopPropagation()}
@@ -235,32 +238,32 @@ export function CategoryManager({
                     );
                   })}
 
-                  <AddGroupButton onClick={() => setIsCreatingGroupFor(category.id)} />
+                  <AddCategoryButton onClick={() => setIsCreatingCategoryFor(group.id)} />
 
-                  {isCreatingGroupFor === category.id && (
+                  {isCreatingCategoryFor === group.id && (
                     <InlineEditInput
-                      placeholder="Group name"
-                      onSubmit={(name) => handleCreateGroup(category.id, name)}
-                      onCancel={() => setIsCreatingGroupFor(null)}
+                      placeholder="Category name"
+                      onSubmit={(name) => handleCreateCategory(group.id, name)}
+                      onCancel={() => setIsCreatingCategoryFor(null)}
                       autoFocus
                       indent
                     />
                   )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
 
-        {safeCategories.length === 0 && !isCreatingCategory && (
-          <p className={styles.emptyText}>No categories yet</p>
+        {safeGroups.length === 0 && !isCreatingGroup && (
+          <p className={styles.emptyText}>No groups yet</p>
         )}
 
-        {isCreatingCategory && (
+        {isCreatingGroup && (
           <InlineEditInput
-            placeholder="Category name"
-            onSubmit={handleCreateCategory}
-            onCancel={() => setIsCreatingCategory(false)}
+            placeholder="Group name"
+            onSubmit={handleCreateGroup}
+            onCancel={() => setIsCreatingGroup(false)}
             autoFocus
           />
         )}
@@ -269,11 +272,11 @@ export function CategoryManager({
       {contextMenu && (
         <ContextMenu
           type={contextMenu.type}
-          categoryId={contextMenu.categoryId}
           groupId={contextMenu.groupId}
+          categoryId={contextMenu.categoryId}
           x={contextMenu.x}
           y={contextMenu.y}
-          categories={safeCategories}
+          groups={safeGroups}
           onRename={startEditing}
           onDelete={handleDelete}
           onClose={closeContextMenu}

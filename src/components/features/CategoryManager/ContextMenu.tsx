@@ -1,38 +1,38 @@
 import { PencilSimple, Trash } from '@phosphor-icons/react';
-import type { Category } from '../../../stores/libraryStore';
+import type { Group } from '../../../stores/libraryStore';
 import styles from './ContextMenu.module.scss';
 
 export interface ContextMenuProps {
-  type: 'category' | 'group';
-  categoryId: string;
-  groupId?: string | undefined;
+  type: 'group' | 'category';
+  groupId: string;
+  categoryId?: string | undefined;
   x: number;
   y: number;
-  categories: Category[];
-  onRename: (type: 'category' | 'group', categoryId: string, groupId?: string | undefined, currentValue?: string) => void;
+  groups: Group[];
+  onRename: (type: 'group' | 'category', groupId: string, categoryId?: string | undefined, currentValue?: string) => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
 export function ContextMenu({
   type,
-  categoryId,
   groupId,
+  categoryId,
   x,
   y,
-  categories,
+  groups,
   onRename,
   onDelete,
   onClose,
 }: ContextMenuProps): React.ReactElement {
   const handleRename = () => {
-    if (type === 'category') {
-      const cat = categories.find((c) => c.id === categoryId);
-      onRename('category', categoryId, undefined, cat?.name);
+    if (type === 'group') {
+      const grp = groups.find((g) => g.id === groupId);
+      onRename('group', groupId, undefined, grp?.name);
     } else {
-      const cat = categories.find((c) => c.id === categoryId);
-      const group = cat?.groups.find((g) => g.id === groupId);
-      onRename('group', categoryId, groupId, group?.name);
+      const grp = groups.find((g) => g.id === groupId);
+      const category = grp?.categories.find((c) => c.id === categoryId);
+      onRename('category', groupId, categoryId, category?.name);
     }
   };
 
