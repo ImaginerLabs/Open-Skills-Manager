@@ -56,6 +56,40 @@ vi.mock('@/components/features/CategoryManager/ContextMenu.module.scss', () => (
   },
 }));
 
+// Mock CreateGroupDialog
+vi.mock('@/components/features/CategoryManager/CreateGroupDialog', () => ({
+  CreateGroupDialog: ({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (name: string, icon?: string, notes?: string) => void }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="create-group-dialog">
+        <input
+          placeholder="Enter group name"
+          onChange={(e) => e.target.value}
+        />
+        <button onClick={() => { onCreate('New Group'); onClose(); }}>Create</button>
+        <button onClick={onClose}>Cancel</button>
+      </div>
+    );
+  },
+}));
+
+// Mock CreateCategoryDialog
+vi.mock('@/components/features/CategoryManager/CreateCategoryDialog', () => ({
+  CreateCategoryDialog: ({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (name: string, icon?: string, notes?: string) => void }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="create-category-dialog">
+        <input
+          placeholder="Enter category name"
+          onChange={(e) => e.target.value}
+        />
+        <button onClick={() => { onCreate('New Category'); onClose(); }}>Create</button>
+        <button onClick={onClose}>Cancel</button>
+      </div>
+    );
+  },
+}));
+
 const mockGroups: Group[] = [
   {
     id: 'grp-1',
@@ -145,32 +179,27 @@ describe('CategoryManager', () => {
   });
 
   describe('group CRUD operations', () => {
-    it('should call onCreateGroup when creating new group', async () => {
+    it('should open create group dialog when clicking add button', async () => {
       const onCreateGroup = vi.fn();
       render(<CategoryManager {...defaultProps} onCreateGroup={onCreateGroup} />);
 
       const addButton = screen.getByLabelText('Create group');
       fireEvent.click(addButton);
 
-      const input = screen.getByPlaceholderText('Group name');
-      fireEvent.change(input, { target: { value: 'New Group' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      expect(onCreateGroup).toHaveBeenCalledWith('New Group');
+      expect(screen.getByTestId('create-group-dialog')).toBeInTheDocument();
     });
 
-    it('should not create group with empty name', async () => {
+    it('should call onCreateGroup when creating new group via dialog', async () => {
       const onCreateGroup = vi.fn();
       render(<CategoryManager {...defaultProps} onCreateGroup={onCreateGroup} />);
 
       const addButton = screen.getByLabelText('Create group');
       fireEvent.click(addButton);
 
-      const input = screen.getByPlaceholderText('Group name');
-      fireEvent.change(input, { target: { value: '' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+      const createButton = screen.getByText('Create');
+      fireEvent.click(createButton);
 
-      expect(onCreateGroup).not.toHaveBeenCalled();
+      expect(onCreateGroup).toHaveBeenCalledWith('New Group', undefined, undefined);
     });
 
     it('should call onSelectGroup when clicking group', async () => {
@@ -208,7 +237,22 @@ describe('CategoryManager', () => {
       expect(visibleAddCategoryButton).toBeInTheDocument();
     });
 
-    it('should call onCreateCategory when creating new category', async () => {
+    it('should open create category dialog when clicking add category button', async () => {
+      render(<CategoryManager {...defaultProps} />);
+
+      const groupItem = screen.getByText('Development');
+      fireEvent.click(groupItem);
+
+      const addCategoryButtons = screen.getAllByText('Add category');
+      const visibleAddCategoryButton = addCategoryButtons.find(
+        (btn) => !btn.closest('[aria-hidden="true"]')
+      );
+      fireEvent.click(visibleAddCategoryButton!);
+
+      expect(screen.getByTestId('create-category-dialog')).toBeInTheDocument();
+    });
+
+    it('should call onCreateCategory when creating new category via dialog', async () => {
       const onCreateCategory = vi.fn();
       render(<CategoryManager {...defaultProps} onCreateCategory={onCreateCategory} />);
 
@@ -221,11 +265,10 @@ describe('CategoryManager', () => {
       );
       fireEvent.click(visibleAddCategoryButton!);
 
-      const input = screen.getByPlaceholderText('Category name');
-      fireEvent.change(input, { target: { value: 'DevOps' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+      const createButton = screen.getByText('Create');
+      fireEvent.click(createButton);
 
-      expect(onCreateCategory).toHaveBeenCalledWith('grp-1', 'DevOps');
+      expect(onCreateCategory).toHaveBeenCalledWith('grp-1', 'New Category', undefined, undefined);
     });
 
     it('should call onSelectCategory when clicking category', async () => {
