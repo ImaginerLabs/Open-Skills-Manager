@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Gear, PaintBrush, Translate } from '@phosphor-icons/react';
+import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -20,6 +21,8 @@ function formatBytes(bytes: number): string {
 export function Settings(): React.ReactElement {
   const { theme, language, setTheme, setLanguage } = useSettingsStore();
   const { showToast } = useUIStore();
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [appName, setAppName] = useState<string>('');
 
   const {
     status,
@@ -31,6 +34,11 @@ export function Settings(): React.ReactElement {
     error,
     forceSync,
   } = useIcloudSync();
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
+    getName().then(setAppName).catch(() => setAppName('Claude Code Skills Manager'));
+  }, []);
 
   const handleForceSync = useCallback(async () => {
     await forceSync();
@@ -134,10 +142,10 @@ export function Settings(): React.ReactElement {
           <div className={styles.settingRow}>
             <div className={styles.settingLabel}>
               <span className={styles.settingName}>Version</span>
-              <span className={styles.settingDescription}>Claude Code Skills Manager</span>
+              <span className={styles.settingDescription}>{appName}</span>
             </div>
             <div className={styles.settingValue}>
-              <span className={styles.settingName}>1.0.0</span>
+              <span className={styles.settingName}>{appVersion || '...'}</span>
             </div>
           </div>
 

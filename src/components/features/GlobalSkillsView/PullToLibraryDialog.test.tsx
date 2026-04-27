@@ -37,6 +37,7 @@ const mockSkill: GlobalSkill = {
   size: 10240,
   fileCount: 5,
   hasResources: false,
+  isSymlink: false,
 };
 
 describe('PullToLibraryDialog', () => {

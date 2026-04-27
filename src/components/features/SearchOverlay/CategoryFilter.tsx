@@ -1,37 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
 import { CaretDown, Check, FolderOpen } from '@phosphor-icons/react';
 import { libraryService } from '../../../services/libraryService';
-import type { Category } from '../../../stores/libraryStore';
+import type { Group } from '../../../stores/libraryStore';
 import styles from './SearchOverlay.module.scss';
 
 export interface CategoryFilterProps {
   value: string | null;
-  onChange: (categoryId: string | null) => void;
+  onChange: (groupId: string | null) => void;
 }
 
 export function CategoryFilter({ value, onChange }: CategoryFilterProps): React.ReactElement {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadGroups = async () => {
       setIsLoading(true);
       try {
-        const result = await libraryService.categories.list();
+        const result = await libraryService.groups.list();
         if (result.success) {
-          setCategories(result.data);
+          setGroups(result.data);
         }
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (isOpen && categories.length === 0) {
-      loadCategories();
+    if (isOpen && groups.length === 0) {
+      loadGroups();
     }
-  }, [isOpen, categories.length]);
+  }, [isOpen, groups.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -44,15 +44,15 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps): React.
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedCategory = value ? categories.find((c) => c.id === value) : null;
+  const selectedGroup = value ? groups.find((g) => g.id === value) : null;
 
-  const handleSelect = (categoryId: string | null) => {
-    onChange(categoryId);
+  const handleSelect = (groupId: string | null) => {
+    onChange(groupId);
     setIsOpen(false);
   };
 
-  const count = (category: Category): number => {
-    return category.skillCount ?? 0;
+  const count = (group: Group): number => {
+    return group.skillCount ?? 0;
   };
 
   return (
@@ -66,7 +66,7 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps): React.
         disabled={isLoading}
       >
         <FolderOpen size={14} />
-        <span>{selectedCategory?.name ?? 'All Categories'}</span>
+        <span>{selectedGroup?.name ?? 'All Groups'}</span>
         <CaretDown size={12} className={styles.caret} />
       </button>
 
@@ -80,25 +80,25 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps): React.
             aria-selected={value === null}
           >
             <FolderOpen size={14} />
-            <span>All Categories</span>
+            <span>All Groups</span>
             {value === null && <Check size={14} className={styles.checkIcon} />}
           </button>
 
-          {categories.length > 0 && (
+          {groups.length > 0 && (
             <>
               <div className={styles.dropdownDivider} />
-              {categories.map((category) => (
+              {groups.map((group) => (
                 <button
-                  key={category.id}
+                  key={group.id}
                   type="button"
                   className={styles.dropdownItem}
-                  onClick={() => handleSelect(category.id)}
+                  onClick={() => handleSelect(group.id)}
                   role="option"
-                  aria-selected={value === category.id}
+                  aria-selected={value === group.id}
                 >
-                  <span>{category.name}</span>
-                  <span className={styles.count}>({count(category)})</span>
-                  {value === category.id && <Check size={14} className={styles.checkIcon} />}
+                  <span>{group.name}</span>
+                  <span className={styles.count}>({count(group)})</span>
+                  {value === group.id && <Check size={14} className={styles.checkIcon} />}
                 </button>
               ))}
             </>

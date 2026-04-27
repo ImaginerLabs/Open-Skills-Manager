@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { DotsThree, Trash, Export, Rocket, ArrowDown, FolderOpen } from '@phosphor-icons/react';
+import { DotsThree, Trash, Export, Rocket, ArrowDown, FolderOpen, Link } from '@phosphor-icons/react';
 import type { Skill, SkillScope, SkillCardActions, ViewMode } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
 import { formatSize, formatDate } from '@/utils/formatters';
@@ -27,9 +27,25 @@ function hasSourceLibrarySkillId(skill: Skill): boolean {
   return 'sourceLibrarySkillId' in skill && skill.sourceLibrarySkillId !== undefined;
 }
 
+function isSymlinkSkill(skill: Skill): boolean {
+  return 'isSymlink' in skill && skill.isSymlink === true;
+}
+
 function getSourceBadge(skill: Skill, scope: SkillScope): React.ReactNode {
   if ((scope === 'global' || scope === 'project') && hasSourceLibrarySkillId(skill)) {
     return <span className={styles.sourceBadge}>From Library</span>;
+  }
+  return null;
+}
+
+function getSymlinkBadge(skill: Skill): React.ReactNode {
+  if (isSymlinkSkill(skill)) {
+    return (
+      <span className={styles.symlinkBadge}>
+        <Link size={10} weight="bold" />
+        <span>Link</span>
+      </span>
+    );
   }
   return null;
 }
@@ -169,6 +185,7 @@ export function SkillCard<T extends Skill>({
               <h3 className={styles.listName} title={displayName}>
                 {displayName}
               </h3>
+              {getSymlinkBadge(skill)}
               {skill.fileCount > 0 && (
                 <span className={styles.fileCountBadge}>
                   <FolderOpen size={10} weight="fill" />
@@ -220,6 +237,7 @@ export function SkillCard<T extends Skill>({
             </p>
 
             <div className={styles.meta}>
+              {getSymlinkBadge(skill)}
               {skill.fileCount > 0 && (
                 <span className={styles.resourceBadge}>
                   <FolderOpen size={10} weight="fill" />

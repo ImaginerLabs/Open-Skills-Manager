@@ -50,12 +50,14 @@ export function ProjectSkillsView(): React.ReactElement {
     }
   }, [projectId, skills.length, isRefreshing, loadSkills]);
 
-  // Select project on mount
+  // Select project on mount - only when this view is first mounted
+  // This handles direct URL navigation to a project
   useEffect(() => {
-    if (project && project.id !== selectedProject?.id) {
+    if (project) {
       selectProject(project);
     }
-  }, [project, selectedProject, selectProject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.id]); // Only re-run if the project ID changes (different project)
 
   // Keyboard shortcut for refresh (Cmd+R)
   useEffect(() => {

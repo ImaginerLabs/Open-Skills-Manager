@@ -43,7 +43,7 @@ describe('SkillPreviewModal', () => {
       <SkillPreviewModal isOpen={true} onClose={vi.fn()} skill={mockSkill} skillMdContent={mockContent} />
     );
 
-    expect(screen.getByText('2026-04-27')).toBeInTheDocument();
+    expect(screen.getByText('Apr 27, 2026')).toBeInTheDocument();
     expect(screen.getByText('1 KB')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
   });

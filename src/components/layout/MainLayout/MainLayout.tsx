@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen,
@@ -6,22 +6,19 @@ import {
   Gear,
   MagnifyingGlass,
   CaretRight,
-  CaretDown,
 } from '@phosphor-icons/react';
-import { CategoryManager, ALL_CATEGORY_ID } from '../../features/CategoryManager';
+import { CategoryManager, ALL_GROUP_ID } from '../../features/CategoryManager';
 import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { useLibraryStore } from '../../../stores/libraryStore';
+import { useProjectStore } from '../../../stores/projectStore';
+import { useGlobalStore } from '../../../stores/globalStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { libraryService } from '../../../services/libraryService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
-
-export interface MainLayoutProps {
-  children?: React.ReactNode;
-}
 
 export interface MainLayoutProps {
   children?: React.ReactNode;
@@ -43,18 +40,22 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { categories, updateSkill, selectedCategoryId, selectedGroupId, selectCategory, selectGroup, skills } = useLibraryStore();
+  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore();
+  const { skills: globalSkills } = useGlobalStore();
   const { showToast } = useUIStore();
-  const dragTargetRef = useRef<HTMLDivElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
 
-  // Set default selection to "All" category on mount
+  // Set default selection to "All" group on initial mount if on library page
   useEffect(() => {
-    if (!selectedCategoryId) {
-      selectCategory(ALL_CATEGORY_ID);
+    // Only run once on initial mount
+    if (location.pathname.startsWith('/library') && selectedGroupId === undefined) {
+      console.log('[useEffect:mount] Setting default All group');
+      selectGroup(ALL_GROUP_ID);
     }
-  }, [selectedCategoryId, selectCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   const navSections: NavSection[] = [
     {
@@ -85,65 +86,53 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     });
   }, []);
 
-  const handleSelectCategory = useCallback((categoryId: string) => {
-    selectCategory(categoryId);
-    // Navigate to library if not already there
-    if (!location.pathname.startsWith('/library')) {
-      navigate('/library');
-    }
-  }, [selectCategory, location.pathname, navigate]);
-
-  const handleSelectGroup = useCallback((categoryId: string, groupId: string) => {
-    selectCategory(categoryId);
+  const handleSelectGroup = useCallback((groupId: string) => {
+    console.log('[handleSelectGroup] Selecting group:', groupId);
     selectGroup(groupId);
+    // Clear project selection when selecting a group (mutual exclusivity)
+    useProjectStore.getState().selectProject(null);
     // Navigate to library if not already there
     if (!location.pathname.startsWith('/library')) {
       navigate('/library');
     }
-  }, [selectCategory, selectGroup, location.pathname, navigate]);
+  }, [selectGroup, location.pathname, navigate]);
 
-  const handleCreateCategory = useCallback(
-    (name: string) => {
-      categoryManager.createCategory(name);
-    },
-    [categoryManager]
-  );
+  const handleSelectCategory = useCallback((groupId: string, categoryId: string) => {
+    console.log('[handleSelectCategory] Selecting category:', groupId, categoryId);
+    selectGroup(groupId);
+    selectCategory(categoryId);
+    // Clear project selection when selecting a category (mutual exclusivity)
+    useProjectStore.getState().selectProject(null);
+    // Navigate to library if not already there
+    if (!location.pathname.startsWith('/library')) {
+      navigate('/library');
+    }
+  }, [selectGroup, selectCategory, location.pathname, navigate]);
 
-  const handleRenameCategory = useCallback(
-    (categoryId: string, newName: string) => {
-      categoryManager.renameCategory(categoryId, newName);
-    },
-    [categoryManager]
-  );
-
-  const handleDeleteCategory = useCallback(
-    (categoryId: string) => {
-      categoryManager.deleteCategory(categoryId).then((success) => {
-        if (success && selectedCategoryId === categoryId) {
-          selectCategory(undefined);
-        }
-      });
-    },
-    [categoryManager, selectedCategoryId, selectCategory]
-  );
+  const handleSelectGlobalSkills = useCallback(() => {
+    // Clear library and project selections when selecting Global Skills (mutual exclusivity)
+    console.log('[handleSelectGlobalSkills] Clearing selections');
+    selectGroup(undefined);
+    useProjectStore.getState().selectProject(null);
+  }, [selectGroup]);
 
   const handleCreateGroup = useCallback(
-    (categoryId: string, name: string) => {
-      categoryManager.createGroup(categoryId, name);
+    (name: string) => {
+      categoryManager.createGroup(name);
     },
     [categoryManager]
   );
 
   const handleRenameGroup = useCallback(
-    (categoryId: string, groupId: string, newName: string) => {
-      categoryManager.renameGroup(categoryId, groupId, newName);
+    (groupId: string, newName: string) => {
+      categoryManager.renameGroup(groupId, newName);
     },
     [categoryManager]
   );
 
   const handleDeleteGroup = useCallback(
-    (categoryId: string, groupId: string) => {
-      categoryManager.deleteGroup(categoryId, groupId).then((success) => {
+    (groupId: string) => {
+      categoryManager.deleteGroup(groupId).then((success) => {
         if (success && selectedGroupId === groupId) {
           selectGroup(undefined);
         }
@@ -152,26 +141,53 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     [categoryManager, selectedGroupId, selectGroup]
   );
 
+  const handleCreateCategory = useCallback(
+    (groupId: string, name: string) => {
+      categoryManager.createCategory(groupId, name);
+    },
+    [categoryManager]
+  );
+
+  const handleRenameCategory = useCallback(
+    (groupId: string, categoryId: string, newName: string) => {
+      categoryManager.renameCategory(groupId, categoryId, newName);
+    },
+    [categoryManager]
+  );
+
+  const handleDeleteCategory = useCallback(
+    (groupId: string, categoryId: string) => {
+      categoryManager.deleteCategory(groupId, categoryId).then((success) => {
+        if (success && selectedCategoryId === categoryId) {
+          selectCategory(undefined);
+        }
+      });
+    },
+    [categoryManager, selectedCategoryId, selectCategory]
+  );
+
+  // Load groups once on mount (empty deps ensures this only runs once)
   useEffect(() => {
-    categoryManager.loadCategories();
-  }, [categoryManager]);
+    categoryManager.loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleOrganizeSkill = useCallback(
-    async (skillId: string, categoryId: string | null, groupId?: string) => {
+    async (skillId: string, groupId: string | null, categoryId?: string) => {
       try {
-        const result = await libraryService.organize(skillId, categoryId ?? undefined, groupId);
+        const result = await libraryService.organize(skillId, groupId ?? undefined, categoryId);
         if (result.success) {
-          const updates: Partial<{ categoryId: string; groupId: string }> = {};
-          if (categoryId) updates.categoryId = categoryId;
+          const updates: Partial<{ groupId: string; categoryId: string }> = {};
           if (groupId) updates.groupId = groupId;
+          if (categoryId) updates.categoryId = categoryId;
           updateSkill(skillId, updates);
-          const category = categories.find((c) => c.id === categoryId);
-          const group = category?.groups.find((g) => g.id === groupId);
-          const locationName = group
-            ? `${category?.name} / ${group.name}`
-            : category?.name ?? 'Uncategorized';
+          const group = groups.find((g) => g.id === groupId);
+          const category = group?.categories.find((c) => c.id === categoryId);
+          const locationName = category
+            ? `${group?.name} / ${category.name}`
+            : group?.name ?? 'Uncategorized';
           showToast('success', `Skill moved to ${locationName}`);
-          await categoryManager.loadCategories();
+          await categoryManager.loadGroups();
         } else {
           showToast('error', result.error.message);
         }
@@ -179,37 +195,31 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         showToast('error', e instanceof Error ? e.message : 'Failed to organize skill');
       }
     },
-    [updateSkill, categories, showToast, categoryManager]
+    [updateSkill, groups, showToast, categoryManager]
   );
 
   // Drag-drop handlers for organizing skills
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (styles.dragOver) {
-      dragTargetRef.current?.classList.add(styles.dragOver);
-    }
+    setIsDragOver(true);
   }, []);
 
   const handleDragLeave = useCallback(() => {
-    if (styles.dragOver) {
-      dragTargetRef.current?.classList.remove(styles.dragOver);
-    }
+    setIsDragOver(false);
   }, []);
 
   const handleDrop = useCallback(
-    async (e: React.DragEvent, categoryId?: string, groupId?: string) => {
+    async (e: React.DragEvent, groupId?: string, categoryId?: string) => {
       e.preventDefault();
-      if (styles.dragOver) {
-        dragTargetRef.current?.classList.remove(styles.dragOver);
-      }
+      setIsDragOver(false);
 
       const data = e.dataTransfer.getData('application/json');
       if (!data) return;
 
       try {
         const { skillId } = JSON.parse(data) as { skillId: string; skillName: string };
-        await handleOrganizeSkill(skillId, categoryId ?? null, groupId);
+        await handleOrganizeSkill(skillId, groupId ?? null, categoryId);
       } catch (error) {
         console.error('Failed to organize skill:', error);
       }
@@ -250,37 +260,32 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                 onClick={() => toggleSection(section.id)}
                 aria-expanded={section.expanded}
               >
-                <span className={styles.expandIcon}>
-                  {section.expanded ? (
-                    <CaretDown size={12} />
-                  ) : (
-                    <CaretRight size={12} />
-                  )}
+                <span className={[styles.expandIcon, section.expanded && styles.expanded].filter(Boolean).join(' ')}>
+                  <CaretRight size={12} />
                 </span>
                 <span className={styles.navSectionTitle}>{section.title}</span>
               </button>
 
               {section.expanded && section.id === 'library' && (
                 <div
-                  ref={dragTargetRef}
-                  className={styles.categoryContainer}
+                  className={[styles.categoryContainer, isDragOver && styles.dragOver].filter(Boolean).join(' ')}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e)}
                 >
                   <CategoryManager
-                    categories={categories}
-                    selectedCategoryId={selectedCategoryId}
+                    groups={groups}
                     selectedGroupId={selectedGroupId}
+                    selectedCategoryId={selectedCategoryId}
                     totalSkillsCount={skills?.length ?? 0}
-                    onSelectCategory={handleSelectCategory}
                     onSelectGroup={handleSelectGroup}
-                    onCreateCategory={handleCreateCategory}
-                    onRenameCategory={handleRenameCategory}
-                    onDeleteCategory={handleDeleteCategory}
+                    onSelectCategory={handleSelectCategory}
                     onCreateGroup={handleCreateGroup}
                     onRenameGroup={handleRenameGroup}
                     onDeleteGroup={handleDeleteGroup}
+                    onCreateCategory={handleCreateCategory}
+                    onRenameCategory={handleRenameCategory}
+                    onDeleteCategory={handleDeleteCategory}
                     onOrganizeSkill={handleOrganizeSkill}
                   />
                 </div>
@@ -290,12 +295,14 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                 <div className={styles.scopeList}>
                   <NavLink
                     to="/global"
+                    onClick={handleSelectGlobalSkills}
                     className={({ isActive }) =>
                       [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')
                     }
                   >
                     <Globe size={18} />
                     <span>Global Skills</span>
+                    <span className={styles.count}>{globalSkills.length}</span>
                   </NavLink>
                   <div className={styles.projectSection}>
                     <ProjectListContainer />

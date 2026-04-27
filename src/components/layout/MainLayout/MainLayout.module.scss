@@ -69,6 +69,11 @@
   width: 12px;
   height: 12px;
   color: var(--color-text-tertiary);
+  transition: transform var(--duration-normal) var(--ease-out-expo);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
 }
 
 .navSectionTitle {
@@ -84,6 +89,9 @@
 .categoryContainer {
   margin-top: var(--space-2);
   padding: 0 var(--space-1);
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
 
   &.dragOver {
     background: rgba(10, 132, 255, 0.1);
@@ -91,11 +99,34 @@
   }
 }
 
+.categoryContainerCollapsed {
+  margin-top: 0;
+  padding: 0 var(--space-1);
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+}
+
+.categoryContainerInner {
+  overflow: hidden;
+}
+
 .scopeList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
   padding-left: var(--space-4);
+}
+
+.scopeListCollapsed {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out-expo);
+  padding-left: var(--space-4);
+}
+
+.scopeListInner {
+  overflow: hidden;
 }
 
 .projectSection {
@@ -127,6 +158,19 @@
   }
 
   .light &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.count {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  padding: 1px var(--space-1);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+
+  .light & {
     background: rgba(0, 0, 0, 0.05);
   }
 }

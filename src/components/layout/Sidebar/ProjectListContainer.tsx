@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useNavigate } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
 import { useProjectStore } from '@/stores/projectStore';
+import { useLibraryStore } from '@/stores/libraryStore';
 import { useUIStore } from '@/stores/uiStore';
 import { projectService } from '@/services/projectService';
 
@@ -44,7 +45,10 @@ export function ProjectListContainer(): React.ReactElement {
     (projectId: string) => {
       const project = projects.find((p) => p.id === projectId);
       if (project) {
+        console.log('[handleSelectProject] Selecting project:', projectId);
         selectProject(project);
+        // Clear library selection when selecting a project (mutual exclusivity)
+        useLibraryStore.getState().selectGroup(undefined);
         navigate(`/projects/${projectId}`);
       }
     },

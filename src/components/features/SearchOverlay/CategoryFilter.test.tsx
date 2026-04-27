@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { CategoryFilter } from './CategoryFilter';
 
-const mockCategories = [
-  { id: 'cat-1', name: 'Development', skillCount: 10, groups: [], isCustom: false, createdAt: new Date() },
-  { id: 'cat-2', name: 'Testing', skillCount: 5, groups: [], isCustom: false, createdAt: new Date() },
+const mockGroups = [
+  { id: 'grp-1', name: 'Development', skillCount: 10, categories: [], isCustom: false, createdAt: new Date() },
+  { id: 'grp-2', name: 'Testing', skillCount: 5, categories: [], isCustom: false, createdAt: new Date() },
 ];
 
 vi.mock('../../../services/libraryService', () => ({
   libraryService: {
-    categories: {
+    groups: {
       list: vi.fn(),
     },
   },
@@ -24,9 +24,9 @@ describe('CategoryFilter', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     const { libraryService } = await import('../../../services/libraryService');
-    vi.mocked(libraryService.categories.list).mockResolvedValue({
+    vi.mocked(libraryService.groups.list).mockResolvedValue({
       success: true,
-      data: mockCategories,
+      data: mockGroups,
     });
   });
 
@@ -34,25 +34,25 @@ describe('CategoryFilter', () => {
     vi.clearAllMocks();
   });
 
-  it('displays "All Categories" by default', () => {
+  it('displays "All Groups" by default', () => {
     render(<CategoryFilter {...defaultProps} />);
-    expect(screen.getByText('All Categories')).toBeInTheDocument();
+    expect(screen.getByText('All Groups')).toBeInTheDocument();
   });
 
   it('opens dropdown on click', () => {
     render(<CategoryFilter {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: /All Categories/ }));
+    fireEvent.click(screen.getByRole('button', { name: /All Groups/ }));
 
     expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
-  it('loads and displays categories', async () => {
+  it('loads and displays groups', async () => {
     await act(async () => {
       render(<CategoryFilter {...defaultProps} />);
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /All Categories/ }));
+      fireEvent.click(screen.getByRole('button', { name: /All Groups/ }));
     });
 
     await waitFor(
@@ -64,13 +64,13 @@ describe('CategoryFilter', () => {
     );
   });
 
-  it('displays category count', async () => {
+  it('displays group count', async () => {
     await act(async () => {
       render(<CategoryFilter {...defaultProps} />);
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /All Categories/ }));
+      fireEvent.click(screen.getByRole('button', { name: /All Groups/ }));
     });
 
     await waitFor(
@@ -82,7 +82,7 @@ describe('CategoryFilter', () => {
     );
   });
 
-  it('calls onChange when category selected', async () => {
+  it('calls onChange when group selected', async () => {
     const onChange = vi.fn();
 
     await act(async () => {
@@ -90,7 +90,7 @@ describe('CategoryFilter', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /All Categories/ }));
+      fireEvent.click(screen.getByRole('button', { name: /All Groups/ }));
     });
 
     await waitFor(
@@ -101,20 +101,20 @@ describe('CategoryFilter', () => {
     );
 
     fireEvent.click(screen.getByRole('option', { name: /Development/ }));
-    expect(onChange).toHaveBeenCalledWith('cat-1');
+    expect(onChange).toHaveBeenCalledWith('grp-1');
   });
 
-  it('shows selected category name', () => {
-    render(<CategoryFilter {...defaultProps} value="cat-1" />);
-    expect(screen.getByText('All Categories')).toBeInTheDocument();
+  it('shows selected group name', () => {
+    render(<CategoryFilter {...defaultProps} value="grp-1" />);
+    expect(screen.getByText('All Groups')).toBeInTheDocument();
   });
 
-  it('calls onChange with null when "All Categories" selected', () => {
+  it('calls onChange with null when "All Groups" selected', () => {
     const onChange = vi.fn();
     render(<CategoryFilter {...defaultProps} onChange={onChange} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /All Categories/ }));
-    fireEvent.click(screen.getByRole('option', { name: /^All Categories$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /All Groups/ }));
+    fireEvent.click(screen.getByRole('option', { name: /^All Groups$/ }));
 
     expect(onChange).toHaveBeenCalledWith(null);
   });

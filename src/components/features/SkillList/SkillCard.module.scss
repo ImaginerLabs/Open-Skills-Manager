@@ -263,6 +263,18 @@
   border-radius: var(--radius-sm);
 }
 
+.symlinkBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-warning);
+  padding: 2px var(--space-2);
+  background: rgba(255, 159, 10, 0.15);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
 .footer {
   display: flex;
   align-items: center;
