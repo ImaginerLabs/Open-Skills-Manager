@@ -1,0 +1,110 @@
+import { useState, useEffect } from 'react';
+import { SquaresFour, Globe, Folder, CaretDown } from '@phosphor-icons/react';
+import type { SearchResult } from '../../../stores/uiStore';
+import { SearchResultCard } from './SearchResultCard';
+import styles from './SearchOverlay.module.scss';
+
+export interface SearchResultGroupProps {
+  groupId: string;
+  title: string;
+  results: SearchResult[];
+  query: string;
+  scope: 'library' | 'global' | 'project';
+  isCollapsed: boolean;
+  onToggleCollapse: (groupId: string) => void;
+  onDeploy?: ((result: SearchResult) => void) | undefined;
+  onExport?: ((result: SearchResult) => void) | undefined;
+  onCopyPath?: ((result: SearchResult) => void) | undefined;
+  onDelete?: ((result: SearchResult) => void) | undefined;
+}
+
+const SCOPE_ICONS = {
+  library: SquaresFour,
+  global: Globe,
+  project: Folder,
+};
+
+const SCOPE_COLORS = {
+  library: '#0A84FF',
+  global: '#30D158',
+  project: '#FF9F0A',
+};
+
+export function SearchResultGroup({
+  groupId,
+  title,
+  results,
+  query,
+  scope,
+  isCollapsed,
+  onToggleCollapse,
+  onDeploy,
+  onExport,
+  onCopyPath,
+  onDelete,
+}: SearchResultGroupProps): React.ReactElement {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!isCollapsed) {
+      setVisibleCount(0);
+      const timer = setInterval(() => {
+        setVisibleCount((prev) => {
+          if (prev >= results.length) {
+            clearInterval(timer);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 30);
+
+      return () => clearInterval(timer);
+    }
+    return undefined;
+  }, [isCollapsed, results.length]);
+
+  const ScopeIcon = SCOPE_ICONS[scope];
+  const count = results.length;
+
+  return (
+    <div className={styles.resultGroup}>
+      <button
+        type="button"
+        className={styles.groupHeader}
+        onClick={() => onToggleCollapse(groupId)}
+        aria-expanded={!isCollapsed}
+      >
+        <ScopeIcon size={16} style={{ color: SCOPE_COLORS[scope] }} />
+        <span className={styles.groupTitle}>{title}</span>
+        <span className={styles.countBadge}>{count}</span>
+        <CaretDown
+          size={14}
+          className={[styles.groupCaret, isCollapsed && styles.collapsed].filter(Boolean).join(' ')}
+        />
+      </button>
+
+      {!isCollapsed && (
+        <div className={styles.groupResults}>
+          {results.slice(0, visibleCount).map((result, index) => (
+            <div
+              key={result.id}
+              className={styles.resultItem}
+              style={{
+                animationDelay: `${index * 30}ms`,
+              }}
+            >
+              <SearchResultCard
+                result={result}
+                query={query}
+                onDeploy={onDeploy}
+                onExport={onExport}
+                onCopyPath={onCopyPath}
+                onDelete={onDelete}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -5,7 +5,7 @@ export { projectService } from './projectService';
 export { deployService } from './deployService';
 export { searchService, type SearchResult } from './searchService';
 export { configService, type AppConfig } from './configService';
-export { icloudService, type SyncStatus, type ConflictInfo } from './icloudService';
+export { icloudService, type SyncStatusInfo, type QuotaInfo, type PendingChange, type ConflictInfo } from './icloudService';
 export { localeService } from './localeService';
 export { themeService } from './themeService';
 export { updateService, type UpdateInfo } from './updateService';
