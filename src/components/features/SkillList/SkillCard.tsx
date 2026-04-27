@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { DotsThree, Trash, Export, Rocket, ArrowDown, FolderOpen } from '@phosphor-icons/react';
 import type { Skill, SkillScope, SkillCardActions } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
-import { formatSize, formatDate, formatVersion } from '@/utils/formatters';
+import { formatSize, formatDate } from '@/utils/formatters';
 import styles from './SkillCard.module.scss';
 
 interface ContextMenuPosition {
@@ -131,6 +131,7 @@ export function SkillCard<T extends Skill>({
 
   const deploymentCount = isLibrarySkill(skill) ? skill.deployments.length : 0;
   const canDrag = scope === 'library';
+  const displayName = skill.name.replace(/^["']|["']$/g, '');
 
   return (
     <>
@@ -146,12 +147,12 @@ export function SkillCard<T extends Skill>({
         draggable={canDrag}
         tabIndex={0}
         role="button"
-        aria-label={`${scope === 'library' ? '' : scope.charAt(0).toUpperCase() + scope.slice(1) + ' '}skill: ${skill.name}`}
+        aria-label={`${scope === 'library' ? '' : scope.charAt(0).toUpperCase() + scope.slice(1) + ' '}skill: ${displayName}`}
         aria-selected={isSelected}
       >
         <div className={styles.header}>
-          <h3 className={styles.name} title={skill.name}>
-            {skill.name}
+          <h3 className={styles.name} title={displayName}>
+            {displayName}
           </h3>
           <button
             type="button"
@@ -168,15 +169,6 @@ export function SkillCard<T extends Skill>({
         </p>
 
         <div className={styles.meta}>
-          {(() => {
-            const { display, stability } = formatVersion(skill.version);
-            if (!display) return null;
-            return (
-              <span className={[styles.version, styles[`version-${stability}`]].filter(Boolean).join(' ')}>
-                {display}
-              </span>
-            );
-          })()}
           {skill.fileCount > 0 && (
             <span className={styles.resourceBadge}>
               <FolderOpen size={10} weight="fill" />
