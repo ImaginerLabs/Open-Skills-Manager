@@ -1,12 +1,14 @@
 import { useCallback } from 'react';
 import type { Skill, SkillListItemProps } from './types';
+import { SkillCard } from './SkillCard';
 import styles from './SkillList.module.scss';
 
 export function SkillListItem<T extends Skill>({
   skill,
   isSelected,
   onSelect,
-  renderCard,
+  scope,
+  actions,
   animationDelay = 0,
 }: SkillListItemProps<T>): React.ReactElement {
   const handleClick = useCallback(() => {
@@ -27,7 +29,12 @@ export function SkillListItem<T extends Skill>({
         }
       }}
     >
-      {renderCard(skill, isSelected)}
+      <SkillCard
+        skill={skill}
+        isSelected={isSelected}
+        scope={scope}
+        actions={actions}
+      />
     </div>
   );
 }

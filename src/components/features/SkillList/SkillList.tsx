@@ -11,7 +11,8 @@ export function SkillList<T extends Skill>({
   selectedSkillId,
   onSelect,
   onGetSkillId,
-  renderCard,
+  scope,
+  actions,
   isLoading,
   emptyIcon,
   emptyTitle,
@@ -58,7 +59,8 @@ export function SkillList<T extends Skill>({
           skill={skill}
           isSelected={selectedSkillId === onGetSkillId(skill)}
           onSelect={onSelect}
-          renderCard={renderCard}
+          scope={scope}
+          actions={actions}
           animationDelay={delay}
         />
       ))}
