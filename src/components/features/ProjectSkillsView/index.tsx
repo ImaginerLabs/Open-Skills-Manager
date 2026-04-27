@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowClockwise, MagnifyingGlass, FolderOpen, DotsThree } from '@phosphor-icons/react';
+import { ArrowClockwise, FolderOpen } from '@phosphor-icons/react';
 import { useProjectStore, type ProjectSkill } from '../../../stores/projectStore';
 import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
-import { ProjectSkillCard } from './ProjectSkillCard';
-import { ProjectSkillDetail } from './ProjectSkillDetail';
-import { RefreshIndicator } from './RefreshIndicator';
-import { SkillListSkeleton } from '../../common/Skeletons/SkillListSkeleton';
+import { SkillListLayout, SkillListHeader, SkillList, SkillDetailPanel } from '../SkillList';
+import { useSkillSort } from '../SkillList/hooks/useSkillSort';
+import { formatDate } from '../../../utils/formatters';
+import {
+  ProjectSkillCard,
+  SkillContextMenu,
+  useProjectSkillContextMenu,
+} from './ProjectSkillCard';
+import { SkillDetailContent } from './SkillDetailContent';
+import { SkillDetailHeader } from './SkillDetailHeader';
+import { SkillDetailActions } from './SkillDetailActions';
 import styles from './ProjectSkillsView.module.scss';
 
 export function ProjectSkillsView(): React.ReactElement {
@@ -17,6 +24,14 @@ export function ProjectSkillsView(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
+
+  const {
+    showContextMenu,
+    contextMenuPos,
+    contextSkill,
+    handleContextMenu,
+    closeContextMenu,
+  } = useProjectSkillContextMenu();
 
   const { isRefreshing, refreshingProjectId, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
     projectId,
@@ -28,7 +43,7 @@ export function ProjectSkillsView(): React.ReactElement {
   // Get project info
   const project = useMemo(() => {
     if (!projectId) return null;
-    return projects.find((p: import('../../../stores/projectStore').Project) => p.id === projectId) ?? selectedProject;
+    return projects.find((p) => p.id === projectId) ?? selectedProject;
   }, [projectId, projects, selectedProject]);
 
   // Get skills for this project
@@ -36,6 +51,9 @@ export function ProjectSkillsView(): React.ReactElement {
     if (!projectId) return [];
     return projectSkills.get(projectId) ?? [];
   }, [projectId, projectSkills]);
+
+  // Sort skills
+  const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
 
   // Load skills if not loaded
   useEffect(() => {
@@ -111,74 +129,104 @@ export function ProjectSkillsView(): React.ReactElement {
     }
   }, [projectId, refresh]);
 
+  const handleContextMenuDelete = useCallback(() => {
+    closeContextMenu();
+    if (contextSkill) {
+      handleDeleteSkill(contextSkill.id);
+    }
+  }, [contextSkill, handleDeleteSkill, closeContextMenu]);
+
+  const handleContextMenuPull = useCallback(() => {
+    closeContextMenu();
+    if (contextSkill) {
+      handlePullSkill(contextSkill.id);
+    }
+  }, [contextSkill, handlePullSkill, closeContextMenu]);
+
+  // Filter skills by search query
   const filteredSkills = useMemo(() => {
-    if (!searchQuery) return skills;
+    if (!searchQuery) return sortedSkills;
     const lowerQuery = searchQuery.toLowerCase();
-    return skills.filter(
-      (skill: ProjectSkill) =>
+    return sortedSkills.filter(
+      (skill) =>
         skill.name.toLowerCase().includes(lowerQuery) ||
         skill.description.toLowerCase().includes(lowerQuery) ||
         skill.folderName.toLowerCase().includes(lowerQuery)
     );
-  }, [skills, searchQuery]);
+  }, [sortedSkills, searchQuery]);
 
-  const isEmpty = filteredSkills.length === 0 && !isRefreshing;
   const hasSkills = skills.length > 0;
+
+  // Render card for SkillList
+  const renderCard = useCallback(
+    (skill: ProjectSkill, isSelected: boolean): React.ReactNode => (
+      <ProjectSkillCard
+        skill={skill}
+        isSelected={isSelected}
+        onContextMenu={handleContextMenu}
+        styles={styles}
+      />
+    ),
+    [handleContextMenu]
+  );
 
   if (!project) {
     return (
-      <div className={styles.page}>
+      <SkillListLayout className={styles.page}>
         <div className={styles.empty}>
           <FolderOpen size={48} weight="thin" className={styles.emptyIcon} />
           <h2 className={styles.emptyTitle}>Project not found</h2>
           <p className={styles.emptyText}>The requested project does not exist or has been removed.</p>
         </div>
-      </div>
+      </SkillListLayout>
     );
   }
 
+  // Refresh indicator component
+  const RefreshIndicator = () => {
+    if (isRefreshing && refreshingProjectId === projectId) {
+      return (
+        <span className={styles.refreshIndicator}>
+          Refreshing...
+        </span>
+      );
+    }
+    if (lastRefreshAt) {
+      return (
+        <span className={styles.refreshIndicator}>
+          Last refreshed: {formatDate(lastRefreshAt)}
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleSection}>
-          <h1 className={styles.title}>{project.name}</h1>
-          <span className={styles.count}>{skills.length} skills</span>
-          <RefreshIndicator
-            isRefreshing={isRefreshing && refreshingProjectId === projectId}
-            lastRefreshAt={lastRefreshAt}
-            error={refreshError}
-          />
-        </div>
-        <div className={styles.actions}>
-          <div className={styles.searchWrapper}>
-            <MagnifyingGlass size={16} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Filter skills..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.searchInput}
-            />
-          </div>
-          <button
-            type="button"
-            className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            title="Refresh (Cmd+R)"
-          >
-            <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-          <button
-            type="button"
-            className={styles.menuButton}
-            title="More options"
-          >
-            <DotsThree size={16} weight="bold" />
-          </button>
-        </div>
-      </header>
+    <SkillListLayout className={styles.page}>
+      <SkillListHeader
+        title={project.name}
+        count={skills.length}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        sortDirection={sortDirection}
+        onToggleSortDirection={toggleSortDirection}
+        actions={
+          <>
+            <RefreshIndicator />
+            <button
+              type="button"
+              className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Refresh (Cmd+R)"
+            >
+              <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
+            </button>
+          </>
+        }
+      />
 
       {refreshError && (
         <div className={styles.error}>
@@ -187,49 +235,56 @@ export function ProjectSkillsView(): React.ReactElement {
       )}
 
       <div className={[styles.gridContainer, selectedSkill && styles.withDetail].filter(Boolean).join(' ')}>
-        {isRefreshing && skills.length === 0 ? (
-          <SkillListSkeleton count={8} />
-        ) : isEmpty ? (
-          <div className={styles.empty}>
-            <FolderOpen size={48} weight="thin" className={styles.emptyIcon} />
-            {hasSkills ? (
-              <>
-                <h2 className={styles.emptyTitle}>No matching skills</h2>
-                <p className={styles.emptyText}>Try adjusting your search query.</p>
-              </>
-            ) : (
-              <>
-                <h2 className={styles.emptyTitle}>No skills in this project</h2>
-                <p className={styles.emptyText}>This project has no skills installed in .claude/skills/</p>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className={styles.grid}>
-            {filteredSkills.map((skill: ProjectSkill, index: number) => (
-              <ProjectSkillCard
-                key={skill.id}
-                skill={skill}
-                isSelected={selectedSkill?.id === skill.id}
-                onSelect={handleSelectSkill}
-                onDelete={handleDeleteSkill}
-                onPull={handlePullSkill}
-                style={{ animationDelay: `${index * 50}ms` }}
-              />
-            ))}
-          </div>
-        )}
+        <SkillList
+          skills={filteredSkills}
+          selectedSkillId={selectedSkill?.id}
+          onSelect={handleSelectSkill}
+          onGetSkillId={(skill) => skill.id}
+          renderCard={renderCard}
+          isLoading={isRefreshing && skills.length === 0}
+          emptyTitle="No skills in this project"
+          emptyText="This project has no skills installed in .claude/skills/"
+          hasSkills={hasSkills}
+        />
       </div>
 
-      {selectedSkill && (
-        <ProjectSkillDetail
-          skill={selectedSkill}
-          skillMdContent={skillMdContent}
-          onClose={handleCloseDetail}
-          onDelete={() => handleDeleteSkill(selectedSkill.id)}
-          onPull={() => handlePullSkill(selectedSkill.id)}
+      <SkillDetailPanel
+        isOpen={selectedSkill !== null}
+        onClose={handleCloseDetail}
+      >
+        {selectedSkill && (
+          <>
+            <SkillDetailHeader
+              skillName={selectedSkill.name}
+              onClose={handleCloseDetail}
+              styles={styles}
+            />
+            <div className={styles.detailContent}>
+              <SkillDetailContent
+                skill={selectedSkill}
+                skillMdContent={skillMdContent}
+                styles={styles}
+              />
+            </div>
+            <SkillDetailActions
+              skill={selectedSkill}
+              onDelete={handleDeleteSkill}
+              onPull={handlePullSkill}
+              styles={styles}
+            />
+          </>
+        )}
+      </SkillDetailPanel>
+
+      {showContextMenu && (
+        <SkillContextMenu
+          isOpen={showContextMenu}
+          position={contextMenuPos}
+          onDelete={handleContextMenuDelete}
+          onPull={handleContextMenuPull}
+          styles={styles}
         />
       )}
-    </div>
+    </SkillListLayout>
   );
 }
