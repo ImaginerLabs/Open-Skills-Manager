@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowClockwise, FolderOpen } from '@phosphor-icons/react';
 import { useProjectStore, type ProjectSkill } from '../../../stores/projectStore';
@@ -19,8 +19,10 @@ export function ProjectSkillsView(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
+  const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { isRefreshing, refreshingProjectId, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
+  const { isRefreshing, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
     projectId,
     { autoRefresh: true }
   );
@@ -147,23 +149,33 @@ export function ProjectSkillsView(): React.ReactElement {
     );
   }
 
-  // Refresh indicator component
-  const RefreshIndicator = () => {
-    if (isRefreshing && refreshingProjectId === projectId) {
-      return (
-        <span className={styles.refreshIndicator}>
-          Refreshing...
-        </span>
-      );
-    }
-    if (lastRefreshAt) {
-      return (
-        <span className={styles.refreshIndicator}>
-          Last refreshed: {formatDate(lastRefreshAt)}
-        </span>
-      );
-    }
-    return null;
+  // Render refresh button with tooltip
+  const renderRefreshButton = () => {
+    const tooltipContent = isRefreshing
+      ? 'Refreshing...'
+      : lastRefreshAt
+        ? `Last refreshed: ${formatDate(lastRefreshAt)}`
+        : 'Refresh';
+
+    return (
+      <button
+        ref={refreshButtonRef}
+        type="button"
+        className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        onMouseEnter={() => setShowRefreshTooltip(true)}
+        onMouseLeave={() => setShowRefreshTooltip(false)}
+        aria-label="Refresh skills"
+      >
+        <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
+        {showRefreshTooltip && (
+          <div className={styles.refreshTooltip} role="tooltip">
+            {tooltipContent}
+          </div>
+        )}
+      </button>
+    );
   };
 
   return (
@@ -177,20 +189,7 @@ export function ProjectSkillsView(): React.ReactElement {
         onSortByChange={setSortBy}
         sortDirection={sortDirection}
         onToggleSortDirection={toggleSortDirection}
-        actions={
-          <>
-            <RefreshIndicator />
-            <button
-              type="button"
-              className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              title="Refresh (Cmd+R)"
-            >
-              <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
-            </button>
-          </>
-        }
+        actions={renderRefreshButton()}
       />
 
       {refreshError && (

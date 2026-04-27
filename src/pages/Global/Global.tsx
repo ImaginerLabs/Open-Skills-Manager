@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowClockwise, ArrowDown, FolderOpen } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
@@ -30,6 +30,9 @@ export function Global(): React.ReactElement {
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [showPullDialog, setShowPullDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
+  const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
+  const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
   const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
 
@@ -59,6 +62,7 @@ export function Global(): React.ReactElement {
       const result = await globalService.list();
       if (result.success) {
         setSkills(result.data);
+        setLastRefreshAt(new Date());
         showToast('success', 'Global skills refreshed');
       } else {
         setError(result.error.message);
@@ -194,6 +198,35 @@ export function Global(): React.ReactElement {
     );
   }, [selectedSkill, skillMdContent]);
 
+  // Render refresh button with tooltip
+  const renderRefreshButton = () => {
+    const tooltipContent = isRefreshing
+      ? 'Refreshing...'
+      : lastRefreshAt
+        ? `Last refreshed: ${formatDate(lastRefreshAt)}`
+        : 'Refresh';
+
+    return (
+      <button
+        ref={refreshButtonRef}
+        type="button"
+        className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        onMouseEnter={() => setShowRefreshTooltip(true)}
+        onMouseLeave={() => setShowRefreshTooltip(false)}
+        aria-label="Refresh global skills"
+      >
+        <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
+        {showRefreshTooltip && (
+          <div className={styles.refreshTooltip} role="tooltip">
+            {tooltipContent}
+          </div>
+        )}
+      </button>
+    );
+  };
+
   return (
     <SkillListLayout className={styles.page}>
       <SkillListHeader
@@ -205,17 +238,7 @@ export function Global(): React.ReactElement {
         onSortByChange={setSortBy}
         sortDirection={sortDirection}
         onToggleSortDirection={toggleSortDirection}
-        actions={
-          <button
-            type="button"
-            className={[styles.refreshButton, isRefreshing && styles.refreshing].filter(Boolean).join(' ')}
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            title="Refresh global skills"
-          >
-            <ArrowClockwise size={16} className={isRefreshing ? styles.spinning : ''} />
-          </button>
-        }
+        actions={renderRefreshButton()}
       />
 
       {error && (
