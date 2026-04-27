@@ -91,6 +91,7 @@ pub struct Group {
     pub name: String,
     pub icon: Option<String>,
     pub color: Option<String>,
+    pub notes: Option<String>,
     pub categories: Vec<Category>,
     pub skill_count: u32,
     pub is_custom: bool,
@@ -103,6 +104,8 @@ pub struct Category {
     pub id: String,
     pub group_id: String,
     pub name: String,
+    pub icon: Option<String>,
+    pub notes: Option<String>,
     pub skill_count: u32,
     pub is_custom: bool,
     pub created_at: String,
@@ -334,11 +337,14 @@ fn get_default_groups() -> Vec<Group> {
             name: "Development".to_string(),
             icon: Some("code".to_string()),
             color: Some("#0A84FF".to_string()),
+            notes: None,
             categories: vec![
                 Category {
                     id: "cat-dev-general".to_string(),
                     group_id: "grp-development".to_string(),
                     name: "General".to_string(),
+                    icon: None,
+                    notes: None,
                     skill_count: 0,
                     is_custom: false,
                     created_at: chrono::Utc::now().to_rfc3339(),
@@ -353,6 +359,7 @@ fn get_default_groups() -> Vec<Group> {
             name: "Productivity".to_string(),
             icon: Some("rocket".to_string()),
             color: Some("#30D158".to_string()),
+            notes: None,
             categories: vec![],
             skill_count: 0,
             is_custom: false,
@@ -1049,14 +1056,15 @@ pub fn library_groups_list() -> IpcResult<Vec<Group>> {
 }
 
 #[tauri::command]
-pub fn library_groups_create(name: String, icon: Option<String>, color: Option<String>) -> IpcResult<Group> {
+pub fn library_groups_create(name: String, icon: Option<String>, notes: Option<String>) -> IpcResult<Group> {
     let mut groups = load_groups();
 
     let group = Group {
         id: format!("grp-{}", uuid::Uuid::new_v4()),
         name,
         icon,
-        color,
+        color: None,
+        notes,
         categories: vec![],
         skill_count: 0,
         is_custom: true,
@@ -1123,7 +1131,7 @@ pub fn library_groups_delete(id: String) -> IpcResult<()> {
 // ============================================================================
 
 #[tauri::command]
-pub fn library_categories_create(group_id: String, name: String) -> IpcResult<Category> {
+pub fn library_categories_create(group_id: String, name: String, icon: Option<String>, notes: Option<String>) -> IpcResult<Category> {
     let mut groups = load_groups();
 
     if let Some(group) = groups.iter_mut().find(|g| g.id == group_id) {
@@ -1131,6 +1139,8 @@ pub fn library_categories_create(group_id: String, name: String) -> IpcResult<Ca
             id: format!("cat-{}", uuid::Uuid::new_v4()),
             group_id: group_id.clone(),
             name,
+            icon,
+            notes,
             skill_count: 0,
             is_custom: true,
             created_at: chrono::Utc::now().to_rfc3339(),

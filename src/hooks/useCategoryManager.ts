@@ -4,10 +4,10 @@ import { useLibraryStore } from '../stores/libraryStore';
 import { useUIStore } from '../stores/uiStore';
 
 export interface UseCategoryManagerResult {
-  createGroup: (name: string) => Promise<boolean>;
+  createGroup: (name: string, icon?: string, notes?: string) => Promise<boolean>;
   renameGroup: (groupId: string, newName: string) => Promise<boolean>;
   deleteGroup: (groupId: string) => Promise<boolean>;
-  createCategory: (groupId: string, name: string) => Promise<boolean>;
+  createCategory: (groupId: string, name: string, icon?: string, notes?: string) => Promise<boolean>;
   renameCategory: (groupId: string, categoryId: string, newName: string) => Promise<boolean>;
   deleteCategory: (groupId: string, categoryId: string) => Promise<boolean>;
   loadGroups: () => Promise<boolean>;
@@ -41,10 +41,10 @@ export function useCategoryManager(): UseCategoryManagerResult {
   }, [setGroups, setLoading, setError, showToast]);
 
   const createGroup = useCallback(
-    async (name: string): Promise<boolean> => {
+    async (name: string, icon?: string, notes?: string): Promise<boolean> => {
       setLoading(true);
       try {
-        const result = await libraryService.groups.create(name);
+        const result = await libraryService.groups.create(name, icon, notes);
         if (result.success) {
           addGroup(result.data);
           showToast('success', `Group "${name}" created`);
@@ -130,10 +130,10 @@ export function useCategoryManager(): UseCategoryManagerResult {
   );
 
   const createCategory = useCallback(
-    async (groupId: string, name: string): Promise<boolean> => {
+    async (groupId: string, name: string, icon?: string, notes?: string): Promise<boolean> => {
       setLoading(true);
       try {
-        const result = await libraryService.categories.create(groupId, name);
+        const result = await libraryService.categories.create(groupId, name, icon, notes);
         if (result.success) {
           addCategory(groupId, result.data);
           showToast('success', `Category "${name}" created`);

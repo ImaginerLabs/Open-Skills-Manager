@@ -41,16 +41,16 @@ export const libraryService = {
 
   groups: {
     list: () => invokeIPC<Group[]>('library_groups_list'),
-    create: (name: string, icon?: string, color?: string) =>
-      invokeIPC<Group>('library_groups_create', { name, icon, color }),
+    create: (name: string, icon?: string, notes?: string) =>
+      invokeIPC<Group>('library_groups_create', { name, icon, notes }),
     rename: (id: string, newName: string) =>
       invokeIPC<Group>('library_groups_rename', { id, newName }),
     delete: (id: string) => invokeIPC<void>('library_groups_delete', { id }),
   },
 
   categories: {
-    create: (groupId: string, name: string) =>
-      invokeIPC<Category>('library_categories_create', { groupId, name }),
+    create: (groupId: string, name: string, icon?: string, notes?: string) =>
+      invokeIPC<Category>('library_categories_create', { groupId, name, icon, notes }),
     rename: (groupId: string, categoryId: string, newName: string) =>
       invokeIPC<Category>('library_categories_rename', { groupId, categoryId, newName }),
     delete: (groupId: string, categoryId: string) =>

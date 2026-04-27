@@ -55,6 +55,7 @@ export interface Group {
   name: string;
   icon?: string;
   color?: string;
+  notes?: string;
   categories: Category[];
   skillCount: number;
   isCustom: boolean;
@@ -65,6 +66,8 @@ export interface Category {
   id: string;
   groupId: string;
   name: string;
+  icon?: string;
+  notes?: string;
   skillCount: number;
   isCustom: boolean;
   createdAt: Date;
