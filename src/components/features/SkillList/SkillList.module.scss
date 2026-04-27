@@ -157,10 +157,27 @@
   gap: var(--space-4);
 }
 
+.listGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.viewToggleContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+  grid-column: 1 / -1;
+}
+
 // =============================================================================
 // List Item with Staggered Animation
 // =============================================================================
 .listItem {
+  animation: item-enter var(--duration-normal) var(--ease-out-expo) backwards;
+}
+
+.listItemRow {
   animation: item-enter var(--duration-normal) var(--ease-out-expo) backwards;
 }
 
@@ -339,6 +356,7 @@
 // =============================================================================
 @media (prefers-reduced-motion: reduce) {
   .listItem,
+  .listItemRow,
   .detailPanel,
   .closing {
     animation: none;

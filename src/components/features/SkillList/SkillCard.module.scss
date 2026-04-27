@@ -32,6 +32,32 @@
   cursor: grabbing;
 }
 
+.listMode {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-4);
+
+  .header {
+    flex: 0 0 auto;
+    min-width: 200px;
+  }
+
+  .description {
+    flex: 1;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .meta {
+    flex: 0 0 auto;
+  }
+
+  .footer {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+}
+
 .header {
   display: flex;
   align-items: flex-start;

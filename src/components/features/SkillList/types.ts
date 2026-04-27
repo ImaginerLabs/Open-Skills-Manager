@@ -4,6 +4,7 @@ import type { ProjectSkill } from '@/stores/projectStore';
 
 export type Skill = LibrarySkill | GlobalSkill | ProjectSkill;
 export type SkillScope = 'library' | 'global' | 'project';
+export type ViewMode = 'grid' | 'list';
 
 export type SortOption = 'name' | 'date' | 'size';
 export type SortDirection = 'asc' | 'desc';
@@ -40,12 +41,14 @@ export interface SkillListProps<T extends Skill> {
   onSelect: (skill: T) => void;
   onGetSkillId: (skill: T) => string;
   scope: SkillScope;
-  actions?: SkillCardActions<T>;
-  isLoading?: boolean;
-  emptyIcon?: React.ReactNode;
+  actions?: SkillCardActions<T> | undefined;
+  isLoading?: boolean | undefined;
+  emptyIcon?: React.ReactNode | undefined;
   emptyTitle: string;
   emptyText: string;
   hasSkills: boolean;
+  showViewToggle?: boolean | undefined;
+  onSkillClick?: ((skill: T) => void) | undefined;
 }
 
 export interface SkillListItemProps<T extends Skill> {
@@ -54,7 +57,9 @@ export interface SkillListItemProps<T extends Skill> {
   onSelect: (skill: T) => void;
   scope: SkillScope;
   actions?: SkillCardActions<T> | undefined;
-  animationDelay?: number;
+  animationDelay?: number | undefined;
+  viewMode?: ViewMode | undefined;
+  onClick?: (() => void) | undefined;
 }
 
 export interface SkillDetailPanelProps {

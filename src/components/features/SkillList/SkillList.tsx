@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { FolderOpen } from '@phosphor-icons/react';
 import { SkillListSkeleton } from '../../common/Skeletons/SkillListSkeleton';
+import { ViewToggle } from '../../ui/ViewToggle';
+import { useUIStore } from '@/stores';
 import type { Skill, SkillListProps } from './types';
 import { SkillListItem } from './SkillListItem';
 import { getAnimationDelay } from './hooks/useSkillListAnimation';
@@ -18,7 +20,10 @@ export function SkillList<T extends Skill>({
   emptyTitle,
   emptyText,
   hasSkills,
+  showViewToggle = true,
+  onSkillClick,
 }: SkillListProps<T>): React.ReactElement {
+  const { viewMode, setViewMode } = useUIStore();
   const isEmpty = skills.length === 0 && !isLoading;
 
   const itemsWithDelay = useMemo(() => {
@@ -52,18 +57,28 @@ export function SkillList<T extends Skill>({
   }
 
   return (
-    <div className={styles.grid}>
-      {itemsWithDelay.map(({ skill, delay }) => (
-        <SkillListItem
-          key={onGetSkillId(skill)}
-          skill={skill}
-          isSelected={selectedSkillId === onGetSkillId(skill)}
-          onSelect={onSelect}
-          scope={scope}
-          actions={actions}
-          animationDelay={delay}
-        />
-      ))}
+    <div className={viewMode === 'list' ? styles.listGrid : styles.grid}>
+      {showViewToggle && (
+        <div className={styles.viewToggleContainer}>
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+        </div>
+      )}
+      {itemsWithDelay.map(({ skill, delay }) => {
+        const handleClick = onSkillClick ? () => onSkillClick(skill) : undefined;
+        return (
+          <SkillListItem
+            key={onGetSkillId(skill)}
+            skill={skill}
+            isSelected={selectedSkillId === onGetSkillId(skill)}
+            onSelect={onSelect}
+            scope={scope}
+            actions={actions}
+            animationDelay={delay}
+            viewMode={viewMode}
+            onClick={handleClick}
+          />
+        );
+      })}
     </div>
   );
 }

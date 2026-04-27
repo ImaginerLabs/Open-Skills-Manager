@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { DotsThree, Trash, Export, Rocket, ArrowDown, FolderOpen } from '@phosphor-icons/react';
-import type { Skill, SkillScope, SkillCardActions } from './types';
+import type { Skill, SkillScope, SkillCardActions, ViewMode } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
 import { formatSize, formatDate } from '@/utils/formatters';
 import styles from './SkillCard.module.scss';
@@ -15,6 +15,8 @@ export interface SkillCardProps<T extends Skill> {
   isSelected: boolean;
   scope: SkillScope;
   actions?: SkillCardActions<T> | undefined;
+  viewMode?: ViewMode | undefined;
+  onClick?: (() => void) | undefined;
 }
 
 function isLibrarySkill(skill: Skill): skill is LibrarySkill {
@@ -37,6 +39,8 @@ export function SkillCard<T extends Skill>({
   isSelected,
   scope,
   actions,
+  viewMode = 'grid',
+  onClick,
 }: SkillCardProps<T>): React.ReactElement {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 });
@@ -140,6 +144,7 @@ export function SkillCard<T extends Skill>({
           styles.card,
           isSelected && styles.selected,
           isBeingDragged && styles.dragging,
+          viewMode === 'list' && styles.listMode,
         ].filter(Boolean).join(' ')}
         onContextMenu={handleContextMenu}
         onDragStart={canDrag ? handleDragStart : undefined}
@@ -149,6 +154,13 @@ export function SkillCard<T extends Skill>({
         role="button"
         aria-label={`${scope === 'library' ? '' : scope.charAt(0).toUpperCase() + scope.slice(1) + ' '}skill: ${displayName}`}
         aria-selected={isSelected}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
       >
         <div className={styles.header}>
           <h3 className={styles.name} title={displayName}>

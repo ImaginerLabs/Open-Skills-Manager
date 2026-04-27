@@ -10,14 +10,17 @@ export function SkillListItem<T extends Skill>({
   scope,
   actions,
   animationDelay = 0,
+  viewMode = 'grid',
+  onClick,
 }: SkillListItemProps<T>): React.ReactElement {
   const handleClick = useCallback(() => {
+    onClick?.();
     onSelect(skill);
-  }, [onSelect, skill]);
+  }, [onClick, onSelect, skill]);
 
   return (
     <div
-      className={styles.listItem}
+      className={viewMode === 'list' ? styles.listItemRow : styles.listItem}
       style={{ animationDelay: `${animationDelay}ms` }}
       onClick={handleClick}
       role="button"
@@ -34,6 +37,8 @@ export function SkillListItem<T extends Skill>({
         isSelected={isSelected}
         scope={scope}
         actions={actions}
+        viewMode={viewMode}
+        onClick={onClick}
       />
     </div>
   );
