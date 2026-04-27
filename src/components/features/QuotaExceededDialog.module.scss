@@ -1,0 +1,86 @@
+@use '../../styles/variables' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 69, 58, 0.1);
+  color: var(--color-error);
+
+  .light & {
+    background: rgba(255, 69, 58, 0.15);
+  }
+}
+
+.description {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: 0;
+  max-width: 320px;
+}
+
+.storageBreakdown {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.storageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.storageLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.storageValue {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.storageBar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+
+  .light & {
+    background: rgba(0, 0, 0, 0.1);
+  }
+}
+
+.storageFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-error), var(--color-warning));
+  transition: width var(--duration-normal) ease;
+}
+
+.storageNote {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storageFill {
+    transition: none;
+  }
+}
