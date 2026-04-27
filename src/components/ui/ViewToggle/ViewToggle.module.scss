@@ -1,0 +1,39 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/glassmorphism' as glass;
+
+.container {
+  display: flex;
+  gap: 2px;
+  @include glass.glass-light;
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+
+  &:hover {
+    color: var(--color-text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  &.active {
+    color: var(--color-primary);
+    background: rgba(10, 132, 255, 0.15);
+  }
+}
