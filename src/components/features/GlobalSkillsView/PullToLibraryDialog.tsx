@@ -6,7 +6,7 @@ import type { GlobalSkill } from '../../../stores/globalStore';
 import { libraryService } from '../../../services/libraryService';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
-import styles from './GlobalSkillsView.module.scss';
+import styles from './PullToLibraryDialog.module.scss';
 
 export interface PullToLibraryDialogProps {
   isOpen: boolean;
