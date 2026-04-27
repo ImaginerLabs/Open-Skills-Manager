@@ -43,6 +43,7 @@ pub struct ProjectSkill {
     pub file_count: u32,
     pub has_resources: bool,
     pub project_id: String,
+    pub installed_at: String,
 }
 
 // ============================================================================
@@ -130,6 +131,16 @@ fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectS
                     let (size, file_count) = count_files(&path);
                     let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
+                    // Get folder modification time as installed_at
+                    let installed_at = fs::metadata(&path)
+                        .ok()
+                        .and_then(|m| m.modified().ok())
+                        .map(|t| {
+                            let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                            datetime.to_rfc3339()
+                        })
+                        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
                     let skill = ProjectSkill {
                         id: folder_name.clone(),
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
@@ -145,6 +156,7 @@ fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectS
                         file_count,
                         has_resources: has_resources(&path),
                         project_id: project_id.to_string(),
+                        installed_at,
                     };
                     skills.push(skill);
                 }
@@ -429,6 +441,16 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
                         let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
+                        // Get folder modification time as installed_at
+                        let installed_at = fs::metadata(&path)
+                            .ok()
+                            .and_then(|m| m.modified().ok())
+                            .map(|t| {
+                                let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                                datetime.to_rfc3339()
+                            })
+                            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
                         let skill = ProjectSkill {
                             id: skill_id.clone(),
                             name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
@@ -444,6 +466,7 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
                             file_count,
                             has_resources: has_resources(&path),
                             project_id,
+                            installed_at,
                         };
                         return IpcResult::success(skill);
                     }

@@ -47,7 +47,6 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
     }
 
     let mut skills = Vec::new();
-    let now = chrono::Utc::now().to_rfc3339();
 
     if let Ok(entries) = fs::read_dir(&global_path) {
         for entry in entries.flatten() {
@@ -63,6 +62,15 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                     let (size, file_count) = count_files(&path);
                     let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
+                    // Get folder modification time as installed_at
+                    let installed_at = fs::metadata(&path)
+                        .ok()
+                        .and_then(|m| m.modified().ok())
+                        .map(|t| {
+                            let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                            datetime.to_rfc3339()
+                        });
+
                     let skill = GlobalSkill {
                         id: folder_name.clone(),
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
@@ -74,7 +82,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                         skill_md_content: None,
                         skill_md_lines,
                         skill_md_chars,
-                        installed_at: Some(now.clone()),
+                        installed_at,
                         size,
                         file_count,
                         has_resources: has_resources(&path),
@@ -112,6 +120,15 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
                         let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
 
+                        // Get folder modification time as installed_at
+                        let installed_at = fs::metadata(&path)
+                            .ok()
+                            .and_then(|m| m.modified().ok())
+                            .map(|t| {
+                                let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                                datetime.to_rfc3339()
+                            });
+
                         let skill = GlobalSkill {
                             id: id.clone(),
                             name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
@@ -123,7 +140,7 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                             skill_md_content,
                             skill_md_lines,
                             skill_md_chars,
-                            installed_at: Some(chrono::Utc::now().to_rfc3339()),
+                            installed_at,
                             size,
                             file_count,
                             has_resources: has_resources(&path),
