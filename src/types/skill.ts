@@ -11,14 +11,34 @@ export interface LibrarySkill {
   skillMdContent?: string;
   skillMdLines: number;
   skillMdChars: number;
-  categoryId?: string;
   groupId?: string;
+  categoryId?: string;
   importedAt: Date;
   updatedAt?: Date;
   size: number;
   fileCount: number;
   hasResources: boolean;
   deployments: Deployment[];
+  isSymlink: boolean;
+}
+
+export interface GlobalSkill {
+  id: string;
+  name: string;
+  folderName: string;
+  version: string;
+  description: string;
+  path: string;
+  skillMdPath: string;
+  skillMdContent?: string;
+  skillMdLines: number;
+  skillMdChars: number;
+  installedAt?: Date;
+  size: number;
+  fileCount: number;
+  hasResources: boolean;
+  sourceLibrarySkillId?: string;
+  isSymlink: boolean;
 }
 
 export interface Deployment {
@@ -30,20 +50,20 @@ export interface Deployment {
   deployedAt: Date;
 }
 
-export interface Category {
+export interface Group {
   id: string;
   name: string;
   icon?: string;
   color?: string;
-  groups: Group[];
+  categories: Category[];
   skillCount: number;
   isCustom: boolean;
   createdAt: Date;
 }
 
-export interface Group {
+export interface Category {
   id: string;
-  categoryId: string;
+  groupId: string;
   name: string;
   skillCount: number;
   isCustom: boolean;
