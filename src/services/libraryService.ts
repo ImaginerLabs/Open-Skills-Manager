@@ -1,11 +1,11 @@
 import { invokeIPC } from './ipcService';
-import type { LibrarySkill, Category, Group } from '../stores/libraryStore';
+import type { LibrarySkill, Group, Category } from '../stores/libraryStore';
 
 export const libraryService = {
   list: () => invokeIPC<LibrarySkill[]>('library_list'),
   get: (id: string) => invokeIPC<LibrarySkill>('library_get', { id }),
   delete: (id: string) => invokeIPC<void>('library_delete', { id }),
-  import: (options: { path: string; categoryId?: string | undefined; groupId?: string | undefined }) =>
+  import: (options: { path: string; groupId?: string | undefined; categoryId?: string | undefined }) =>
     invokeIPC<LibrarySkill>('library_import', options),
   export: async (id: string, format: 'zip' | 'folder', skillName?: string) => {
     const { save } = await import('@tauri-apps/plugin-dialog');
@@ -36,24 +36,24 @@ export const libraryService = {
     }
     return invokeIPC<string>('library_export_batch', { ids, destPath });
   },
-  organize: (skillId: string, categoryId?: string, groupId?: string) =>
-    invokeIPC<void>('library_organize', { skillId, categoryId, groupId }),
-
-  categories: {
-    list: () => invokeIPC<Category[]>('library_categories_list'),
-    create: (name: string, icon?: string, color?: string) =>
-      invokeIPC<Category>('library_categories_create', { name, icon, color }),
-    rename: (id: string, newName: string) =>
-      invokeIPC<Category>('library_categories_rename', { id, newName }),
-    delete: (id: string) => invokeIPC<void>('library_categories_delete', { id }),
-  },
+  organize: (skillId: string, groupId?: string, categoryId?: string) =>
+    invokeIPC<void>('library_organize', { skillId, groupId, categoryId }),
 
   groups: {
-    create: (categoryId: string, name: string) =>
-      invokeIPC<Group>('library_groups_create', { categoryId, name }),
-    rename: (categoryId: string, groupId: string, newName: string) =>
-      invokeIPC<Group>('library_groups_rename', { categoryId, groupId, newName }),
-    delete: (categoryId: string, groupId: string) =>
-      invokeIPC<void>('library_groups_delete', { categoryId, groupId }),
+    list: () => invokeIPC<Group[]>('library_groups_list'),
+    create: (name: string, icon?: string, color?: string) =>
+      invokeIPC<Group>('library_groups_create', { name, icon, color }),
+    rename: (id: string, newName: string) =>
+      invokeIPC<Group>('library_groups_rename', { id, newName }),
+    delete: (id: string) => invokeIPC<void>('library_groups_delete', { id }),
+  },
+
+  categories: {
+    create: (groupId: string, name: string) =>
+      invokeIPC<Category>('library_categories_create', { groupId, name }),
+    rename: (groupId: string, categoryId: string, newName: string) =>
+      invokeIPC<Category>('library_categories_rename', { groupId, categoryId, newName }),
+    delete: (groupId: string, categoryId: string) =>
+      invokeIPC<void>('library_categories_delete', { groupId, categoryId }),
   },
 };
