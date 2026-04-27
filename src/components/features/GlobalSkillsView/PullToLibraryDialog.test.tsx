@@ -31,6 +31,8 @@ const mockSkill: GlobalSkill = {
   description: 'A test skill for testing',
   path: '/Users/test/.claude/skills/test-skill',
   skillMdPath: '/Users/test/.claude/skills/test-skill/SKILL.md',
+  skillMdLines: 50,
+  skillMdChars: 1200,
   installedAt: new Date('2024-01-01'),
   size: 10240,
   fileCount: 5,

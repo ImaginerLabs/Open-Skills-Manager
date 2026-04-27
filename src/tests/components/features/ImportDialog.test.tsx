@@ -114,6 +114,8 @@ describe('ImportDialog', () => {
         description: 'Test',
         path: '/path',
         skillMdPath: '/path/SKILL.md',
+        skillMdLines: 50,
+        skillMdChars: 1200,
         importedAt: new Date(),
         size: 1024,
         fileCount: 1,

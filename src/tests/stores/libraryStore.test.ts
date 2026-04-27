@@ -276,6 +276,8 @@ describe('libraryStore', () => {
       description: 'A test skill',
       path: '/path/to/skill',
       skillMdPath: '/path/to/skill/SKILL.md',
+      skillMdLines: 50,
+      skillMdChars: 1200,
       importedAt: new Date(),
       size: 1024,
       fileCount: 5,
