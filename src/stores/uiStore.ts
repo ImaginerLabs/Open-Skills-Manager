@@ -10,6 +10,34 @@ export interface Toast {
   duration?: number;
 }
 
+export type SearchScope = 'all' | 'library' | 'global' | 'project';
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  description: string;
+  scope: 'library' | 'global' | 'project';
+  matchedSnippet?: string;
+  projectId?: string;
+}
+
+export interface GroupedSearchResults {
+  library: SearchResult[];
+  global: SearchResult[];
+  projects: Record<string, SearchResult[]>;
+}
+
+interface SearchUIState {
+  isSearchOpen: boolean;
+  searchQuery: string;
+  searchScope: SearchScope;
+  selectedProjectId: string | null;
+  selectedCategoryId: string | null;
+  searchResults: GroupedSearchResults | null;
+  isSearching: boolean;
+  collapsedGroups: Record<string, boolean>;
+}
+
 interface UIState {
   sidebarState: 'expanded' | 'collapsed';
   searchQuery: string;
@@ -23,6 +51,20 @@ interface UIState {
     cancelText?: string;
     onConfirm: () => void;
   } | null;
+  search: SearchUIState;
+}
+
+interface SearchUIActions {
+  openSearch: () => void;
+  closeSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  setSearchScope: (scope: SearchScope) => void;
+  setSelectedProjectId: (projectId: string | null) => void;
+  setSelectedCategoryId: (categoryId: string | null) => void;
+  setSearchResults: (results: GroupedSearchResults | null) => void;
+  setSearching: (searching: boolean) => void;
+  toggleGroupCollapse: (groupId: string) => void;
+  resetSearch: () => void;
 }
 
 interface UIActions {
@@ -40,11 +82,23 @@ interface UIActions {
     onConfirm: () => void;
   }) => void;
   closeConfirmDialog: () => void;
+  searchActions: SearchUIActions;
 }
 
 export type UIStore = UIState & UIActions;
 
 let toastId = 0;
+
+const initialSearchState: SearchUIState = {
+  isSearchOpen: false,
+  searchQuery: '',
+  searchScope: 'all',
+  selectedProjectId: null,
+  selectedCategoryId: null,
+  searchResults: null,
+  isSearching: false,
+  collapsedGroups: {},
+};
 
 export const useUIStore = create<UIStore>()(
   devtools(
@@ -54,6 +108,7 @@ export const useUIStore = create<UIStore>()(
       activeView: 'library',
       toasts: [],
       confirmDialog: null,
+      search: initialSearchState,
 
       toggleSidebar: () =>
         set((state) => ({
@@ -87,6 +142,27 @@ export const useUIStore = create<UIStore>()(
         set((state) =>
           state.confirmDialog ? { confirmDialog: { ...state.confirmDialog, open: false } } : state
         ),
+
+      searchActions: {
+        openSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: true } })),
+        closeSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: false } })),
+        setSearchQuery: (query) => set((state) => ({ search: { ...state.search, searchQuery: query } })),
+        setSearchScope: (scope) => set((state) => ({ search: { ...state.search, searchScope: scope } })),
+        setSelectedProjectId: (projectId) => set((state) => ({ search: { ...state.search, selectedProjectId: projectId } })),
+        setSelectedCategoryId: (categoryId) => set((state) => ({ search: { ...state.search, selectedCategoryId: categoryId } })),
+        setSearchResults: (results) => set((state) => ({ search: { ...state.search, searchResults: results } })),
+        setSearching: (searching) => set((state) => ({ search: { ...state.search, isSearching: searching } })),
+        toggleGroupCollapse: (groupId) => set((state) => ({
+          search: {
+            ...state.search,
+            collapsedGroups: {
+              ...state.search.collapsedGroups,
+              [groupId]: !state.search.collapsedGroups[groupId],
+            },
+          },
+        })),
+        resetSearch: () => set({ search: initialSearchState }),
+      },
     }),
     { name: 'ui-store' }
   )

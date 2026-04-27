@@ -1,0 +1,175 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/glassmorphism' as glass;
+
+.statusIndicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .light &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.synced {
+  color: var(--color-success);
+}
+
+.syncing {
+  color: var(--color-primary);
+}
+
+.pending {
+  color: var(--color-text-secondary);
+}
+
+.offline {
+  color: var(--color-warning);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.syncingIcon {
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+.tooltip {
+  @include glass.glass-heavy;
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 200px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  z-index: var(--z-elevated);
+  animation: tooltip-enter var(--duration-normal) var(--ease-out-expo);
+
+  @keyframes tooltip-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.tooltipHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.statusDotSynced {
+  background: var(--color-success);
+}
+
+.statusDotSyncing {
+  background: var(--color-primary);
+  animation: pulse 1s ease-in-out infinite;
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+.statusDotPending {
+  background: var(--color-text-secondary);
+}
+
+.statusDotOffline {
+  background: var(--color-warning);
+}
+
+.statusDotError {
+  background: var(--color-error);
+}
+
+.tooltipLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+}
+
+.tooltipContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.tooltipValue {
+  color: var(--color-text-primary);
+  font-weight: var(--font-medium);
+}
+
+.tooltipHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-2);
+}
+
+.clickHint {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  margin-top: var(--space-2);
+  text-align: center;
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .syncingIcon,
+  .statusDotSyncing,
+  .tooltip {
+    animation: none;
+  }
+}

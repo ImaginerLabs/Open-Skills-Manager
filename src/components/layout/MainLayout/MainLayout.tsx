@@ -5,15 +5,16 @@ import {
   Globe,
   Gear,
   MagnifyingGlass,
-  Cloud,
   CaretRight,
   CaretDown,
 } from '@phosphor-icons/react';
 import { CategoryManager, ALL_CATEGORY_ID } from '../../features/CategoryManager';
 import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
+import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
+import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { libraryService } from '../../../services/libraryService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
@@ -46,6 +47,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const { showToast } = useUIStore();
   const dragTargetRef = useRef<HTMLDivElement>(null);
   const categoryManager = useCategoryManager();
+  const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
 
   // Set default selection to "All" category on mount
   useEffect(() => {
@@ -327,7 +329,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             />
           </div>
           <div className={styles.topBarActions}>
-            <Cloud size={20} weight="fill" className={styles.syncIcon} />
+            <ICloudStatus
+              status={syncStatus}
+              lastSyncTime={lastSyncTime}
+              pendingChanges={pendingChanges}
+            />
           </div>
         </header>
         <div className={styles.content}>{children ?? <Outlet />}</div>

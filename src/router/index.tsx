@@ -1,7 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout/MainLayout';
-import { Library } from '../pages/Library';
-import { Global } from '../pages/Global';
+import { Library } from '../pages/Library/Library';
+import { Global } from '../pages/Global/Global';
+import { Settings } from '../pages/Settings/Settings';
 import { ProjectSkillsView } from '../components/features/ProjectSkillsView';
 import { ToastContainer, ConfirmDialog } from '../components/ui';
 
@@ -12,10 +13,6 @@ function SkillDetailPage(): React.ReactElement {
 
 function ProjectsPage(): React.ReactElement {
   return <div>Projects Page</div>;
-}
-
-function SettingsPage(): React.ReactElement {
-  return <div>Settings Page</div>;
 }
 
 function RootLayout(): React.ReactElement {
@@ -59,7 +56,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: <Settings />,
       },
     ],
   },
