@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Cloud,
   CloudCheck,
   CloudArrowUp,
-  Cloud,
   CloudSlash,
-  Warning,
+  CloudWarning,
 } from '@phosphor-icons/react';
 import type { SyncStatusType } from '@/services/icloudService';
 import styles from './ICloudStatus.module.scss';
@@ -99,7 +99,7 @@ export function ICloudStatus({
   const renderIcon = () => {
     const iconProps = {
       size: 20,
-      weight: 'fill' as const,
+      weight: 'bold' as const,
     };
 
     switch (status) {
@@ -112,7 +112,7 @@ export function ICloudStatus({
       case 'offline':
         return <CloudSlash {...iconProps} className={styles.offline} />;
       case 'error':
-        return <Warning {...iconProps} className={styles.error} />;
+        return <CloudWarning {...iconProps} className={styles.error} />;
       default:
         return <Cloud {...iconProps} className={styles.pending} />;
     }
