@@ -99,7 +99,7 @@ export function Global(): React.ReactElement {
         description: skill.description,
         size: skill.size,
         fileCount: skill.fileCount,
-        date: skill.installedAt ? skill.installedAt.toLocaleDateString() : undefined,
+        date: skill.installedAt ? formatDate(skill.installedAt) : undefined,
         sourceLibrarySkillId: skill.sourceLibrarySkillId,
       };
       setPreviewSkill(previewData);

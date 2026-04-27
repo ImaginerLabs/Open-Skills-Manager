@@ -221,7 +221,7 @@ export function ProjectSkillsView(): React.ReactElement {
                 description: selectedSkill.description,
                 size: selectedSkill.size,
                 fileCount: selectedSkill.fileCount,
-                date: selectedSkill.installedAt?.toLocaleDateString(),
+                date: selectedSkill.installedAt ? formatDate(selectedSkill.installedAt) : undefined,
                 sourceLibrarySkillId: selectedSkill.sourceLibrarySkillId,
               } satisfies SkillPreviewData)
             : null

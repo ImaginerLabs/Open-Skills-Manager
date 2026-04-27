@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { X, Trash, ArrowDown, FolderOpen } from '@phosphor-icons/react';
 import { Modal } from '../../ui/Modal/Modal';
-import { formatSize } from '../../../utils/formatters';
+import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillPreviewModal.module.scss';
 
 export interface SkillPreviewData {
@@ -59,7 +59,7 @@ export function SkillPreviewModal({
 
   if (!skill) return null;
 
-  const formattedDate = skill.date || 'Unknown';
+  const formattedDate = skill.date ? formatDate(skill.date) : 'Unknown';
   const formattedSize = skill.size ? formatSize(skill.size) : 'Unknown';
   const displayName = skill.name.replace(/^["']|["']$/g, '');
 
