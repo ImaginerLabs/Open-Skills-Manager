@@ -32,11 +32,6 @@ pub struct GlobalSkill {
     pub source_library_skill_id: Option<String>,
 }
 
-/// Generate a unique ID for global skills
-fn generate_id() -> String {
-    format!("global-{}", uuid::Uuid::new_v4())
-}
-
 #[tauri::command]
 pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
     let global_path = get_global_skills_path();
@@ -66,7 +61,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                     let (size, file_count) = count_files(&path);
 
                     let skill = GlobalSkill {
-                        id: generate_id(),
+                        id: folder_name.clone(),
                         name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
                         folder_name: folder_name.clone(),
                         version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
