@@ -129,7 +129,7 @@ export function SkillCard<T extends Skill>({
   const formattedSize = formatSize(skill.size);
   const formattedDate = 'importedAt' in skill
     ? formatDate(skill.importedAt)
-    : skill.installedAt
+    : 'installedAt' in skill && skill.installedAt
       ? formatDate(skill.installedAt)
       : 'Unknown';
 
@@ -165,35 +165,38 @@ export function SkillCard<T extends Skill>({
         {viewMode === 'list' ? (
           // List mode layout
           <>
-            <h3 className={styles.listName} title={displayName}>
-              {displayName}
-            </h3>
-            {skill.fileCount > 0 && (
-              <span className={styles.fileCountBadge}>
-                <FolderOpen size={10} weight="fill" />
-                <span>{skill.fileCount}</span>
-              </span>
-            )}
-            {getSourceBadge(skill, scope)}
+            <div className={styles.listRow}>
+              <h3 className={styles.listName} title={displayName}>
+                {displayName}
+              </h3>
+              {skill.fileCount > 0 && (
+                <span className={styles.fileCountBadge}>
+                  <FolderOpen size={10} weight="fill" />
+                  <span>{skill.fileCount}</span>
+                </span>
+              )}
+              {getSourceBadge(skill, scope)}
+              <span className={styles.spacer} />
+              <span className={styles.size}>{formattedSize}</span>
+              <span className={styles.date}>{formattedDate}</span>
+              {scope === 'library' && deploymentCount > 0 && (
+                <span className={styles.deploymentBadge}>
+                  <Rocket size={12} weight="fill" />
+                  <span>{deploymentCount}</span>
+                </span>
+              )}
+              <button
+                type="button"
+                className={styles.menuButton}
+                onClick={handleMenuButtonClick}
+                aria-label="Open context menu"
+              >
+                <DotsThree size={16} weight="bold" />
+              </button>
+            </div>
             <p className={styles.listDescription} title={skill.description}>
               {skill.description || 'No description'}
             </p>
-            <span className={styles.size}>{formattedSize}</span>
-            <span className={styles.date}>{formattedDate}</span>
-            {scope === 'library' && deploymentCount > 0 && (
-              <span className={styles.deploymentBadge}>
-                <Rocket size={12} weight="fill" />
-                <span>{deploymentCount}</span>
-              </span>
-            )}
-            <button
-              type="button"
-              className={styles.menuButton}
-              onClick={handleMenuButtonClick}
-              aria-label="Open context menu"
-            >
-              <DotsThree size={16} weight="bold" />
-            </button>
           </>
         ) : (
           // Grid mode layout (original)

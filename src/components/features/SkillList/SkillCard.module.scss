@@ -33,16 +33,18 @@
 }
 
 .listMode {
-  display: grid;
-  grid-template-columns: auto auto auto 1fr auto auto auto auto;
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: 0 var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--space-3) var(--space-4);
 
+  .listRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
   .listName {
-    grid-column: 1;
-    grid-row: 1;
     font-size: var(--text-base);
     font-weight: var(--font-semibold);
     color: var(--color-text-primary);
@@ -51,11 +53,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 300px;
+    flex-shrink: 0;
   }
 
   .fileCountBadge {
-    grid-column: 2;
-    grid-row: 1;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -64,46 +65,44 @@
     padding: 2px var(--space-2);
     background: rgba(10, 132, 255, 0.15);
     border-radius: var(--radius-sm);
+    flex-shrink: 0;
   }
 
   .sourceBadge {
-    grid-column: 3;
-    grid-row: 1;
+    flex-shrink: 0;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .size {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .date {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .deploymentBadge {
+    flex-shrink: 0;
+  }
+
+  .menuButton {
+    flex-shrink: 0;
   }
 
   .listDescription {
-    grid-column: 1 / -1;
-    grid-row: 2;
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .size {
-    grid-column: -4;
-    grid-row: 1;
-    font-size: var(--text-xs);
-    color: var(--color-text-tertiary);
-  }
-
-  .date {
-    grid-column: -3;
-    grid-row: 1;
-    font-size: var(--text-xs);
-    color: var(--color-text-tertiary);
-  }
-
-  .deploymentBadge {
-    grid-column: -2;
-    grid-row: 1;
-  }
-
-  .menuButton {
-    grid-column: -1;
-    grid-row: 1;
   }
 
   .header {
@@ -162,7 +161,7 @@
     color: var(--color-text-primary);
   }
 
-  .light &:hover {
+  :global(.light) &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
 }
@@ -193,7 +192,7 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-sm);
 
-  .light & {
+  :global(.light) & {
     background: rgba(0, 0, 0, 0.05);
   }
 
@@ -248,7 +247,7 @@
   background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
 
-  .light & {
+  :global(.light) & {
     background: rgba(0, 0, 0, 0.06);
   }
 }
@@ -336,7 +335,7 @@
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .light &:hover {
+  :global(.light) &:hover {
     background: rgba(0, 0, 0, 0.05);
   }
 }
