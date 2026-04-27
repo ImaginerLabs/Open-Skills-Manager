@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -38,10 +38,13 @@ interface SearchUIState {
   collapsedGroups: Record<string, boolean>;
 }
 
+export type ViewMode = 'grid' | 'list';
+
 interface UIState {
   sidebarState: 'expanded' | 'collapsed';
   searchQuery: string;
   activeView: 'library' | 'global' | 'project' | 'settings';
+  viewMode: ViewMode;
   toasts: Toast[];
   confirmDialog: {
     open: boolean;
@@ -72,6 +75,7 @@ interface UIActions {
   setSidebarState: (state: 'expanded' | 'collapsed') => void;
   setSearchQuery: (query: string) => void;
   setActiveView: (view: 'library' | 'global' | 'project' | 'settings') => void;
+  setViewMode: (mode: ViewMode) => void;
   showToast: (type: ToastType, message: string, duration?: number) => void;
   dismissToast: (id: string) => void;
   showConfirmDialog: (options: {
@@ -102,68 +106,78 @@ const initialSearchState: SearchUIState = {
 
 export const useUIStore = create<UIStore>()(
   devtools(
-    (set) => ({
-      sidebarState: 'expanded',
-      searchQuery: '',
-      activeView: 'library',
-      toasts: [],
-      confirmDialog: null,
-      search: initialSearchState,
+    persist(
+      (set) => ({
+        sidebarState: 'expanded',
+        searchQuery: '',
+        activeView: 'library',
+        viewMode: 'list',
+        toasts: [],
+        confirmDialog: null,
+        search: initialSearchState,
 
-      toggleSidebar: () =>
-        set((state) => ({
-          sidebarState: state.sidebarState === 'expanded' ? 'collapsed' : 'expanded',
-        })),
-      setSidebarState: (sidebarState) => set({ sidebarState }),
-      setSearchQuery: (searchQuery) => set({ searchQuery }),
-      setActiveView: (activeView) => set({ activeView }),
+        toggleSidebar: () =>
+          set((state) => ({
+            sidebarState: state.sidebarState === 'expanded' ? 'collapsed' : 'expanded',
+          })),
+        setSidebarState: (sidebarState) => set({ sidebarState }),
+        setSearchQuery: (searchQuery) => set({ searchQuery }),
+        setActiveView: (activeView) => set({ activeView }),
+        setViewMode: (viewMode) => set({ viewMode }),
 
-      showToast: (type, message, duration = 3000) => {
-        const id = `toast-${++toastId}`;
-        set((state) => ({
-          toasts: [...state.toasts, { id, type, message, duration }],
-        }));
-        setTimeout(() => {
+        showToast: (type, message, duration = 3000) => {
+          const id = `toast-${++toastId}`;
+          set((state) => ({
+            toasts: [...state.toasts, { id, type, message, duration }],
+          }));
+          setTimeout(() => {
+            set((state) => ({
+              toasts: state.toasts.filter((t) => t.id !== id),
+            }));
+          }, duration);
+        },
+
+        dismissToast: (id) =>
           set((state) => ({
             toasts: state.toasts.filter((t) => t.id !== id),
-          }));
-        }, duration);
-      },
+          })),
 
-      dismissToast: (id) =>
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
-        })),
+        showConfirmDialog: (options) =>
+          set({ confirmDialog: { ...options, open: true } }),
 
-      showConfirmDialog: (options) =>
-        set({ confirmDialog: { ...options, open: true } }),
+        closeConfirmDialog: () =>
+          set((state) =>
+            state.confirmDialog ? { confirmDialog: { ...state.confirmDialog, open: false } } : state
+          ),
 
-      closeConfirmDialog: () =>
-        set((state) =>
-          state.confirmDialog ? { confirmDialog: { ...state.confirmDialog, open: false } } : state
-        ),
-
-      searchActions: {
-        openSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: true } })),
-        closeSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: false } })),
-        setSearchQuery: (query) => set((state) => ({ search: { ...state.search, searchQuery: query } })),
-        setSearchScope: (scope) => set((state) => ({ search: { ...state.search, searchScope: scope } })),
-        setSelectedProjectId: (projectId) => set((state) => ({ search: { ...state.search, selectedProjectId: projectId } })),
-        setSelectedCategoryId: (categoryId) => set((state) => ({ search: { ...state.search, selectedCategoryId: categoryId } })),
-        setSearchResults: (results) => set((state) => ({ search: { ...state.search, searchResults: results } })),
-        setSearching: (searching) => set((state) => ({ search: { ...state.search, isSearching: searching } })),
-        toggleGroupCollapse: (groupId) => set((state) => ({
-          search: {
-            ...state.search,
-            collapsedGroups: {
-              ...state.search.collapsedGroups,
-              [groupId]: !state.search.collapsedGroups[groupId],
+        searchActions: {
+          openSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: true } })),
+          closeSearch: () => set((state) => ({ search: { ...state.search, isSearchOpen: false } })),
+          setSearchQuery: (query) => set((state) => ({ search: { ...state.search, searchQuery: query } })),
+          setSearchScope: (scope) => set((state) => ({ search: { ...state.search, searchScope: scope } })),
+          setSelectedProjectId: (projectId) => set((state) => ({ search: { ...state.search, selectedProjectId: projectId } })),
+          setSelectedCategoryId: (categoryId) => set((state) => ({ search: { ...state.search, selectedCategoryId: categoryId } })),
+          setSearchResults: (results) => set((state) => ({ search: { ...state.search, searchResults: results } })),
+          setSearching: (searching) => set((state) => ({ search: { ...state.search, isSearching: searching } })),
+          toggleGroupCollapse: (groupId) => set((state) => ({
+            search: {
+              ...state.search,
+              collapsedGroups: {
+                ...state.search.collapsedGroups,
+                [groupId]: !state.search.collapsedGroups[groupId],
+              },
             },
-          },
-        })),
-        resetSearch: () => set({ search: initialSearchState }),
-      },
-    }),
+          })),
+          resetSearch: () => set({ search: initialSearchState }),
+        },
+      }),
+      {
+        name: 'ui-storage',
+        partialize: (state) => ({
+          viewMode: state.viewMode,
+        }),
+      }
+    ),
     { name: 'ui-store' }
   )
 );
