@@ -72,6 +72,26 @@ vi.mock('@/components/features/ImportDialog/ImportDialog.module.scss', () => ({
   },
 }));
 
+vi.mock('@/components/features/ImportDialog/ImportOptions.module.scss', () => ({
+  default: {
+    options: 'options',
+    optionButton: 'optionButton',
+    optionIcon: 'optionIcon',
+    optionLabel: 'optionLabel',
+    optionDescription: 'optionDescription',
+  },
+}));
+
+vi.mock('@/components/features/ImportDialog/DropZone.module.scss', () => ({
+  default: {
+    dropZone: 'dropZone',
+    active: 'active',
+    dropIcon: 'dropIcon',
+    dropText: 'dropText',
+    dropHint: 'dropHint',
+  },
+}));
+
 vi.mock('@/components/features/ImportDialog/DuplicateHandlerDialog', () => ({
   DuplicateHandlerDialog: vi.fn(() => null),
 }));
