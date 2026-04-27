@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Plus, FolderSimple } from '@phosphor-icons/react';
 import type { Category } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { InlineEditInput } from './InlineEditInput';
 import { ContextMenu } from './ContextMenu';
 import { CategoryItem, GroupItem, AddGroupButton } from './CategoryItem';
@@ -33,14 +34,6 @@ interface EditingState {
   value: string;
 }
 
-interface ContextMenuState {
-  type: 'category' | 'group';
-  categoryId: string;
-  groupId?: string | undefined;
-  x: number;
-  y: number;
-}
-
 export function CategoryManager({
   categories,
   selectedCategoryId,
@@ -58,12 +51,13 @@ export function CategoryManager({
 }: CategoryManagerProps): React.ReactElement {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isCreatingGroupFor, setIsCreatingGroupFor] = useState<string | null>(null);
 
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
     useCategoryDragDrop(onOrganizeSkill);
+
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   // Ensure categories is always an array (defensive against corrupted localStorage)
   const safeCategories = Array.isArray(categories) ? categories : [];
@@ -94,19 +88,6 @@ export function CategoryManager({
     },
     [onSelectGroup]
   );
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, type: 'category' | 'group', categoryId: string, groupId?: string) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setContextMenu({ type, categoryId, groupId, x: e.clientX, y: e.clientY });
-    },
-    []
-  );
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
 
   const startEditing = useCallback(
     (type: 'category' | 'group', categoryId: string, groupId?: string, currentValue?: string) => {

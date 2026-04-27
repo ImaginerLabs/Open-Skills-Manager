@@ -1,12 +1,14 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { FolderOpen, FileArchive, X, Trash, Warning } from '@phosphor-icons/react';
-import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { X, Trash, Warning, FolderOpen, FileArchive } from '@phosphor-icons/react';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { useLibraryStore, type LibrarySkill } from '@/stores/libraryStore';
 import { libraryService } from '@/services/libraryService';
+import { useTauriDragDrop } from '@/hooks/useTauriDragDrop';
 import { DuplicateHandlerDialog } from './DuplicateHandlerDialog';
+import { DropZone } from './DropZone';
+import { ImportOptions } from './ImportOptions';
 import { selectFolders, selectZipFiles, validateFolderName, processDroppedPaths } from './importUtils';
 import styles from './ImportDialog.module.scss';
 
@@ -51,7 +53,6 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
     existing: DuplicateSkill;
   } | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
   const addSkill = useLibraryStore((state) => state?.addSkill);
   const removeSkill = useLibraryStore((state) => state?.removeSkill);
   const skills = useLibraryStore((state) => state?.skills);
@@ -60,33 +61,15 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
     [skills]
   );
 
-  // Tauri native drag-drop event listener
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
+  const handleDropPaths = useCallback((paths: string[]) => {
+    const newItems = processDroppedPaths(paths);
+    setItems((prev) => [...prev, ...newItems]);
+  }, []);
 
-    const setupDragDrop = async () => {
-      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        if (!isOpen) return;
-
-        if (event.payload.type === 'over') {
-          setIsDragOver(true);
-        } else if (event.payload.type === 'drop') {
-          setIsDragOver(false);
-          const newItems = processDroppedPaths(event.payload.paths);
-          setItems((prev) => [...prev, ...newItems]);
-        } else {
-          // cancel
-          setIsDragOver(false);
-        }
-      });
-    };
-
-    setupDragDrop();
-
-    return () => {
-      unlisten?.();
-    };
-  }, [isOpen]);
+  const { isDragOver } = useTauriDragDrop({
+    enabled: isOpen,
+    onDrop: handleDropPaths,
+  });
 
   const handleSelectFolder = useCallback(async () => {
     const newItems = await selectFolders();
@@ -104,18 +87,6 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
 
   const handleRemoveItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
   }, []);
 
   const handleDuplicateAction = useCallback(
@@ -247,36 +218,14 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
         </div>
 
         <div className={styles.content}>
-          <div className={styles.options}>
-            <button className={styles.optionButton} onClick={handleSelectFolder} type="button">
-              <span className={styles.optionIcon}>
-                <FolderOpen size={32} weight="duotone" />
-              </span>
-              <span className={styles.optionLabel}>From Folder</span>
-              <span className={styles.optionDescription}>Select skill folder(s)</span>
-            </button>
+          <ImportOptions onSelectFolder={handleSelectFolder} onSelectZip={handleSelectZip} />
 
-            <button className={styles.optionButton} onClick={handleSelectZip} type="button">
-              <span className={styles.optionIcon}>
-                <FileArchive size={32} weight="duotone" />
-              </span>
-              <span className={styles.optionLabel}>From Zip</span>
-              <span className={styles.optionDescription}>Select .zip file(s)</span>
-            </button>
-          </div>
-
-          <div
+          <DropZone
             ref={dropZoneRef}
-            className={`${styles.dropZone}${isDragOver ? ` ${styles.active}` : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
-            <span className={styles.dropIcon}>
-              <FolderOpen size={24} weight="duotone" />
-            </span>
-            <span className={styles.dropText}>Drag and drop skill folders or zip files</span>
-            <span className={styles.dropHint}>Supports multiple selection</span>
-          </div>
+            isDragOver={isDragOver}
+            onDragOver={() => {}}
+            onDragLeave={() => {}}
+          />
 
           {items.length > 0 && (
             <div className={styles.selectedFiles}>
