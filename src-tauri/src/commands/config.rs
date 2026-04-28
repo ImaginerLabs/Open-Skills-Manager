@@ -121,10 +121,12 @@ pub struct OpenSkillsManagerConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_by: Option<String>,  // client_id of last modifier
     pub settings: Settings,
+    #[serde(default)]
     pub groups: Vec<Group>,
     pub ide_configs: Vec<IDEConfig>,
     pub active_ide_id: String,
     pub sync: SyncSettings,
+    #[serde(default)]
     pub skill_organization: HashMap<String, SkillOrgEntry>,
 }
 

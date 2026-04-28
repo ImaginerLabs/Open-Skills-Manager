@@ -15,6 +15,7 @@ pub mod update;
 pub mod security;
 pub mod error;
 pub mod performance;
+pub mod storage;
 
 pub use error_codes::AppError;
 pub use library::IpcError;

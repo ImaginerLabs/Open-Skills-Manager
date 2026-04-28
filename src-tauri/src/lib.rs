@@ -2,11 +2,13 @@ mod commands;
 mod parsers;
 mod paths;
 mod services;
+mod storage;
 mod utils;
 
 use commands::{
     library, global, project, deploy, search, config, ide, sync, migration, icloud, locale, theme, update, security,
     error, performance,
+    storage as storage_commands,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -134,6 +136,29 @@ pub fn run() {
             performance::performance_get_startup,
             performance::performance_get_memory,
             performance::performance_get_operations,
+            // Storage commands (new unified layer)
+            storage_commands::storage_config_get,
+            storage_commands::storage_config_set_settings,
+            storage_commands::storage_config_set_sync_enabled,
+            storage_commands::storage_ide_get_active,
+            storage_commands::storage_ide_set_active,
+            storage_commands::storage_ide_list,
+            storage_commands::storage_ide_update,
+            storage_commands::storage_library_get,
+            storage_commands::storage_groups_get,
+            storage_commands::storage_groups_set,
+            storage_commands::storage_skills_get,
+            storage_commands::storage_skill_add,
+            storage_commands::storage_skill_remove,
+            storage_commands::storage_sync_state,
+            storage_commands::storage_sync_force,
+            storage_commands::storage_sync_status,
+            storage_commands::storage_needs_migration,
+            storage_commands::storage_migrate,
+            storage_commands::storage_migrate_rollback,
+            storage_commands::storage_client_id,
+            storage_commands::storage_icloud_available,
+            storage_commands::storage_invalidate_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

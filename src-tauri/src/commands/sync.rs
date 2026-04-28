@@ -3,9 +3,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use super::library::IpcResult;
-use super::config::{load_config, save_config, OpenSkillsManagerConfig};
 use super::AppError;
 use crate::paths;
+use crate::storage::service::get_storage;
 
 // ============================================================================
 // Client Identity
@@ -260,8 +260,10 @@ pub fn sync_full() -> IpcResult<SyncResult> {
 
 #[tauri::command]
 pub fn sync_enable(enabled: bool) -> IpcResult<()> {
-    match crate::commands::config::update_config(|config| {
-        config.sync.enabled = enabled;
+    let storage = get_storage();
+    storage.set_icloud_enabled(enabled);
+    match storage.write_config(|config| {
+        config.sync_enabled = enabled;
     }) {
         Ok(_) => IpcResult::success(()),
         Err(e) => IpcResult::error(
@@ -293,20 +295,20 @@ fn sync_config(client_identity: &ClientIdentity) -> Result<bool, String> {
     let local_path = paths::get_config_path();
     let icloud_path = paths::get_icloud_config_path();
 
-    // Load local config
-    let local_config = load_config()?;
+    // Load local config using new storage layer
+    let storage = get_storage();
+    let local_config = storage.read_config()?;
     let local_updated_at = local_config.updated_at.clone();
-    let local_updated_by = local_config.updated_by.clone().unwrap_or_default();
 
     // Check iCloud config
     if icloud_path.exists() {
         let icloud_content = fs::read_to_string(&icloud_path)
             .map_err(|e| format!("Failed to read iCloud config: {}", e))?;
-        let icloud_config: OpenSkillsManagerConfig = serde_json::from_str(&icloud_content)
+        let icloud_config: crate::storage::AppConfig = serde_json::from_str(&icloud_content)
             .map_err(|e| format!("Failed to parse iCloud config: {}", e))?;
 
         let icloud_updated_at = icloud_config.updated_at.clone();
-        let icloud_updated_by = icloud_config.updated_by.clone().unwrap_or_default();
+        let icloud_updated_by = icloud_config.updated_by.clone();
 
         // Compare timestamps
         let local_time = chrono::DateTime::parse_from_rfc3339(&local_updated_at)
@@ -323,13 +325,14 @@ fn sync_config(client_identity: &ClientIdentity) -> Result<bool, String> {
                 .map_err(|e| format!("Failed to serialize config: {}", e))?;
             fs::write(&local_path, content)
                 .map_err(|e| format!("Failed to write local config: {}", e))?;
+            // Invalidate cache
+            storage.invalidate_cache();
             return Ok(true);
         }
     }
 
     // Push local to iCloud (we have newer or iCloud doesn't exist)
-    let mut config_to_push = local_config;
-    config_to_push.updated_by = Some(client_identity.client_id.clone());
+    let config_to_push = local_config;
 
     let content = serde_json::to_string_pretty(&config_to_push)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
@@ -347,7 +350,7 @@ fn sync_config(client_identity: &ClientIdentity) -> Result<bool, String> {
 
 /// Sync library skills between local and iCloud
 /// Returns count of synced items
-fn sync_library(client_identity: &ClientIdentity) -> Result<u32, String> {
+fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
     let local_library = paths::get_local_library_path();
     let icloud_library = paths::get_icloud_library_path();
 
@@ -517,14 +520,17 @@ pub fn trigger_full_sync() {
 
 /// Perform full sync (config + library + metadata) in background
 fn do_full_sync_background() -> Result<(), String> {
-    // Check if sync is enabled
-    let config = super::config::load_config()?;
-    if !config.sync.enabled {
+    // Check if sync is enabled using new storage layer
+    let storage = get_storage();
+    let config = storage.read_config()?;
+    if !config.sync_enabled {
+        println!("Sync skipped: disabled in settings");
         return Ok(()); // Sync disabled, skip
     }
 
     // Check if iCloud is available
     if !paths::icloud_is_available() {
+        println!("Sync skipped: iCloud not available");
         return Ok(()); // iCloud not available, skip
     }
 
