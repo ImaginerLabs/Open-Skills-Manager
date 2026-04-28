@@ -1,10 +1,11 @@
 mod commands;
 mod parsers;
+mod paths;
 mod services;
 mod utils;
 
 use commands::{
-    library, global, project, deploy, search, config, icloud, locale, theme, update, security,
+    library, global, project, deploy, search, config, ide, sync, migration, icloud, locale, theme, update, security,
     error, performance,
 };
 
@@ -64,6 +65,44 @@ pub fn run() {
             // Config commands
             config::config_get,
             config::config_set,
+            config::config_set_settings,
+            config::config_get_active_ide,
+            config::config_set_active_ide,
+            config::config_add_ide,
+            config::config_remove_ide,
+            config::config_update_ide,
+            config::config_get_projects,
+            config::config_add_project,
+            config::config_remove_project,
+            config::config_update_project,
+            config::config_get_groups,
+            config::config_set_groups,
+            config::config_get_skill_org,
+            config::config_set_skill_org,
+            config::config_remove_skill_org,
+            config::config_set_sync_settings,
+            config::config_needs_migration,
+            // IDE commands
+            ide::ide_list,
+            ide::ide_get_active,
+            ide::ide_set_active,
+            ide::ide_global_list,
+            ide::ide_project_list,
+            ide::ide_project_add,
+            ide::ide_project_remove,
+            ide::ide_project_refresh,
+            ide::ide_project_skills,
+            ide::ide_get_global_path,
+            // Sync commands
+            sync::sync_status,
+            sync::sync_full,
+            sync::sync_enable,
+            sync::sync_set_interval,
+            sync::sync_icloud_path,
+            // Migration commands
+            migration::migration_check,
+            migration::migration_execute,
+            migration::migration_skip,
             // iCloud commands
             icloud::icloud_sync_status,
             icloud::icloud_resolve_conflict,
