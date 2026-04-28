@@ -16,6 +16,8 @@
   flex-direction: column;
   z-index: var(--z-sidebar);
   border-right: 1px solid var(--color-border);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sidebarHeader {
