@@ -1,29 +1,17 @@
 use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
+use super::config::{load_config, update_config, Project};
 use super::AppError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use crate::paths;
 
 // ============================================================================
 // Data Types
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Project {
-    pub id: String,
-    pub name: String,
-    pub path: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub skills_path: Option<String>,
-    pub exists: bool,
-    pub skill_count: u32,
-    pub added_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_accessed: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_scanned_at: Option<String>,
-}
+// Project type is now defined in config.rs, use that directly
+// This module uses config::Project for consistency
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,20 +39,17 @@ pub struct ProjectSkill {
 // ============================================================================
 
 fn get_projects_path() -> PathBuf {
-    // Allow tests to override the storage path (thread-local)
-    #[cfg(test)]
-    {
-        if let Some(path) = TEST_PROJECTS_PATH.with(|p| p.borrow().clone()) {
-            return path;
+    // Legacy path - kept for migration
+    paths::get_legacy_projects_path()
+}
+
+fn get_active_ide_project_scope_name() -> String {
+    if let Ok(config) = load_config() {
+        if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
+            return ide.project_scope_name.clone();
         }
     }
-
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("projects.json")
+    ".claude".to_string()
 }
 
 fn generate_id() -> String {
@@ -72,6 +57,14 @@ fn generate_id() -> String {
 }
 
 fn load_projects() -> Vec<Project> {
+    // Load from new config system
+    if let Ok(config) = load_config() {
+        if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
+            return ide.projects.clone();
+        }
+    }
+
+    // Fallback to legacy file
     let path = get_projects_path();
     if path.exists() {
         fs::read_to_string(path)
@@ -93,7 +86,8 @@ fn save_projects(projects: &[Project]) -> Result<(), String> {
 }
 
 fn count_skills_in_project(project_path: &PathBuf) -> u32 {
-    let skills_dir = project_path.join(".claude").join("skills");
+    let scope_name = get_active_ide_project_scope_name();
+    let skills_dir = project_path.join(&scope_name).join("skills");
     if !skills_dir.exists() {
         return 0;
     }
@@ -110,7 +104,8 @@ fn count_skills_in_project(project_path: &PathBuf) -> u32 {
 }
 
 fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectSkill> {
-    let skills_dir = project_path.join(".claude").join("skills");
+    let scope_name = get_active_ide_project_scope_name();
+    let skills_dir = project_path.join(&scope_name).join("skills");
     let mut skills = Vec::new();
 
     if !skills_dir.exists() {

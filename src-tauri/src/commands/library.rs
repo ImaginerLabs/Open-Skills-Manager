@@ -8,6 +8,7 @@ use zip::read::ZipArchive;
 
 use super::AppError;
 use crate::parsers::SkillFrontmatter;
+use crate::paths;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpcResult<T> {
@@ -125,32 +126,18 @@ pub struct SkillMetadata {
 // ============================================================================
 
 pub fn get_library_path() -> PathBuf {
-    // Default to iCloud container or local app support
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Mobile Documents")
-        .join("com~apple~CloudDocs")
-        .join("ClaudeCode")
-        .join("Skills")
+    paths::get_library_path()
 }
 
+// Legacy path functions - kept for migration compatibility
+#[allow(dead_code)]
 fn get_categories_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("categories.json")
+    paths::get_legacy_app_support_path().join("categories.json")
 }
 
+#[allow(dead_code)]
 fn get_skill_metadata_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("skill_metadata.json")
+    paths::get_legacy_app_support_path().join("skill_metadata.json")
 }
 
 /// Persistent metadata for each skill (survives app restart)

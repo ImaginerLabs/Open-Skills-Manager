@@ -1,13 +1,20 @@
 use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats, copy_dir_all, is_symlink_dir, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
+use super::config::load_config;
 use std::fs;
 use std::path::PathBuf;
+use crate::paths;
 
-/// Get the global skills directory path (~/.claude/skills/)
+/// Get the global skills directory path for the active IDE
 pub fn get_global_skills_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join(".claude")
-        .join("skills")
+    // Try to get from config, fallback to default
+    if let Ok(config) = load_config() {
+        if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
+            return paths::get_global_scope_path(&ide.global_scope_path);
+        }
+    }
+
+    // Fallback to Claude Code default
+    paths::get_global_scope_path("~/.claude/skills")
 }
 
 /// Global skill representation
