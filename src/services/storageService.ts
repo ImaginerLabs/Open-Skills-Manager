@@ -255,6 +255,11 @@ export const storageService = {
   isICloudAvailable: () => unwrap(invokeIPC<boolean>('storage_icloud_available')),
 
   /**
+   * Ensure iCloud directory structure exists
+   */
+  ensureICloudPath: () => unwrap(invokeIPC<string>('storage_ensure_icloud_path')),
+
+  /**
    * Invalidate cache
    */
   invalidateCache: () => unwrap(invokeIPC<void>('storage_invalidate_cache')),

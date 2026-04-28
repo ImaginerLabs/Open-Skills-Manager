@@ -344,3 +344,17 @@ pub fn storage_invalidate_cache() -> IpcResult<()> {
     storage.invalidate_cache();
     IpcResult::success(())
 }
+
+#[tauri::command]
+pub fn storage_ensure_icloud_path() -> IpcResult<String> {
+    match crate::paths::ensure_icloud_structure() {
+        Ok(()) => {
+            let path = crate::paths::get_icloud_container_path();
+            IpcResult::success(path.to_string_lossy().to_string())
+        }
+        Err(e) => IpcResult::error(
+            AppError::E101CreateDirFailed(e.clone()).code(),
+            &e,
+        ),
+    }
+}
