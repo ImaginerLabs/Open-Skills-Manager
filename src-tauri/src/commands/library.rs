@@ -218,7 +218,9 @@ pub fn parse_skill_md(path: &Path) -> Option<SkillMetadata> {
                 version = value.trim().to_string();
             } else if let Some(value) = line.strip_prefix("description:") {
                 let trimmed = value.trim();
-                if trimmed == "|" {
+                // Handle YAML block scalar indicators: |, |-, >, >-, |+, >+
+                if trimmed == "|" || trimmed == "|-" || trimmed == "|+"
+                    || trimmed == ">" || trimmed == ">-" || trimmed == ">+" {
                     // Start multiline description
                     in_multiline_description = true;
                 } else {

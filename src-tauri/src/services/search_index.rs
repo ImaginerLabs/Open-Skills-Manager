@@ -439,7 +439,9 @@ fn parse_skill_md_content(content: &str) -> (String, String) {
                     name = value.trim().to_string();
                 } else if let Some(value) = line.strip_prefix("description:") {
                     let trimmed = value.trim();
-                    if trimmed == "|" {
+                    // Handle YAML block scalar indicators: |, |-, >, >-, |+, >+
+                    if trimmed == "|" || trimmed == "|-" || trimmed == "|+"
+                        || trimmed == ">" || trimmed == ">-" || trimmed == ">+" {
                         in_multiline_description = true;
                     } else {
                         description = trimmed.to_string();
@@ -571,6 +573,15 @@ mod tests {
         let (name, desc) = parse_skill_md_content(content);
         assert_eq!(name, "smart-commit");
         assert_eq!(desc, "Intelligent git commit assistant that analyzes uncommitted changes. TRIGGER when: user says \"commit\".");
+    }
+
+    #[test]
+    fn test_parse_skill_md_content_folded_block() {
+        // Test YAML folded block scalar (>-)
+        let content = "---\nname: api-designer\nversion: 1.0.0\ndescription: >-\n  Endpoint（API 设计师）专注于 RESTful/GraphQL 接口设计与文档生成。\n  Should be used when the user mentions designing APIs.\n---\n\nContent here";
+        let (name, desc) = parse_skill_md_content(content);
+        assert_eq!(name, "api-designer");
+        assert_eq!(desc, "Endpoint（API 设计师）专注于 RESTful/GraphQL 接口设计与文档生成。 Should be used when the user mentions designing APIs.");
     }
 
     #[test]
