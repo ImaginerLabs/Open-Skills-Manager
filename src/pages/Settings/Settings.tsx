@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Gear, PaintBrush, Translate } from '@phosphor-icons/react';
+import { FolderOpen, Gear, PaintBrush, Translate } from '@phosphor-icons/react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
+import { Button } from '../../components/ui/Button';
+import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -53,12 +55,25 @@ export function Settings(): React.ReactElement {
     }
 
     try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('shell_open', { path: containerPath });
-    } catch {
-      showToast('error', 'Failed to open Finder');
+      // First ensure the directory exists
+      await storageService.ensureICloudPath();
+
+      // Open the folder directly (enter into it)
+      await configService.openPath(containerPath);
+      showToast('success', 'Opened iCloud folder in Finder');
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to open Finder');
     }
   }, [containerPath, showToast]);
+
+  const handleOpenDataDir = useCallback(async () => {
+    try {
+      const path = await configService.getAppDataPath();
+      await configService.openPath(path);
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to open data directory');
+    }
+  }, [showToast]);
 
   return (
     <div className={styles.page}>
@@ -153,6 +168,23 @@ export function Settings(): React.ReactElement {
             </div>
             <div className={styles.settingValue}>
               <span className={styles.settingName}>{formatBytes(storageUsed)}</span>
+            </div>
+          </div>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Data Directory</span>
+              <span className={styles.settingDescription}>Open application data folder in Finder</span>
+            </div>
+            <div className={styles.settingValue}>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleOpenDataDir}
+              >
+                <FolderOpen size={16} weight="bold" />
+                Open in Finder
+              </Button>
             </div>
           </div>
         </section>
