@@ -62,21 +62,15 @@ export function IDESwitcher(): React.ReactElement | null {
     const loadConfigs = async () => {
       setLoading(true);
       try {
-        const result = await configService.get();
-        if (result.success && result.data) {
-          const config = result.data;
-          if (config.ideConfigs && config.ideConfigs.length > 0) {
-            // Merge backend configs with defaults to ensure new IDEs are included
-            const mergedConfigs = DEFAULT_IDE_CONFIGS.map((defaultIde) => {
-              const existingConfig = config.ideConfigs.find((ide) => ide.id === defaultIde.id);
-              return existingConfig || defaultIde;
-            });
-            setIDEConfigs(mergedConfigs);
-            setActiveIDE(config.activeIdeId);
-          } else {
-            setIDEConfigs(DEFAULT_IDE_CONFIGS);
-            setActiveIDE('claude-code');
-          }
+        const config = await configService.get();
+        if (config.ideConfigs && config.ideConfigs.length > 0) {
+          // Merge backend configs with defaults to ensure new IDEs are included
+          const mergedConfigs = DEFAULT_IDE_CONFIGS.map((defaultIde) => {
+            const existingConfig = config.ideConfigs.find((ide) => ide.id === defaultIde.id);
+            return existingConfig || defaultIde;
+          });
+          setIDEConfigs(mergedConfigs);
+          setActiveIDE(config.activeIdeId);
         } else {
           setIDEConfigs(DEFAULT_IDE_CONFIGS);
           setActiveIDE('claude-code');

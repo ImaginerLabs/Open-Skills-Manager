@@ -1,11 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { icloudService, type SyncStatusInfo, type PendingChange } from '../services/icloudService';
+import { storageService, type SyncState } from '../services/storageService';
 
 export interface UseIcloudSyncResult {
-  status: SyncStatusInfo['status'];
+  status: 'synced' | 'syncing' | 'pending' | 'offline' | 'error';
   lastSyncTime: string | undefined;
   pendingChanges: number;
-  pendingChangeList: PendingChange[];
   storageUsed: number;
   storageTotal: number;
   containerPath: string | null;
@@ -18,9 +17,8 @@ export interface UseIcloudSyncResult {
 const POLL_INTERVAL = 30000; // 30 seconds
 
 export function useIcloudSync(): UseIcloudSyncResult {
-  const [statusInfo, setStatusInfo] = useState<SyncStatusInfo | null>(null);
-  const [pendingChangeList, setPendingChangeList] = useState<PendingChange[]>([]);
-  const [containerPath, setContainerPath] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<SyncState | null>(null);
+  const [icloudAvailable, setIcloudAvailable] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -30,25 +28,13 @@ export function useIcloudSync(): UseIcloudSyncResult {
     setError(null);
 
     try {
-      const [statusResult, pendingResult, pathResult] = await Promise.all([
-        icloudService.syncStatus(),
-        icloudService.getPendingChanges(),
-        icloudService.containerPath(),
+      const [state, available] = await Promise.all([
+        storageService.getSyncState(),
+        storageService.isICloudAvailable(),
       ]);
 
-      if (statusResult.success) {
-        setStatusInfo(statusResult.data);
-      } else {
-        setError(statusResult.error.message);
-      }
-
-      if (pendingResult.success) {
-        setPendingChangeList(pendingResult.data);
-      }
-
-      if (pathResult.success) {
-        setContainerPath(pathResult.data);
-      }
+      setSyncState(state);
+      setIcloudAvailable(available);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
@@ -61,12 +47,10 @@ export function useIcloudSync(): UseIcloudSyncResult {
     setError(null);
 
     try {
-      const statusResult = await icloudService.syncStatus();
-      if (statusResult.success) {
-        setStatusInfo(statusResult.data);
-      } else {
-        setError(statusResult.error.message);
-      }
+      await storageService.forceSync();
+      // Refresh state after sync
+      const state = await storageService.getSyncState();
+      setSyncState(state);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
@@ -86,14 +70,25 @@ export function useIcloudSync(): UseIcloudSyncResult {
     };
   }, [refresh]);
 
+  // Determine status from sync state
+  const getStatus = (): 'synced' | 'syncing' | 'pending' | 'offline' | 'error' => {
+    if (!icloudAvailable) return 'offline';
+    if (error) return 'error';
+
+    const pendingCount = syncState?.pendingChanges.filter(c => !c.synced).length ?? 0;
+    if (pendingCount > 0) return 'pending';
+    if (syncState?.lastSyncTime) return 'synced';
+
+    return 'syncing';
+  };
+
   return {
-    status: statusInfo?.status ?? 'offline',
-    lastSyncTime: statusInfo?.lastSyncTime,
-    pendingChanges: statusInfo?.pendingChanges ?? 0,
-    pendingChangeList,
-    storageUsed: statusInfo?.storageUsed ?? 0,
-    storageTotal: statusInfo?.storageTotal ?? 0,
-    containerPath,
+    status: getStatus(),
+    lastSyncTime: syncState?.lastSyncTime,
+    pendingChanges: syncState?.pendingChanges.filter(c => !c.synced).length ?? 0,
+    storageUsed: 0, // Not tracked in new storage
+    storageTotal: 5_000_000_000, // 5GB default
+    containerPath: null, // Not available in new storage
     isLoading,
     error,
     forceSync,
