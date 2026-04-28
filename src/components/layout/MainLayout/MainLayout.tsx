@@ -42,7 +42,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore();
+  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills, setSkills } = useLibraryStore();
   const { skills: globalSkills, setSkills: setGlobalSkills } = useGlobalStore();
   const { showToast } = useUIStore();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -176,6 +176,13 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     globalService.list().then((result) => {
       if (result.success) {
         setGlobalSkills(result.data);
+      }
+    });
+
+    // Pre-load library skills for sidebar count
+    libraryService.list().then((result) => {
+      if (result.success) {
+        setSkills(result.data);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
