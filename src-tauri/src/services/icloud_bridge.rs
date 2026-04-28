@@ -1,9 +1,12 @@
+use crate::paths::{
+    get_icloud_container_path as paths_icloud_container_path,
+    get_local_cache_path as paths_local_cache_path,
+    get_library_path, get_metadata_path,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
-
-pub const APP_IDENTIFIER: &str = "com.alex.claude-code-skills-manager";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,31 +65,21 @@ pub struct ConflictInfo {
     pub remote_version: ConflictVersion,
 }
 
-fn get_home_dir() -> PathBuf {
-    std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()).into()
-}
-
+// Use centralized paths from paths.rs
 pub fn get_icloud_container_path() -> PathBuf {
-    get_home_dir()
-        .join("Library")
-        .join("Mobile Documents")
-        .join("com~apple~CloudDocs")
-        .join(APP_IDENTIFIER)
+    paths_icloud_container_path()
 }
 
 pub fn get_local_cache_path() -> PathBuf {
-    get_home_dir()
-        .join("Library")
-        .join("Caches")
-        .join("CSM")
+    paths_local_cache_path()
 }
 
 pub fn get_skills_path() -> PathBuf {
-    get_icloud_container_path().join("skills")
+    get_library_path()
 }
 
 pub fn get_config_path() -> PathBuf {
-    get_icloud_container_path().join("config")
+    get_metadata_path()
 }
 
 pub fn get_deployments_path() -> PathBuf {
@@ -181,10 +174,8 @@ pub fn ensure_local_cache() -> Result<(), String> {
 pub fn fallback_to_local_cache() -> PathBuf {
     let cache = get_local_cache_path();
     if let Err(_) = ensure_local_cache() {
-        return get_home_dir()
-            .join("Library")
-            .join("Application Support")
-            .join("claude-code-skills-manager");
+        // Fallback to app support path
+        return crate::paths::get_app_support_path();
     }
     cache
 }

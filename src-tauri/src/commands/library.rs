@@ -129,15 +129,14 @@ pub fn get_library_path() -> PathBuf {
     paths::get_library_path()
 }
 
-// Legacy path functions - kept for migration compatibility
+// Metadata path functions
 #[allow(dead_code)]
 fn get_categories_path() -> PathBuf {
-    paths::get_legacy_app_support_path().join("categories.json")
+    paths::get_app_support_path().join("categories.json")
 }
 
-#[allow(dead_code)]
 fn get_skill_metadata_path() -> PathBuf {
-    paths::get_legacy_app_support_path().join("skill_metadata.json")
+    paths::get_app_support_path().join("skill_metadata.json")
 }
 
 /// Persistent metadata for each skill (survives app restart)
@@ -260,12 +259,7 @@ fn save_groups(groups: &[Group]) -> Result<(), String> {
 }
 
 fn get_groups_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("groups.json")
+    paths::get_app_support_path().join("groups.json")
 }
 
 fn get_default_groups() -> Vec<Group> {
@@ -495,6 +489,7 @@ pub fn library_delete(id: String) -> IpcResult<()> {
                         eprintln!("Warning: Failed to update skill metadata after delete: {}", e);
                     }
 
+                    trigger_library_sync();
                     return IpcResult::success(());
                 }
             }
@@ -612,6 +607,7 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         eprintln!("Warning: Failed to save skill metadata after import: {}", e);
     }
 
+    trigger_library_sync();
     IpcResult::success(skill)
 }
 
@@ -756,6 +752,7 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
         eprintln!("Warning: Failed to save skill metadata after zip import: {}", e);
     }
 
+    trigger_library_sync();
     IpcResult::success(skill)
 }
 
@@ -1215,4 +1212,13 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+// ============================================================================
+// Sync Trigger
+// ============================================================================
+
+/// Trigger a full sync after library changes
+fn trigger_library_sync() {
+    super::sync::trigger_full_sync();
 }

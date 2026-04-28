@@ -7,6 +7,7 @@ export interface SyncStatusInfo {
   errorMessage?: string;
   storageUsed: number;
   storageTotal: number;
+  icloudAvailable: boolean;
 }
 
 export interface SyncResult {
@@ -23,7 +24,7 @@ export const syncService = {
   status: () => invokeIPC<SyncStatusInfo>('sync_status'),
 
   /**
-   * Perform a full sync to iCloud
+   * Perform a full sync between local and iCloud
    */
   full: () => invokeIPC<SyncResult>('sync_full'),
 
@@ -33,13 +34,12 @@ export const syncService = {
   enable: (enabled: boolean) => invokeIPC<void>('sync_enable', { enabled }),
 
   /**
-   * Set the sync interval in minutes
-   */
-  setInterval: (intervalMinutes: number) =>
-    invokeIPC<void>('sync_set_interval', { intervalMinutes }),
-
-  /**
    * Get the iCloud path
    */
   getICloudPath: () => invokeIPC<string>('sync_icloud_path'),
+
+  /**
+   * Get the local storage path
+   */
+  getLocalPath: () => invokeIPC<string>('sync_local_path'),
 };

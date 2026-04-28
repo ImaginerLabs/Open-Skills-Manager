@@ -10,7 +10,7 @@ fn get_home_dir() -> PathBuf {
 }
 
 // ============================================================================
-// App Support Paths (Local Storage)
+// App Support Paths (Primary Local Storage)
 // ============================================================================
 
 /// Get the main app support directory
@@ -26,6 +26,30 @@ pub fn get_app_support_path() -> PathBuf {
 /// ~/Library/Application Support/OpenSkillsManager/config.json
 pub fn get_config_path() -> PathBuf {
     get_app_support_path().join("config.json")
+}
+
+/// Get the local library path (primary storage for skills)
+/// ~/Library/Application Support/OpenSkillsManager/library/
+pub fn get_local_library_path() -> PathBuf {
+    get_app_support_path().join("library")
+}
+
+/// Get the local metadata path
+/// ~/Library/Application Support/OpenSkillsManager/metadata/
+pub fn get_local_metadata_path() -> PathBuf {
+    get_app_support_path().join("metadata")
+}
+
+/// Get the client identity file path
+/// ~/Library/Application Support/OpenSkillsManager/client-id.json
+pub fn get_client_id_path() -> PathBuf {
+    get_app_support_path().join("client-id.json")
+}
+
+/// Get the sync state file path
+/// ~/Library/Application Support/OpenSkillsManager/sync-state.json
+pub fn get_sync_state_path() -> PathBuf {
+    get_app_support_path().join("sync-state.json")
 }
 
 /// Get the legacy app support path (for migration)
@@ -53,7 +77,7 @@ pub fn get_legacy_projects_path() -> PathBuf {
 }
 
 // ============================================================================
-// iCloud Paths
+// iCloud Paths (Optional Sync)
 // ============================================================================
 
 /// Get the iCloud container path
@@ -66,22 +90,34 @@ pub fn get_icloud_container_path() -> PathBuf {
         .join(APP_NAME)
 }
 
-/// Get the library path (skills stored in iCloud)
+/// Get the iCloud library path (synced skills)
 /// ~/Library/Mobile Documents/com~apple~CloudDocs/OpenSkillsManager/library/
-pub fn get_library_path() -> PathBuf {
+pub fn get_icloud_library_path() -> PathBuf {
     get_icloud_container_path().join("library")
 }
 
-/// Get the metadata path (skill organization)
+/// Get the iCloud metadata path
 /// ~/Library/Mobile Documents/com~apple~CloudDocs/OpenSkillsManager/metadata/
-pub fn get_metadata_path() -> PathBuf {
+pub fn get_icloud_metadata_path() -> PathBuf {
     get_icloud_container_path().join("metadata")
 }
 
-/// Get the skill organization file path
-/// ~/Library/Mobile Documents/com~apple~CloudDocs/OpenSkillsManager/metadata/skill-org.json
+/// Get the iCloud config path
+/// ~/Library/Mobile Documents/com~apple~CloudDocs/OpenSkillsManager/config.json
+pub fn get_icloud_config_path() -> PathBuf {
+    get_icloud_container_path().join("config.json")
+}
+
+/// Get the skill organization file path (local primary)
+/// ~/Library/Application Support/OpenSkillsManager/metadata/skill-org.json
 pub fn get_skill_org_path() -> PathBuf {
-    get_metadata_path().join("skill-org.json")
+    get_local_metadata_path().join("skill-org.json")
+}
+
+/// Get the iCloud skill organization file path
+/// ~/Library/Mobile Documents/com~apple~CloudDocs/OpenSkillsManager/metadata/skill-org.json
+pub fn get_icloud_skill_org_path() -> PathBuf {
+    get_icloud_metadata_path().join("skill-org.json")
 }
 
 /// Get legacy iCloud library path (for migration)
@@ -103,6 +139,22 @@ pub fn get_legacy_icloud_container_path() -> PathBuf {
         .join("Mobile Documents")
         .join("com~apple~CloudDocs")
         .join(LEGACY_IDENTIFIER)
+}
+
+// ============================================================================
+// Compatibility Aliases (Library uses local storage by default)
+// ============================================================================
+
+/// Get the library path (local storage, primary)
+/// Alias for get_local_library_path()
+pub fn get_library_path() -> PathBuf {
+    get_local_library_path()
+}
+
+/// Get the metadata path (local storage, primary)
+/// Alias for get_local_metadata_path()
+pub fn get_metadata_path() -> PathBuf {
+    get_local_metadata_path()
 }
 
 // ============================================================================
@@ -156,18 +208,34 @@ pub fn ensure_app_support_path() -> Result<(), String> {
         .map_err(|e| format!("Failed to create app support directory: {}", e))
 }
 
-/// Ensure the iCloud container structure exists
-pub fn ensure_icloud_structure() -> Result<(), String> {
-    let container = get_icloud_container_path();
-    let library = get_library_path();
-    let metadata = get_metadata_path();
+/// Ensure the local storage structure exists
+pub fn ensure_local_structure() -> Result<(), String> {
+    let app_support = get_app_support_path();
+    let library = get_local_library_path();
+    let metadata = get_local_metadata_path();
 
-    std::fs::create_dir_all(&container)
-        .map_err(|e| format!("Failed to create iCloud container: {}", e))?;
+    std::fs::create_dir_all(&app_support)
+        .map_err(|e| format!("Failed to create app support directory: {}", e))?;
     std::fs::create_dir_all(&library)
         .map_err(|e| format!("Failed to create library directory: {}", e))?;
     std::fs::create_dir_all(&metadata)
         .map_err(|e| format!("Failed to create metadata directory: {}", e))?;
+
+    Ok(())
+}
+
+/// Ensure the iCloud container structure exists (for sync)
+pub fn ensure_icloud_structure() -> Result<(), String> {
+    let container = get_icloud_container_path();
+    let library = get_icloud_library_path();
+    let metadata = get_icloud_metadata_path();
+
+    std::fs::create_dir_all(&container)
+        .map_err(|e| format!("Failed to create iCloud container: {}", e))?;
+    std::fs::create_dir_all(&library)
+        .map_err(|e| format!("Failed to create iCloud library directory: {}", e))?;
+    std::fs::create_dir_all(&metadata)
+        .map_err(|e| format!("Failed to create iCloud metadata directory: {}", e))?;
 
     Ok(())
 }

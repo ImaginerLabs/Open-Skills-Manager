@@ -97,8 +97,8 @@ pub fn run() {
             sync::sync_status,
             sync::sync_full,
             sync::sync_enable,
-            sync::sync_set_interval,
             sync::sync_icloud_path,
+            sync::sync_local_path,
             // Migration commands
             migration::migration_check,
             migration::migration_execute,

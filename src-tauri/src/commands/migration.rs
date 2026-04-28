@@ -190,6 +190,7 @@ pub fn migration_execute() -> IpcResult<MigrationResult> {
         version: super::config::CONFIG_VERSION.to_string(),
         created_at: now.clone(),
         updated_at: now,
+        updated_by: None,
         settings: Settings::default(),
         groups,
         ide_configs,

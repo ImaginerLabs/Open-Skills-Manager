@@ -35,6 +35,7 @@ export interface OpenSkillsManagerConfig {
   version: string;
   createdAt: string;
   updatedAt: string;
+  updatedBy?: string;  // client_id of last modifier
   settings: Settings;
   groups: Group[];
   ideConfigs: IDEConfig[];
