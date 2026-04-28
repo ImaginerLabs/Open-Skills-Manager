@@ -196,6 +196,11 @@ export function SkillCard<T extends Skill>({
                   <span>{skill.fileCount}</span>
                 </span>
               )}
+              {skill.skillMdLines > 0 && (
+                <span className={styles.lineCountBadge} title={`${skill.skillMdChars.toLocaleString()} characters`}>
+                  <span>{skill.skillMdLines} lines</span>
+                </span>
+              )}
               {getSourceBadge(skill, scope)}
               <span className={styles.spacer} />
               <span className={styles.size}>{formattedSize}</span>
