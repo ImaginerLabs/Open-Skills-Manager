@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { FolderOpen, Warning } from '@phosphor-icons/react';
+import { useState, useCallback } from 'react';
+import { FolderOpen, Warning, Trash } from '@phosphor-icons/react';
 import type { Project } from '@/stores/projectStore';
+import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
+import { SidebarItem } from '@/components/common/SidebarItem';
 import styles from './ProjectItem.module.scss';
-import contextMenuStyles from '@/components/features/CategoryManager/ContextMenu.module.scss';
 
 export interface ProjectItemProps {
   project: Project;
@@ -18,6 +19,7 @@ export function ProjectItem({
   onRemove,
 }: ProjectItemProps): React.ReactElement {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
   const handleClick = useCallback(() => {
     onSelect(project.id);
@@ -25,6 +27,7 @@ export function ProjectItem({
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    setMenuPosition({ x: e.clientX, y: e.clientY });
     setShowMenu(true);
   }, []);
 
@@ -37,91 +40,37 @@ export function ProjectItem({
     setShowMenu(false);
   }, []);
 
-  const itemClasses = [
-    styles.projectItem,
-    isSelected && styles.selected,
-    !project.exists && styles.missing,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const menuItems: ContextMenuItem[] = [
+    {
+      id: 'remove',
+      label: 'Remove',
+      icon: Trash,
+      variant: 'danger',
+      onClick: handleRemove,
+    },
+  ];
 
   return (
     <>
-      <div
-        className={itemClasses}
+      <SidebarItem
+        name={project.name}
+        icon={<FolderOpen size={16} />}
+        count={project.exists ? project.skillCount : undefined}
+        isSelected={isSelected}
+        isMissing={!project.exists}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-        aria-label={`Project ${project.name}${!project.exists ? ' (missing)' : ''}`}
-      >
-        <span className={styles.expandIcon} />
-        {project.exists ? (
-          <FolderOpen size={16} className={styles.icon} />
-        ) : (
-          <Warning size={16} className={styles.missingIcon} />
-        )}
-        <span className={styles.name}>{project.name}</span>
-        {project.exists && (
-          <span className={styles.count}>{project.skillCount}</span>
-        )}
-      </div>
+        missingIcon={<Warning size={16} />}
+        ariaLabel={`Project ${project.name}${!project.exists ? ' (missing)' : ''}`}
+        className={styles.projectItem}
+      />
 
-      {showMenu && (
-        <ContextMenu
-          projectName={project.name}
-          onRemove={handleRemove}
-          onClose={handleCloseMenu}
-        />
-      )}
-    </>
-  );
-}
-
-interface ContextMenuProps {
-  projectName: string;
-  onRemove: () => void;
-  onClose: () => void;
-}
-
-function ContextMenu({
-  onRemove,
-  onClose,
-}: ContextMenuProps): React.ReactElement {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    const updatePosition = () => {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        setPosition({
-          top: rect.bottom + 4,
-          left: rect.left,
-        });
-      }
-    };
-    updatePosition();
-  }, []);
-
-  return (
-    <>
-      <div className={contextMenuStyles.contextOverlay} onClick={onClose} />
-      <div
-        ref={menuRef}
-        className={contextMenuStyles.contextMenu}
-        style={{ top: position.top, left: position.left }}
-      >
-        <button
-          className={[contextMenuStyles.menuItem, contextMenuStyles.danger].join(' ')}
-          onClick={onRemove}
-        >
-          Remove
-        </button>
-      </div>
+      <ContextMenu
+        isOpen={showMenu}
+        position={menuPosition}
+        items={menuItems}
+        onClose={handleCloseMenu}
+      />
     </>
   );
 }
