@@ -1,6 +1,6 @@
-import { FolderSimple, FolderOpen, CaretRight, Plus } from '@phosphor-icons/react';
+import { CaretRight, Plus, FolderSimple, FolderOpen } from '@phosphor-icons/react';
 import type { Group, Category } from '../../../stores/libraryStore';
-import { InlineEditInput } from './InlineEditInput';
+import { SidebarItem } from '../../common/SidebarItem';
 import styles from './CategoryManager.module.scss';
 
 interface GroupItemProps {
@@ -37,45 +37,27 @@ export function GroupItem({
   onEditClick,
 }: GroupItemProps): React.ReactElement {
   return (
-    <div
-      className={[
-        styles.categoryItem,
-        isSelected && styles.selected,
-        isDragOver && styles.dragOver,
-      ].filter(Boolean).join(' ')}
+    <SidebarItem
+      name={group.name}
+      icon={isExpanded ? <FolderOpen size={16} /> : <FolderSimple size={16} />}
+      count={group.skillCount}
+      isSelected={isSelected}
+      isDragOver={isDragOver}
+      expandIcon={<CaretRight size={12} />}
+      isExpanded={isExpanded}
       onClick={onGroupClick}
       onContextMenu={onContextMenu}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      role="button"
-      tabIndex={0}
-      aria-expanded={isExpanded}
-    >
-      <span className={[styles.expandIcon, isExpanded && styles.expanded].filter(Boolean).join(' ')}>
-        <CaretRight size={12} />
-      </span>
-      {isExpanded ? (
-        <FolderOpen size={16} className={styles.icon} />
-      ) : (
-        <FolderSimple size={16} className={styles.icon} />
-      )}
-      {isEditing ? (
-        <InlineEditInput
-          value={editingValue}
-          placeholder="Group name"
-          onSubmit={onEditSubmit}
-          onCancel={onEditCancel}
-          onClick={onEditClick}
-          autoFocus
-        />
-      ) : (
-        <>
-          <span className={styles.name}>{group.name}</span>
-          <span className={styles.count}>{group.skillCount}</span>
-        </>
-      )}
-    </div>
+      isEditing={isEditing}
+      editingValue={editingValue}
+      onEditSubmit={onEditSubmit}
+      onEditCancel={onEditCancel}
+      onEditClick={onEditClick}
+      ariaExpanded={isExpanded}
+      className={styles.categoryItem}
+    />
   );
 }
 
@@ -111,38 +93,24 @@ export function CategoryItem({
   onEditClick,
 }: CategoryItemProps): React.ReactElement {
   return (
-    <div
-      className={[
-        styles.groupItem,
-        isSelected && styles.selected,
-        isDragOver && styles.dragOver,
-      ].filter(Boolean).join(' ')}
+    <SidebarItem
+      name={category.name}
+      count={category.skillCount}
+      isSelected={isSelected}
+      isDragOver={isDragOver}
+      indentLevel={1}
       onClick={onCategoryClick}
       onContextMenu={onContextMenu}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      role="button"
-      tabIndex={0}
-    >
-      {/* Spacer to align count with parent group */}
-      <span className={styles.groupSpacer} />
-      {isEditing ? (
-        <InlineEditInput
-          value={editingValue}
-          placeholder="Category name"
-          onSubmit={onEditSubmit}
-          onCancel={onEditCancel}
-          onClick={onEditClick}
-          autoFocus
-        />
-      ) : (
-        <>
-          <span className={styles.name}>{category.name}</span>
-          <span className={styles.count}>{category.skillCount}</span>
-        </>
-      )}
-    </div>
+      isEditing={isEditing}
+      editingValue={editingValue}
+      onEditSubmit={onEditSubmit}
+      onEditCancel={onEditCancel}
+      onEditClick={onEditClick}
+      className={styles.groupItem}
+    />
   );
 }
 

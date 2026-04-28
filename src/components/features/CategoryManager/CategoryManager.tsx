@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { Plus, FolderSimple } from '@phosphor-icons/react';
+import { Plus, FolderSimple, PencilSimple, Trash } from '@phosphor-icons/react';
 import type { Group } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { useContextMenu } from '../../../hooks/useContextMenu';
-import { ContextMenu } from './ContextMenu';
+import { ContextMenu, type ContextMenuItem } from '../../common/ContextMenu';
+import { CreateEntityDialog } from '../../common/CreateEntityDialog';
+import { SidebarItem } from '../../common/SidebarItem';
 import { GroupItem, CategoryItem, AddCategoryButton } from './GroupItem';
-import { CreateGroupDialog } from './CreateGroupDialog';
-import { CreateCategoryDialog } from './CreateCategoryDialog';
 import styles from './CategoryManager.module.scss';
 
 // Special ID for the "All" group
@@ -52,8 +52,7 @@ export function CategoryManager({
 }: CategoryManagerProps): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
-  const [showCreateCategoryDialog, setShowCreateCategoryDialog] = useState(false);
+  const [createDialogType, setCreateDialogType] = useState<'group' | 'category' | null>(null);
   const [creatingCategoryForGroup, setCreatingCategoryForGroup] = useState<string | null>(null);
 
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
@@ -125,29 +124,58 @@ export function CategoryManager({
     closeContextMenu();
   }, [contextMenu, onDeleteGroup, onDeleteCategory, closeContextMenu]);
 
-  const handleCreateGroup = useCallback(
+  const handleCreateEntity = useCallback(
     (name: string, icon?: string, notes?: string) => {
-      onCreateGroup?.(name, icon, notes);
-      setShowCreateGroupDialog(false);
-    },
-    [onCreateGroup]
-  );
-
-  const handleCreateCategory = useCallback(
-    (name: string, icon?: string, notes?: string) => {
-      if (creatingCategoryForGroup) {
+      if (createDialogType === 'group') {
+        onCreateGroup?.(name, icon, notes);
+      } else if (createDialogType === 'category' && creatingCategoryForGroup) {
         onCreateCategory?.(creatingCategoryForGroup, name, icon, notes);
       }
-      setShowCreateCategoryDialog(false);
+      setCreateDialogType(null);
       setCreatingCategoryForGroup(null);
     },
-    [creatingCategoryForGroup, onCreateCategory]
+    [createDialogType, creatingCategoryForGroup, onCreateGroup, onCreateCategory]
   );
+
+  const handleCloseCreateDialog = useCallback(() => {
+    setCreateDialogType(null);
+    setCreatingCategoryForGroup(null);
+  }, []);
 
   const openCreateCategoryDialog = useCallback((groupId: string) => {
     setCreatingCategoryForGroup(groupId);
-    setShowCreateCategoryDialog(true);
+    setCreateDialogType('category');
   }, []);
+
+  const contextMenuItems: ContextMenuItem[] = contextMenu
+    ? [
+        {
+          id: 'rename',
+          label: 'Rename',
+          icon: PencilSimple,
+          onClick: () => {
+            const group = safeGroups.find((g) => g.id === contextMenu.groupId);
+            const currentValue =
+              contextMenu.type === 'group'
+                ? group?.name
+                : group?.categories.find((c) => c.id === contextMenu.categoryId)?.name;
+            startEditing(contextMenu.type, contextMenu.groupId, contextMenu.categoryId, currentValue);
+          },
+        },
+        {
+          id: 'delete',
+          label: 'Delete',
+          icon: Trash,
+          variant: 'danger',
+          onClick: handleDelete,
+        },
+      ]
+    : [];
+
+  const createDialogParentName =
+    createDialogType === 'category' && creatingCategoryForGroup
+      ? safeGroups.find((g) => g.id === creatingCategoryForGroup)?.name
+      : undefined;
 
   return (
     <div className={styles.container}>
@@ -156,7 +184,7 @@ export function CategoryManager({
         <button
           type="button"
           className={styles.addButton}
-          onClick={() => setShowCreateGroupDialog(true)}
+          onClick={() => setCreateDialogType('group')}
           aria-label="Create group"
         >
           <Plus size={14} />
@@ -165,20 +193,14 @@ export function CategoryManager({
 
       <div className={styles.list}>
         {/* "All" group - special virtual group */}
-        <div
-          className={[
-            styles.categoryItem,
-            selectedGroupId === ALL_GROUP_ID && !selectedCategoryId && styles.selected,
-          ].filter(Boolean).join(' ')}
+        <SidebarItem
+          name="All"
+          icon={<FolderSimple size={16} />}
+          count={totalSkillsCount}
+          isSelected={selectedGroupId === ALL_GROUP_ID && !selectedCategoryId}
           onClick={() => onSelectGroup?.(ALL_GROUP_ID)}
-          role="button"
-          tabIndex={0}
-        >
-          <span className={styles.expandIcon} />
-          <FolderSimple size={16} className={styles.icon} />
-          <span className={styles.name}>All</span>
-          <span className={styles.count}>{totalSkillsCount}</span>
-        </div>
+          className={styles.categoryItem}
+        />
 
         {safeGroups.map((group) => {
           const isExpanded = expandedGroups.has(group.id);
@@ -247,39 +269,26 @@ export function CategoryManager({
           );
         })}
 
-        {safeGroups.length === 0 && !showCreateGroupDialog && (
+        {safeGroups.length === 0 && createDialogType === null && (
           <p className={styles.emptyText}>No groups yet</p>
         )}
       </div>
 
       {contextMenu && (
         <ContextMenu
-          type={contextMenu.type}
-          groupId={contextMenu.groupId}
-          categoryId={contextMenu.categoryId}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          groups={safeGroups}
-          onRename={startEditing}
-          onDelete={handleDelete}
+          isOpen={true}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          items={contextMenuItems}
           onClose={closeContextMenu}
         />
       )}
 
-      <CreateGroupDialog
-        open={showCreateGroupDialog}
-        onClose={() => setShowCreateGroupDialog(false)}
-        onCreate={handleCreateGroup}
-      />
-
-      <CreateCategoryDialog
-        open={showCreateCategoryDialog}
-        onClose={() => {
-          setShowCreateCategoryDialog(false);
-          setCreatingCategoryForGroup(null);
-        }}
-        onCreate={handleCreateCategory}
-        groupName={safeGroups.find((g) => g.id === creatingCategoryForGroup)?.name}
+      <CreateEntityDialog
+        open={createDialogType !== null}
+        onClose={handleCloseCreateDialog}
+        onCreate={handleCreateEntity}
+        entityType={createDialogType ?? 'group'}
+        parentName={createDialogParentName}
       />
     </div>
   );
