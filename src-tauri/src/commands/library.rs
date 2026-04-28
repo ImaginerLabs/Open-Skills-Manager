@@ -489,6 +489,11 @@ pub fn library_delete(id: String) -> IpcResult<()> {
                         eprintln!("Warning: Failed to update skill metadata after delete: {}", e);
                     }
 
+                    // Create tombstone in storage layer for iCloud sync
+                    if let Err(e) = crate::storage::service::get_storage().remove_skill(&folder_name) {
+                        eprintln!("Warning: Failed to create tombstone for deleted skill: {}", e);
+                    }
+
                     trigger_library_sync();
                     return IpcResult::success(());
                 }

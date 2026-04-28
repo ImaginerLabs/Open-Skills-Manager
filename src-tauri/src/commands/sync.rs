@@ -366,8 +366,34 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
     let local_skills = list_skills(&local_library);
     let icloud_skills = list_skills(&icloud_library);
 
+    // Get tombstones from storage layer (skills that were deleted locally)
+    let storage = get_storage();
+    let tombstones = match storage.read_library() {
+        Ok(library) => library.deleted_skills,
+        Err(_) => std::collections::HashMap::new(),
+    };
+
     // Sync from iCloud to local (if newer and not from us)
     for (skill_name, icloud_time) in &icloud_skills {
+        // Check if this skill was deleted locally (tombstone exists)
+        if let Some(tombstone) = tombstones.get(skill_name) {
+            // If tombstone is newer than iCloud version, delete from iCloud
+            if let Ok(tombstone_time) = chrono::DateTime::parse_from_rfc3339(&tombstone.deleted_at) {
+                let tombstone_utc = tombstone_time.with_timezone(&chrono::Utc);
+                if tombstone_utc > *icloud_time {
+                    // Delete from iCloud
+                    let icloud_path = icloud_library.join(skill_name);
+                    if icloud_path.exists() {
+                        fs::remove_dir_all(&icloud_path)
+                            .map_err(|e| format!("Failed to delete iCloud skill: {}", e))?;
+                        synced_count += 1;
+                        println!("Deleted skill from iCloud: {}", skill_name);
+                    }
+                    continue; // Skip further processing for this skill
+                }
+            }
+        }
+
         let local_time = local_skills.get(skill_name);
 
         let should_pull = match local_time {
@@ -417,6 +443,34 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
                 .map_err(|e| format!("Failed to copy skill to iCloud: {}", e))?;
 
             synced_count += 1;
+        }
+    }
+
+    // Delete from iCloud any skills that don't exist locally and have a local tombstone
+    for (skill_name, tombstone) in &tombstones {
+        if !local_skills.contains_key(skill_name) {
+            let icloud_path = icloud_library.join(skill_name);
+            if icloud_path.exists() {
+                // Check if iCloud modification time is older than tombstone
+                if let Ok(metadata) = fs::metadata(&icloud_path) {
+                    if let Ok(modified) = metadata.modified() {
+                        if let Ok(icloud_time) = modified.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+                            let icloud_dt = chrono::DateTime::from_timestamp(icloud_time.as_secs() as i64, 0)
+                                .unwrap_or_else(|| chrono::Utc::now());
+
+                            if let Ok(tombstone_time) = chrono::DateTime::parse_from_rfc3339(&tombstone.deleted_at) {
+                                let tombstone_utc = tombstone_time.with_timezone(&chrono::Utc);
+                                if tombstone_utc > icloud_dt {
+                                    fs::remove_dir_all(&icloud_path)
+                                        .map_err(|e| format!("Failed to delete iCloud skill: {}", e))?;
+                                    synced_count += 1;
+                                    println!("Deleted skill from iCloud (tombstone): {}", skill_name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
