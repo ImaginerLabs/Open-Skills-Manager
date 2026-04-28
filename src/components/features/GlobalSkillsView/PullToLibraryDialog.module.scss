@@ -40,7 +40,10 @@
 .pullActions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1) calc(var(--space-6) * -1);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }

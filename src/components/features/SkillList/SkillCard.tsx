@@ -76,24 +76,28 @@ export function SkillCard<T extends Skill>({
     setShowContextMenu(true);
   }, []);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowContextMenu(false);
     actions?.onDelete?.(skill.id);
   }, [actions, skill.id]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowContextMenu(false);
     actions?.onExport?.(skill.id);
   }, [actions, skill.id]);
 
-  const handleDeploy = useCallback(() => {
+  const handleDeploy = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowContextMenu(false);
     if (actions?.onDeploy) {
       actions.onDeploy(skill);
     }
   }, [actions, skill]);
 
-  const handlePull = useCallback(() => {
+  const handlePull = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowContextMenu(false);
     if (actions?.onPull) {
       actions.onPull(skill.id);
