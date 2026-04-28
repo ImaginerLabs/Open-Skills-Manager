@@ -173,7 +173,7 @@ Desktop.ini
 
 # Claude Code
 .claude/worktrees/
-.claude/settings.json
+# .claude/settings.json
 
 # Playwright MCP
 .playwright-mcp/
