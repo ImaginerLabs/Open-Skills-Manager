@@ -10,24 +10,11 @@ import styles from './ICloudSettings.module.scss';
 export interface ICloudSettingsProps {
   status: SyncStatusType;
   lastSyncTime?: string | undefined;
-  storageUsed: number;
-  storageTotal: number;
   containerPath: string | null;
   isLoading: boolean;
   error: string | null;
   onForceSync: () => Promise<void>;
   onViewInFinder: () => void;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const k = 1024;
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  const value = bytes / Math.pow(k, i);
-  return `${value.toFixed(1)} ${units[i]}`;
 }
 
 function formatLastSync(isoString?: string): string {
@@ -66,15 +53,12 @@ function getStatusLabel(status: SyncStatusType): string {
 export function ICloudSettings({
   status,
   lastSyncTime,
-  storageUsed,
-  storageTotal,
   containerPath,
   isLoading,
   error,
   onForceSync,
   onViewInFinder,
 }: ICloudSettingsProps): React.ReactElement {
-  const storagePercent = storageTotal > 0 ? (storageUsed / storageTotal) * 100 : 0;
 
   return (
     <section className={styles.iCloudSection}>
@@ -91,21 +75,6 @@ export function ICloudSettings({
             <span className={styles.statusText}>{getStatusLabel(status)}</span>
           </div>
           <span className={styles.statusValue}>{formatLastSync(lastSyncTime)}</span>
-        </div>
-
-        <div className={styles.storageRow}>
-          <div className={styles.storageHeader}>
-            <span className={styles.storageLabel}>Storage used</span>
-            <span className={styles.storageValue}>
-              {formatBytes(storageUsed)} / {formatBytes(storageTotal)}
-            </span>
-          </div>
-          <div className={styles.storageBar}>
-            <div
-              className={styles.storageFill}
-              style={{ width: `${Math.min(storagePercent, 100)}%` }}
-            />
-          </div>
         </div>
 
         <div className={styles.infoBox}>

@@ -28,7 +28,6 @@ export function Settings(): React.ReactElement {
     status,
     lastSyncTime,
     storageUsed,
-    storageTotal,
     containerPath,
     isLoading,
     error,
@@ -124,8 +123,6 @@ export function Settings(): React.ReactElement {
         <ICloudSettings
           status={status}
           lastSyncTime={lastSyncTime ?? undefined}
-          storageUsed={storageUsed}
-          storageTotal={storageTotal}
           containerPath={containerPath}
           isLoading={isLoading}
           error={error}
