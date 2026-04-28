@@ -450,6 +450,7 @@ impl StorageService {
         let sync_generation = self.sync_generation.clone();
         let last_sync_error = self.last_sync_error.clone();
         let last_sync_time = self.last_sync_time.clone();
+        let sync_cache = self.sync_cache.clone();
 
         let handle = thread::spawn(move || {
             thread::sleep(Duration::from_millis(debounce_ms));
@@ -480,6 +481,8 @@ impl StorageService {
             } else {
                 *write_lock(&last_sync_error) = None;
                 *write_lock(&last_sync_time) = Some(chrono::Utc::now().to_rfc3339());
+                // Clear sync cache so next read gets fresh state
+                *write_lock(&sync_cache) = None;
             }
         });
 
@@ -731,6 +734,8 @@ impl StorageService {
             Ok(_) => {
                 *write_lock(&self.last_sync_error) = None;
                 *write_lock(&self.last_sync_time) = Some(chrono::Utc::now().to_rfc3339());
+                // Clear sync cache so next read gets fresh state
+                *write_lock(&self.sync_cache) = None;
                 Ok(())
             }
             Err(e) => {

@@ -250,8 +250,8 @@ impl SyncEngine {
         state.last_sync_time = Some(chrono::Utc::now().to_rfc3339());
         state.last_sync_by = Some(self.client_id.clone());
 
-        // Clear synced pending changes
-        state.pending_changes.retain(|c| !c.synced);
+        // Clear all pending changes after successful sync
+        state.pending_changes.clear();
 
         let new_content = serde_json::to_string_pretty(&state)
             .map_err(|e| format!("Failed to serialize sync state: {}", e))?;
