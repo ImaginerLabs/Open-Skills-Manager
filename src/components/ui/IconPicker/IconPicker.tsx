@@ -41,6 +41,25 @@ export const ICON_OPTIONS: IconOption[] = [
   { name: 'cube', icon: <Cube size={20} /> },
 ];
 
+// Icon components for rendering at different sizes
+const ICON_COMPONENTS = {
+  folder: FolderSimple,
+  code: Code,
+  wrench: Wrench,
+  lightning: Lightning,
+  rocket: Rocket,
+  book: Book,
+  gear: Gear,
+  star: Star,
+  heart: Heart,
+  globe: Globe,
+  database: Database,
+  cloud: Cloud,
+  terminal: Terminal,
+  search: MagnifyingGlass,
+  cube: Cube,
+};
+
 export interface IconPickerProps {
   value?: string | undefined;
   onChange: (iconName: string) => void;
@@ -69,4 +88,51 @@ export function IconPicker({ value, onChange, label }: IconPickerProps): React.R
       </div>
     </div>
   );
+}
+
+/**
+ * Get icon component by name with specified size
+ */
+export function getIconByName(iconName: string | undefined, size: number = 16): ReactNode {
+  if (!iconName) return null;
+
+  const IconComponent = ICON_COMPONENTS[iconName as keyof typeof ICON_COMPONENTS];
+  if (IconComponent) {
+    return <IconComponent size={size} />;
+  }
+  return null;
+}
+
+/**
+ * Get a deterministic default icon based on a seed string (e.g., item id or name)
+ * This ensures the same item always gets the same default icon
+ */
+export function getDefaultIcon(seed: string, size: number = 16): ReactNode {
+  // Generate a simple hash from the seed string
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  // Use absolute value and modulo to get an index
+  const index = Math.abs(hash) % ICON_OPTIONS.length;
+  const iconName = ICON_OPTIONS[index]?.name;
+
+  if (!iconName) return null;
+  return getIconByName(iconName, size);
+}
+
+/**
+ * Get icon for display, with fallback to default icon if not specified
+ */
+export function getIconWithDefault(
+  iconName: string | undefined,
+  seed: string,
+  size: number = 16
+): ReactNode {
+  const icon = getIconByName(iconName, size);
+  if (icon) return icon;
+  return getDefaultIcon(seed, size);
 }
