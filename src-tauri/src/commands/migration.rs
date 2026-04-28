@@ -2,10 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-use super::library::{IpcResult, Group};
+use super::library::IpcResult;
 use super::config::{OpenSkillsManagerConfig, Settings, Project, SyncSettings, get_default_ide_configs};
 use super::AppError;
 use crate::paths;
+use crate::storage::Group;
 
 // ============================================================================
 // Migration Status Types

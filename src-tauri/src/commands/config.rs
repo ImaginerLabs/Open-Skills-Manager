@@ -2,9 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 
-use super::library::{IpcResult, Group};
+use super::library::IpcResult;
 use super::AppError;
 use crate::paths;
+use crate::storage::Group;
 
 // ============================================================================
 // Config Version
