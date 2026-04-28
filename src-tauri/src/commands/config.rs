@@ -547,3 +547,57 @@ pub fn config_needs_migration() -> IpcResult<bool> {
     // Check if legacy data exists
     IpcResult::success(paths::legacy_data_exists())
 }
+
+// ============================================================================
+// Path Utilities Commands
+// ============================================================================
+
+/// Get the application data directory path
+/// ~/Library/Application Support/OpenSkillsManager/
+#[tauri::command]
+pub fn config_app_data_path() -> IpcResult<String> {
+    let path = paths::get_app_support_path();
+    IpcResult::success(path.to_string_lossy().to_string())
+}
+
+/// Reveal a path in Finder (macOS) or default file manager
+#[tauri::command]
+pub fn config_reveal_path(path: String) -> IpcResult<()> {
+    let path_buf = std::path::PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return IpcResult::error(
+            AppError::E103ReadFailed("Path does not exist".to_string()).code(),
+            &format!("Path does not exist: {}", path),
+        );
+    }
+
+    match tauri_plugin_opener::reveal_item_in_dir(&path_buf) {
+        Ok(()) => IpcResult::success(()),
+        Err(e) => IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to reveal path: {}", e),
+        ),
+    }
+}
+
+/// Open a path directly in Finder (macOS) or default file manager
+#[tauri::command]
+pub fn config_open_path(path: String) -> IpcResult<()> {
+    let path_buf = std::path::PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return IpcResult::error(
+            AppError::E103ReadFailed("Path does not exist".to_string()).code(),
+            &format!("Path does not exist: {}", path),
+        );
+    }
+
+    match tauri_plugin_opener::open_path(&path_buf, None::<&str>) {
+        Ok(()) => IpcResult::success(()),
+        Err(e) => IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to open path: {}", e),
+        ),
+    }
+}

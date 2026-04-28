@@ -10,6 +10,7 @@ import {
   type IDEConfig,
   type SkillOrgEntry,
 } from './storageService';
+import { invokeIPC } from './ipcService';
 
 // Re-export types
 export type { Settings, IDEConfig, SkillOrgEntry };
@@ -121,6 +122,38 @@ export const configService = {
    * Check if migration is needed
    */
   needsMigration: storageService.needsMigration,
+
+  /**
+   * Get the application data directory path
+   * ~/Library/Application Support/OpenSkillsManager/
+   */
+  getAppDataPath: async (): Promise<string> => {
+    const result = await invokeIPC<string>('config_app_data_path');
+    if (!result.success) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
+  },
+
+  /**
+   * Reveal a path in Finder (macOS) or default file manager
+   */
+  revealPath: async (path: string): Promise<void> => {
+    const result = await invokeIPC<void>('config_reveal_path', { path });
+    if (!result.success) {
+      throw new Error(result.error.message);
+    }
+  },
+
+  /**
+   * Open a path directly in Finder (macOS) or default file manager
+   */
+  openPath: async (path: string): Promise<void> => {
+    const result = await invokeIPC<void>('config_open_path', { path });
+    if (!result.success) {
+      throw new Error(result.error.message);
+    }
+  },
 };
 
 // Export the new storage service for direct access

@@ -84,6 +84,9 @@ pub fn run() {
             config::config_remove_skill_org,
             config::config_set_sync_settings,
             config::config_needs_migration,
+            config::config_app_data_path,
+            config::config_reveal_path,
+            config::config_open_path,
             // IDE commands
             ide::ide_list,
             ide::ide_get_active,
@@ -159,6 +162,7 @@ pub fn run() {
             storage_commands::storage_client_id,
             storage_commands::storage_icloud_available,
             storage_commands::storage_invalidate_cache,
+            storage_commands::storage_ensure_icloud_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
