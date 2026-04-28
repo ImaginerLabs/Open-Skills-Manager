@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
-import { OpenAI, Cursor } from '@lobehub/icons';
-import ClaudeCodeColor from '@lobehub/icons/es/ClaudeCode/components/Color';
-import GoogleColor from '@lobehub/icons/es/Google/components/Color';
+import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
+import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
+import OpenAIAvatar from '@lobehub/icons/es/OpenAI/components/Avatar';
+import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
 import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
 import { ideService, configService, libraryService } from '@/services';
 import styles from './IDESwitcher.module.scss';
@@ -152,18 +153,17 @@ export function IDESwitcher(): React.ReactElement | null {
     }
   }, [activeIdeId, setActiveIDE, setLoading, refreshAllData, showToast, configsToShow]);
 
-  const getIcon = (ideId: string) => {
-    switch (ideId) {
+  const getIcon = (iconName: string) => {
+    const size = 14;
+    switch (iconName) {
       case 'claude-code':
-        return <ClaudeCodeColor size={20} />;
+        return <ClaudeCodeAvatar size={size} />;
       case 'opencode':
-        // OpenAI doesn't have Color component, use default
-        return <OpenAI size={20} />;
+        return <OpenAIAvatar size={size} />;
       case 'cursor':
-        // Cursor doesn't have Color component, use Mono
-        return <Cursor size={20} />;
+        return <CursorAvatar size={size} />;
       case 'gemini':
-        return <GoogleColor size={20} />;
+        return <GeminiAvatar size={size} />;
       default:
         return null;
     }
@@ -185,7 +185,7 @@ export function IDESwitcher(): React.ReactElement | null {
           onClick={() => handleIDESwitch(ide.id)}
           title={ide.isEnabled ? ide.name : `${ide.name} (Coming Soon)`}
         >
-          {getIcon(ide.id)}
+          <div className={styles.iconWrapper}>{getIcon(ide.icon || ide.id)}</div>
         </button>
       ))}
     </div>

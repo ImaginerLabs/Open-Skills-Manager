@@ -118,6 +118,8 @@ pub struct OpenSkillsManagerConfig {
     pub version: String,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_by: Option<String>,  // client_id of last modifier
     pub settings: Settings,
     pub groups: Vec<Group>,
     pub ide_configs: Vec<IDEConfig>,
@@ -133,6 +135,7 @@ impl Default for OpenSkillsManagerConfig {
             version: CONFIG_VERSION.to_string(),
             created_at: now.clone(),
             updated_at: now,
+            updated_by: None,
             settings: Settings::default(),
             groups: vec![],
             ide_configs: get_default_ide_configs(),
@@ -166,6 +169,24 @@ pub fn get_default_ide_configs() -> Vec<IDEConfig> {
             projects: vec![],
             is_enabled: true,
             icon: Some("opencode".to_string()),
+        },
+        IDEConfig {
+            id: "cursor".to_string(),
+            name: "Cursor".to_string(),
+            global_scope_path: "~/.cursor/skills".to_string(),
+            project_scope_name: ".cursor".to_string(),
+            projects: vec![],
+            is_enabled: false,
+            icon: Some("cursor".to_string()),
+        },
+        IDEConfig {
+            id: "gemini".to_string(),
+            name: "Gemini CLI".to_string(),
+            global_scope_path: "~/.gemini/skills".to_string(),
+            project_scope_name: ".gemini".to_string(),
+            projects: vec![],
+            is_enabled: false,
+            icon: Some("gemini".to_string()),
         },
     ]
 }
@@ -215,6 +236,10 @@ where
     f(&mut config);
     config.updated_at = chrono::Utc::now().to_rfc3339();
     save_config(&config)?;
+
+    // Trigger full sync in background
+    super::sync::trigger_full_sync();
+
     Ok(config)
 }
 
