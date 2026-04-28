@@ -47,44 +47,122 @@ vi.mock('@/components/features/CategoryManager/InlineEditInput.module.scss', () 
   },
 }));
 
-vi.mock('@/components/features/CategoryManager/ContextMenu.module.scss', () => ({
+vi.mock('@/components/common/SidebarItem/SidebarItem.module.scss', () => ({
   default: {
-    contextOverlay: 'contextOverlay',
-    contextMenu: 'contextMenu',
-    menuItem: 'menuItem',
-    danger: 'danger',
+    sidebarItem: 'sidebarItem',
+    selected: 'selected',
+    disabled: 'disabled',
+    missing: 'missing',
+    dragOver: 'dragOver',
+    indent1: 'indent1',
+    indent2: 'indent2',
+    expandIcon: 'expandIcon',
+    expanded: 'expanded',
+    icon: 'icon',
+    missingIcon: 'missingIcon',
+    name: 'name',
+    count: 'count',
   },
 }));
 
-// Mock CreateGroupDialog
-vi.mock('@/components/features/CategoryManager/CreateGroupDialog', () => ({
-  CreateGroupDialog: ({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (name: string, icon?: string, notes?: string) => void }) => {
+// Mock CreateEntityDialog
+vi.mock('@/components/common/CreateEntityDialog', () => ({
+  CreateEntityDialog: ({ open, onClose, onCreate, entityType, parentName }: { open: boolean; onClose: () => void; onCreate: (name: string, icon?: string, notes?: string) => void; entityType: string; parentName?: string }) => {
     if (!open) return null;
+    const testId = `create-${entityType}-dialog`;
     return (
-      <div data-testid="create-group-dialog">
+      <div data-testid={testId} data-parent-name={parentName}>
         <input
-          placeholder="Enter group name"
+          placeholder={`Enter ${entityType} name`}
           onChange={(e) => e.target.value}
         />
-        <button onClick={() => { onCreate('New Group'); onClose(); }}>Create</button>
+        <button onClick={() => { onCreate(`New ${entityType.charAt(0).toUpperCase() + entityType.slice(1)}`); onClose(); }}>Create</button>
         <button onClick={onClose}>Cancel</button>
       </div>
     );
   },
 }));
 
-// Mock CreateCategoryDialog
-vi.mock('@/components/features/CategoryManager/CreateCategoryDialog', () => ({
-  CreateCategoryDialog: ({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (name: string, icon?: string, notes?: string) => void }) => {
-    if (!open) return null;
+// Mock common ContextMenu
+vi.mock('@/components/common/ContextMenu', () => ({
+  ContextMenu: ({ isOpen, items, onClose }: { isOpen: boolean; items: Array<{ id: string; label: string; onClick?: () => void; variant?: string }>; onClose: () => void }) => {
+    if (!isOpen) return null;
     return (
-      <div data-testid="create-category-dialog">
-        <input
-          placeholder="Enter category name"
-          onChange={(e) => e.target.value}
-        />
-        <button onClick={() => { onCreate('New Category'); onClose(); }}>Create</button>
-        <button onClick={onClose}>Cancel</button>
+      <div role="menu">
+        <div className="contextOverlay" onClick={onClose} />
+        {items.map((item) => (
+          <button
+            key={item.id}
+            role="menuitem"
+            onClick={item.onClick}
+            className={item.variant === 'danger' ? 'danger' : ''}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
+
+// Mock SidebarItem
+vi.mock('@/components/common/SidebarItem', () => ({
+  SidebarItem: ({ name, count, isSelected, onClick, onContextMenu, isEditing, editingValue, onEditSubmit, onEditCancel, expandIcon, icon, indentLevel }: {
+    name: string;
+    count?: number;
+    isSelected?: boolean;
+    onClick?: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
+    isEditing?: boolean;
+    editingValue?: string;
+    onEditSubmit?: () => void;
+    onEditCancel?: () => void;
+    expandIcon?: React.ReactNode;
+    icon?: React.ReactNode;
+    indentLevel?: number;
+  }) => {
+    // When editing is cancelled (isEditing becomes false), don't render input
+    if (isEditing) {
+      return (
+        <div
+          data-testid={`sidebar-item-${name.toLowerCase().replace(/\s+/g, '-')}`}
+          data-selected={isSelected}
+          data-indent={indentLevel}
+          onClick={onClick}
+          onContextMenu={onContextMenu}
+          role="button"
+          tabIndex={0}
+        >
+          {expandIcon && <span data-testid="expand-icon">{expandIcon}</span>}
+          {icon && <span data-testid="icon">{icon}</span>}
+          <input
+            data-testid="edit-input"
+            placeholder="Name"
+            value={editingValue}
+            onChange={(e) => e.target.value}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && onEditSubmit) onEditSubmit();
+              if (e.key === 'Escape' && onEditCancel) onEditCancel();
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        data-testid={`sidebar-item-${name.toLowerCase().replace(/\s+/g, '-')}`}
+        data-selected={isSelected}
+        data-indent={indentLevel}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        role="button"
+        tabIndex={0}
+      >
+        {expandIcon && <span data-testid="expand-icon">{expandIcon}</span>}
+        {icon && <span data-testid="icon">{icon}</span>}
+        <span>{name}</span>
+        {count !== undefined && <span>{count}</span>}
       </div>
     );
   },
@@ -334,7 +412,7 @@ describe('CategoryManager', () => {
       const renameButton = screen.getByText('Rename');
       fireEvent.click(renameButton);
 
-      expect(screen.getByPlaceholderText('Group name')).toBeInTheDocument();
+      expect(screen.getByTestId('edit-input')).toBeInTheDocument();
     });
 
     it('should show inline edit input with current value when renaming', async () => {
@@ -346,7 +424,7 @@ describe('CategoryManager', () => {
       const renameButton = screen.getByText('Rename');
       fireEvent.click(renameButton);
 
-      const input = screen.getByPlaceholderText('Group name');
+      const input = screen.getByTestId('edit-input');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('Testing');
     });
@@ -360,10 +438,10 @@ describe('CategoryManager', () => {
       const renameButton = screen.getByText('Rename');
       fireEvent.click(renameButton);
 
-      const input = screen.getByPlaceholderText('Group name');
+      const input = screen.getByTestId('edit-input');
       fireEvent.keyDown(input, { key: 'Escape' });
 
-      expect(screen.queryByPlaceholderText('Group name')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-input')).not.toBeInTheDocument();
     });
   });
 
@@ -371,8 +449,8 @@ describe('CategoryManager', () => {
     it('should highlight selected group', async () => {
       render(<CategoryManager {...defaultProps} selectedGroupId="grp-2" />);
 
-      const testingGroup = screen.getByText('Testing');
-      expect(testingGroup.closest('.selected')).toBeTruthy();
+      const testingGroup = screen.getByTestId('sidebar-item-testing');
+      expect(testingGroup).toHaveAttribute('data-selected', 'true');
     });
 
     it('should highlight selected category', async () => {
@@ -387,8 +465,8 @@ describe('CategoryManager', () => {
       const groupItem = screen.getByText('Development');
       fireEvent.click(groupItem);
 
-      const frontendCategory = screen.getByText('Frontend');
-      expect(frontendCategory.closest('.selected')).toBeTruthy();
+      const frontendCategory = screen.getByTestId('sidebar-item-frontend');
+      expect(frontendCategory).toHaveAttribute('data-selected', 'true');
     });
   });
 });

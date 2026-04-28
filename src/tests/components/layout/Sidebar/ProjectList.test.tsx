@@ -33,6 +33,59 @@ vi.mock('@/components/layout/Sidebar/AddProjectButton.module.scss', () => ({
   },
 }));
 
+// Mock SidebarItem
+vi.mock('@/components/common/SidebarItem', () => ({
+  SidebarItem: ({ name, count, isSelected, isMissing, onClick, onContextMenu, icon, missingIcon }: {
+    name: string;
+    count?: number;
+    isSelected?: boolean;
+    isMissing?: boolean;
+    onClick?: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
+    icon?: React.ReactNode;
+    missingIcon?: React.ReactNode;
+  }) => {
+    return (
+      <div
+        data-testid={`sidebar-item-${name.toLowerCase().replace(/\s+/g, '-')}`}
+        data-selected={isSelected}
+        data-missing={isMissing}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        role="button"
+        tabIndex={0}
+        className={isSelected ? 'selected' : isMissing ? 'missing' : ''}
+      >
+        {missingIcon ? <span data-testid="missing-icon">{missingIcon}</span> : icon && <span data-testid="icon">{icon}</span>}
+        <span>{name}</span>
+        {count !== undefined && <span>{count}</span>}
+      </div>
+    );
+  },
+}));
+
+// Mock ContextMenu
+vi.mock('@/components/common/ContextMenu', () => ({
+  ContextMenu: ({ isOpen, items, onClose }: { isOpen: boolean; items: Array<{ id: string; label: string; onClick?: () => void; variant?: string }>; onClose: () => void }) => {
+    if (!isOpen) return null;
+    return (
+      <div role="menu">
+        <div className="contextOverlay" onClick={onClose} />
+        {items.map((item) => (
+          <button
+            key={item.id}
+            role="menuitem"
+            onClick={item.onClick}
+            className={item.variant === 'danger' ? 'danger' : ''}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
+
 const mockProjects: Project[] = [
   {
     id: 'proj-1',
@@ -97,8 +150,8 @@ describe('ProjectList', () => {
 
     it('should show missing indicator for non-existent projects', () => {
       render(<ProjectList {...defaultProps} />);
-      const missingProject = screen.getByText('Another Project').closest('.missing');
-      expect(missingProject).toBeTruthy();
+      const missingProject = screen.getByTestId('sidebar-item-another-project');
+      expect(missingProject).toHaveAttribute('data-missing', 'true');
     });
   });
 
@@ -116,8 +169,8 @@ describe('ProjectList', () => {
     it('should highlight selected project', () => {
       render(<ProjectList {...defaultProps} selectedProjectId="proj-1" />);
 
-      const selectedProject = screen.getByText('My Project').closest('.selected');
-      expect(selectedProject).toBeTruthy();
+      const selectedProject = screen.getByTestId('sidebar-item-my-project');
+      expect(selectedProject).toHaveAttribute('data-selected', 'true');
     });
   });
 
