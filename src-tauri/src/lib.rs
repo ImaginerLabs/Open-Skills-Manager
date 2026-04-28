@@ -163,6 +163,7 @@ pub fn run() {
             storage_commands::storage_icloud_available,
             storage_commands::storage_invalidate_cache,
             storage_commands::storage_ensure_icloud_path,
+            storage_commands::storage_reset_to_defaults,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

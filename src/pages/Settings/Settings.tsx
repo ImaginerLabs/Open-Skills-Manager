@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FolderOpen, Gear, PaintBrush, Translate } from '@phosphor-icons/react';
+import { FolderOpen, Gear, PaintBrush, Translate, Warning } from '@phosphor-icons/react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
-import { Button } from '../../components/ui/Button';
 import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -22,7 +21,7 @@ function formatBytes(bytes: number): string {
 
 export function Settings(): React.ReactElement {
   const { theme, language, setTheme, setLanguage } = useSettingsStore();
-  const { showToast } = useUIStore();
+  const { showToast, showConfirmDialog } = useUIStore();
   const [appVersion, setAppVersion] = useState<string>('');
   const [appName, setAppName] = useState<string>('');
 
@@ -74,6 +73,26 @@ export function Settings(): React.ReactElement {
       showToast('error', e instanceof Error ? e.message : 'Failed to open data directory');
     }
   }, [showToast]);
+
+  const handleResetToDefaults = useCallback(() => {
+    showConfirmDialog({
+      title: 'Factory Reset',
+      message: 'This will permanently delete ALL your imported skills and reset all settings to defaults. iCloud synced data will also be cleared. This action cannot be undone.',
+      confirmText: 'Reset',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          await storageService.resetToDefaults();
+          // Reset local store state
+          setTheme('system');
+          setLanguage('auto');
+          showToast('success', 'All data has been reset to factory defaults');
+        } catch (e) {
+          showToast('error', e instanceof Error ? e.message : 'Failed to reset settings');
+        }
+      },
+    });
+  }, [setTheme, setLanguage, showToast, showConfirmDialog]);
 
   return (
     <div className={styles.page}>
@@ -177,14 +196,31 @@ export function Settings(): React.ReactElement {
               <span className={styles.settingDescription}>Open application data folder in Finder</span>
             </div>
             <div className={styles.settingValue}>
-              <Button
-                variant="secondary"
-                size="small"
+              <button
+                type="button"
+                className={styles.select}
                 onClick={handleOpenDataDir}
               >
                 <FolderOpen size={16} weight="bold" />
                 Open in Finder
-              </Button>
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Factory Reset</span>
+              <span className={styles.settingDescription}>Reset all settings to defaults and clear iCloud data</span>
+            </div>
+            <div className={styles.settingValue}>
+              <button
+                type="button"
+                className={`${styles.select} ${styles.dangerButton}`}
+                onClick={handleResetToDefaults}
+              >
+                <Warning size={16} weight="bold" />
+                Reset to Defaults
+              </button>
             </div>
           </div>
         </section>

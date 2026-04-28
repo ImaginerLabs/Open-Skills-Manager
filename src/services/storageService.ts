@@ -263,6 +263,12 @@ export const storageService = {
    * Invalidate cache
    */
   invalidateCache: () => unwrap(invokeIPC<void>('storage_invalidate_cache')),
+
+  /**
+   * Reset all settings to factory defaults
+   * This will reset config, library, sync state, and clear iCloud data
+   */
+  resetToDefaults: () => unwrap(invokeIPC<void>('storage_reset_to_defaults')),
 };
 
 // ============================================================================

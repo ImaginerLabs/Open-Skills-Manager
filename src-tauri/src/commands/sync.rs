@@ -616,66 +616,24 @@ fn do_full_sync_background() -> Result<(), String> {
 
 /// Sync metadata files to iCloud
 fn sync_metadata() -> Result<(), String> {
-    let app_support = paths::get_app_support_path();
     let icloud_container = paths::get_icloud_container_path();
 
-    // Files to sync (local -> iCloud, same structure)
-    let files_to_sync = [
-        "skill_metadata.json",
-        "groups.json",
-        "sync-state.json",
+    // Files that should NOT be synced to iCloud (device-specific)
+    let excluded_files = [
+        "client-id.json",
+        ".DS_Store",
     ];
 
-    for file_name in &files_to_sync {
-        let local_file = app_support.join(file_name);
+    // Clean up excluded files from iCloud directory
+    for file_name in &excluded_files {
         let icloud_file = icloud_container.join(file_name);
-
-        if local_file.exists() {
-            sync_file_if_newer(&local_file, &icloud_file)?;
-        }
-    }
-
-    // Also sync metadata directory contents
-    let local_metadata = paths::get_local_metadata_path();
-    let icloud_metadata = paths::get_icloud_metadata_path();
-
-    if local_metadata.exists() {
-        fs::create_dir_all(&icloud_metadata)
-            .map_err(|e| format!("Failed to create iCloud metadata: {}", e))?;
-
-        if let Ok(entries) = fs::read_dir(&local_metadata) {
-            for entry in entries.flatten() {
-                let local_file = entry.path();
-                if local_file.is_file() {
-                    let icloud_file = icloud_metadata.join(entry.file_name());
-                    sync_file_if_newer(&local_file, &icloud_file)?;
-                }
+        if icloud_file.exists() {
+            if let Err(e) = fs::remove_file(&icloud_file) {
+                println!("Warning: Failed to remove {} from iCloud: {}", file_name, e);
+            } else {
+                println!("Removed excluded file from iCloud: {}", file_name);
             }
         }
-    }
-
-    Ok(())
-}
-
-/// Sync a single file if local is newer
-fn sync_file_if_newer(local_path: &PathBuf, icloud_path: &PathBuf) -> Result<(), String> {
-    let local_time = fs::metadata(local_path)
-        .and_then(|m| m.modified())
-        .ok();
-
-    let icloud_time = fs::metadata(icloud_path)
-        .and_then(|m| m.modified())
-        .ok();
-
-    let should_push = match (local_time, icloud_time) {
-        (_, None) => true,
-        (Some(lt), Some(it)) => lt > it,
-        _ => false,
-    };
-
-    if should_push {
-        fs::copy(local_path, icloud_path)
-            .map_err(|e| format!("Failed to copy file: {}", e))?;
     }
 
     Ok(())

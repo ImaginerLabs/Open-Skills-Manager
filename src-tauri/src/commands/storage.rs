@@ -365,3 +365,133 @@ pub fn storage_ensure_icloud_path() -> IpcResult<String> {
         ),
     }
 }
+
+/// Reset all settings to factory defaults
+/// This will:
+/// 1. Reset config.json to defaults
+/// 2. Clear library.json (but keep skills on disk)
+/// 3. Reset sync.json
+/// 4. Clear iCloud synced data
+#[tauri::command]
+pub fn storage_reset_to_defaults() -> IpcResult<()> {
+    use std::fs;
+    use crate::paths;
+    use crate::storage::{AppConfig, LibraryData, SyncState};
+
+    // Reset local config.json
+    let config_path = paths::get_config_path();
+    let default_config = AppConfig::default();
+    let content = match serde_json::to_string_pretty(&default_config) {
+        Ok(c) => c,
+        Err(e) => return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to serialize config: {}", e),
+        ),
+    };
+    if let Err(e) = fs::write(&config_path, &content) {
+        return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to write config: {}", e),
+        );
+    }
+
+    // Reset local library.json (keep skills on disk, just clear metadata)
+    let library_path = paths::get_app_support_path().join("library.json");
+    let default_library = LibraryData::default();
+    let content = match serde_json::to_string_pretty(&default_library) {
+        Ok(c) => c,
+        Err(e) => return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to serialize library: {}", e),
+        ),
+    };
+    if let Err(e) = fs::write(&library_path, &content) {
+        return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to write library: {}", e),
+        );
+    }
+
+    // Reset sync.json
+    let sync_path = paths::get_app_support_path().join("sync.json");
+    let default_sync = SyncState::default();
+    let content = match serde_json::to_string_pretty(&default_sync) {
+        Ok(c) => c,
+        Err(e) => return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to serialize sync state: {}", e),
+        ),
+    };
+    if let Err(e) = fs::write(&sync_path, &content) {
+        return IpcResult::error(
+            AppError::E102WriteFailed(e.to_string()).code(),
+            &format!("Failed to write sync state: {}", e),
+        );
+    }
+
+    // Clear local library directory (delete all skills on disk)
+    let local_library = paths::get_local_library_path();
+    if local_library.exists() {
+        if let Err(e) = fs::remove_dir_all(&local_library) {
+            return IpcResult::error(
+                AppError::E102WriteFailed(e.to_string()).code(),
+                &format!("Failed to clear library directory: {}", e),
+            );
+        }
+        // Recreate empty library directory
+        if let Err(e) = fs::create_dir_all(&local_library) {
+            return IpcResult::error(
+                AppError::E102WriteFailed(e.to_string()).code(),
+                &format!("Failed to recreate library directory: {}", e),
+            );
+        }
+    }
+
+    // Clear iCloud synced data
+    let icloud_container = paths::get_icloud_container_path();
+    if icloud_container.exists() {
+        // Remove config.json from iCloud
+        let icloud_config = icloud_container.join("config.json");
+        if icloud_config.exists() {
+            let _ = fs::remove_file(&icloud_config);
+        }
+
+        // Remove library.json from iCloud
+        let icloud_library = icloud_container.join("library.json");
+        if icloud_library.exists() {
+            let _ = fs::remove_file(&icloud_library);
+        }
+
+        // Remove sync.json from iCloud
+        let icloud_sync = icloud_container.join("sync.json");
+        if icloud_sync.exists() {
+            let _ = fs::remove_file(&icloud_sync);
+        }
+
+        // Remove old format files from iCloud
+        for old_file in &["skill_metadata.json", "groups.json", "sync-state.json"] {
+            let path = icloud_container.join(old_file);
+            if path.exists() {
+                let _ = fs::remove_file(&path);
+            }
+        }
+
+        // Remove metadata directory from iCloud
+        let icloud_metadata = icloud_container.join("metadata");
+        if icloud_metadata.exists() {
+            let _ = fs::remove_dir_all(&icloud_metadata);
+        }
+
+        // Remove library directory from iCloud (synced skills)
+        let icloud_library_dir = icloud_container.join("library");
+        if icloud_library_dir.exists() {
+            let _ = fs::remove_dir_all(&icloud_library_dir);
+        }
+    }
+
+    // Invalidate storage cache
+    let storage = get_storage();
+    storage.invalidate_cache();
+
+    IpcResult::success(())
+}

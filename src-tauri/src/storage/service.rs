@@ -129,7 +129,7 @@ impl StorageService {
         let icloud_enabled = icloud_container.exists()
             || fs::create_dir_all(&icloud_container).is_ok();
 
-        Ok(Self {
+        let service = Self {
             client_id,
             config_path: app_support.join("config.json"),
             library_path: app_support.join("library.json"),
@@ -147,7 +147,38 @@ impl StorageService {
             sync_debouncer: Arc::new(Mutex::new(None)),
             sync_debounce_ms: 500,
             sync_generation: Arc::new(AtomicU64::new(0)),
-        })
+        };
+
+        // Ensure default files exist on first run
+        service.ensure_default_files()?;
+
+        Ok(service)
+    }
+
+    /// Ensure default config and library files exist
+    fn ensure_default_files(&self) -> Result<(), String> {
+        // Create default config.json if not exists
+        if !self.config_path.exists() {
+            let default_config = AppConfig::default();
+            self.write_config_file_atomic(&default_config)?;
+            println!("Created default config.json");
+        }
+
+        // Create default library.json if not exists
+        if !self.library_path.exists() {
+            let default_library = LibraryData::default();
+            self.write_library_file_atomic(&default_library)?;
+            println!("Created default library.json");
+        }
+
+        // Create default sync.json if not exists
+        if !self.sync_path.exists() {
+            let default_sync = SyncState::default();
+            self.write_sync_file_atomic(&default_sync)?;
+            println!("Created default sync.json");
+        }
+
+        Ok(())
     }
 
     /// Get or create client ID

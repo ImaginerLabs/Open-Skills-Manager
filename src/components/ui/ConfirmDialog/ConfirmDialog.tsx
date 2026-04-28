@@ -12,6 +12,7 @@ export function ConfirmDialog(): React.ReactElement | null {
   const { open, title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm } = confirmDialog;
 
   const handleConfirm = () => {
+    closeConfirmDialog();
     onConfirm();
   };
 
