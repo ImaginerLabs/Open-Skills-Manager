@@ -1,6 +1,7 @@
 import { CaretRight, Plus, FolderSimple, FolderOpen } from '@phosphor-icons/react';
 import type { Group, Category } from '../../../stores/libraryStore';
 import { SidebarItem } from '../../common/SidebarItem';
+import { getIconWithDefault } from '../../ui/IconPicker/IconPicker';
 import styles from './CategoryManager.module.scss';
 
 interface GroupItemProps {
@@ -36,10 +37,15 @@ export function GroupItem({
   onEditCancel,
   onEditClick,
 }: GroupItemProps): React.ReactElement {
+  // Use custom icon if specified, otherwise use folder icon (expanded/collapsed)
+  const displayIcon = group.icon
+    ? getIconWithDefault(group.icon, group.id, 16)
+    : (isExpanded ? <FolderOpen size={16} /> : <FolderSimple size={16} />);
+
   return (
     <SidebarItem
       name={group.name}
-      icon={isExpanded ? <FolderOpen size={16} /> : <FolderSimple size={16} />}
+      icon={displayIcon}
       count={group.skillCount}
       isSelected={isSelected}
       isDragOver={isDragOver}
@@ -92,9 +98,13 @@ export function CategoryItem({
   onEditCancel,
   onEditClick,
 }: CategoryItemProps): React.ReactElement {
+  // Use custom icon if specified, otherwise use deterministic default icon based on category id
+  const displayIcon = getIconWithDefault(category.icon, category.id, 16);
+
   return (
     <SidebarItem
       name={category.name}
+      icon={displayIcon}
       count={category.skillCount}
       isSelected={isSelected}
       isDragOver={isDragOver}
