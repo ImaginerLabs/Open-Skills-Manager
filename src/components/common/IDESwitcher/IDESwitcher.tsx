@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
-import OpenAIAvatar from '@lobehub/icons/es/OpenAI/components/Avatar';
+import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
 import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
 import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
 import { ideService, configService, libraryService } from '@/services';
@@ -159,7 +159,7 @@ export function IDESwitcher(): React.ReactElement | null {
       case 'claude-code':
         return <ClaudeCodeAvatar size={size} />;
       case 'opencode':
-        return <OpenAIAvatar size={size} />;
+        return <OpenCodeAvatar size={size} />;
       case 'cursor':
         return <CursorAvatar size={size} />;
       case 'gemini':
