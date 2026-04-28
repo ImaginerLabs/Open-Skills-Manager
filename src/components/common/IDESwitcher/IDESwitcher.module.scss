@@ -1,0 +1,44 @@
+.switcher {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  align-items: center;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+  }
+
+  &.active {
+    background: var(--bg-active);
+    border-color: var(--border-active);
+  }
+
+  // Slightly dim inactive icons
+  &:not(.active) {
+    opacity: 0.6;
+  }
+
+  // Disabled (coming soon) styling
+  &.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &:hover {
+      opacity: 0.5;
+    }
+  }
+}

@@ -10,6 +10,7 @@ import {
 import { CategoryManager, ALL_GROUP_ID } from '../../features/CategoryManager';
 import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
+import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useGlobalStore } from '../../../stores/globalStore';
@@ -348,6 +349,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             />
           </div>
           <div className={styles.topBarActions}>
+            <IDESwitcher />
             <ICloudStatus
               status={syncStatus}
               lastSyncTime={lastSyncTime}
