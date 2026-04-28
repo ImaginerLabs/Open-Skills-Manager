@@ -91,6 +91,8 @@ export interface SyncStatusInfo {
   event: SyncEvent;
   lastSyncTime?: string;
   lastError?: string;
+  storageUsed: number;
+  storageTotal: number;
 }
 
 export interface SkillOrgEntry {
