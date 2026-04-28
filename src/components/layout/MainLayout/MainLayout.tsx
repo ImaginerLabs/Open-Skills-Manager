@@ -18,6 +18,7 @@ import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { libraryService } from '../../../services/libraryService';
+import { globalService } from '../../../services/globalService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
 
@@ -42,7 +43,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const location = useLocation();
 
   const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore();
-  const { skills: globalSkills } = useGlobalStore();
+  const { skills: globalSkills, setSkills: setGlobalSkills } = useGlobalStore();
   const { showToast } = useUIStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
@@ -167,9 +168,16 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     [categoryManager, selectedCategoryId, selectCategory]
   );
 
-  // Load groups once on mount (empty deps ensures this only runs once)
+  // Load groups and global skills once on mount (empty deps ensures this only runs once)
   useEffect(() => {
     categoryManager.loadGroups();
+
+    // Pre-load global skills for sidebar count
+    globalService.list().then((result) => {
+      if (result.success) {
+        setGlobalSkills(result.data);
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
