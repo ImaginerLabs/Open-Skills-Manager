@@ -1,13 +1,14 @@
 use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats, copy_dir_all, is_symlink_dir, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
-use super::config::load_config;
+use crate::storage::service::get_storage;
 use std::fs;
 use std::path::PathBuf;
 use crate::paths;
 
 /// Get the global skills directory path for the active IDE
 pub fn get_global_skills_path() -> PathBuf {
-    // Try to get from config, fallback to default
-    if let Ok(config) = load_config() {
+    // Try to get from new storage layer
+    let storage = get_storage();
+    if let Ok(config) = storage.read_config() {
         if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
             return paths::get_global_scope_path(&ide.global_scope_path);
         }

@@ -1,17 +1,14 @@
 use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
-use super::config::{load_config, update_config, Project};
 use super::AppError;
+use crate::storage::service::get_storage;
+use crate::storage::Project;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::paths;
 
 // ============================================================================
 // Data Types
 // ============================================================================
-
-// Project type is now defined in config.rs, use that directly
-// This module uses config::Project for consistency
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,16 +35,31 @@ pub struct ProjectSkill {
 // Helper Functions
 // ============================================================================
 
-fn get_projects_path() -> PathBuf {
-    // Legacy path - kept for migration
-    paths::get_legacy_projects_path()
+fn get_active_ide_id_from_storage() -> String {
+    let storage = get_storage();
+    match storage.read_config() {
+        Ok(config) => config.active_ide_id,
+        Err(_) => "claude-code".to_string(),
+    }
+}
+
+fn get_ide_config_from_storage(ide_id: &str) -> Option<crate::storage::IDEConfig> {
+    let storage = get_storage();
+    match storage.read_config() {
+        Ok(config) => config.ide_configs.iter().find(|ide| ide.id == ide_id).cloned(),
+        Err(_) => None,
+    }
 }
 
 fn get_active_ide_project_scope_name() -> String {
-    if let Ok(config) = load_config() {
-        if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
-            return ide.project_scope_name.clone();
+    let storage = get_storage();
+    match storage.read_config() {
+        Ok(config) => {
+            if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
+                return ide.project_scope_name.clone();
+            }
         }
+        Err(_) => {}
     }
     ".claude".to_string()
 }
@@ -57,32 +69,26 @@ fn generate_id() -> String {
 }
 
 fn load_projects() -> Vec<Project> {
-    // Load from new config system
-    if let Ok(config) = load_config() {
-        if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
-            return ide.projects.clone();
+    let storage = get_storage();
+    match storage.read_config() {
+        Ok(config) => {
+            if let Some(ide) = config.ide_configs.iter().find(|ide| ide.id == config.active_ide_id) {
+                return ide.projects.clone();
+            }
         }
+        Err(_) => {}
     }
-
-    // Fallback to legacy file
-    let path = get_projects_path();
-    if path.exists() {
-        fs::read_to_string(path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
-    } else {
-        Vec::new()
-    }
+    Vec::new()
 }
 
 fn save_projects(projects: &[Project]) -> Result<(), String> {
-    let path = get_projects_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let json = serde_json::to_string_pretty(projects).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| e.to_string())
+    let active_ide_id = get_active_ide_id_from_storage();
+    let storage = get_storage();
+    storage.write_config(|config| {
+        if let Some(ide) = config.ide_configs.iter_mut().find(|ide| ide.id == active_ide_id) {
+            ide.projects = projects.to_vec();
+        }
+    }).map(|_| ()).map_err(|e| e.to_string())
 }
 
 fn count_skills_in_project(project_path: &PathBuf) -> u32 {
@@ -665,18 +671,6 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
 }
 
 // ============================================================================
-// Test Support
-// ============================================================================
-
-#[cfg(test)]
-use std::cell::RefCell;
-
-#[cfg(test)]
-thread_local! {
-    static TEST_PROJECTS_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
-}
-
-// ============================================================================
 // Tests
 // ============================================================================
 
@@ -693,11 +687,6 @@ mod tests {
     impl TestContext {
         fn new() -> Self {
             let temp_dir = TempDir::new().expect("Failed to create temp dir");
-            let projects_path = temp_dir.path().join("projects.json");
-
-            // Set the test path
-            TEST_PROJECTS_PATH.with(|p| *p.borrow_mut() = Some(projects_path));
-
             TestContext { _temp_dir: temp_dir }
         }
 
@@ -726,13 +715,6 @@ mod tests {
                 ),
             )
             .expect("Failed to write SKILL.md");
-        }
-    }
-
-    impl Drop for TestContext {
-        fn drop(&mut self) {
-            // Clear the test path
-            TEST_PROJECTS_PATH.with(|p| *p.borrow_mut() = None);
         }
     }
 
