@@ -79,10 +79,17 @@ pub fn storage_ide_get_active() -> IpcResult<crate::storage::IDEConfig> {
 #[tauri::command]
 pub fn storage_ide_set_active(ide_id: String) -> IpcResult<AppConfig> {
     let storage = get_storage();
-    match storage.write_config(|config| {
+
+    match storage.write_config_with_change_detection(|config| {
+        // Check if the IDE exists and is different from current
         if config.ide_configs.iter().any(|ide| ide.id == ide_id) {
+            if config.active_ide_id == ide_id {
+                return false; // No change needed
+            }
             config.active_ide_id = ide_id;
+            return true; // Change made
         }
+        false // IDE not found, no change
     }) {
         Ok(config) => IpcResult::success(config),
         Err(e) => IpcResult::error(

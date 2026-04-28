@@ -231,8 +231,23 @@ impl StorageService {
     where
         F: FnOnce(&mut AppConfig),
     {
+        self.write_config_with_change_detection(|config| {
+            f(config);
+            true // Always report changed for backward compatibility
+        })
+    }
+
+    /// Write config with change detection - returns None if no actual change
+    pub fn write_config_with_change_detection<F>(&self, f: F) -> Result<AppConfig, String>
+    where
+        F: FnOnce(&mut AppConfig) -> bool, // Returns false if no actual change
+    {
         let mut config = self.read_config()?;
-        f(&mut config);
+        let changed = f(&mut config);
+
+        if !changed {
+            return Ok(config); // No change, skip write
+        }
 
         // Update metadata
         config.updated_at = chrono::Utc::now().to_rfc3339();
