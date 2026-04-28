@@ -739,6 +739,45 @@ impl StorageService {
             }
         }
     }
+
+    /// Calculate total storage used by the app (local library + config files)
+    pub fn calculate_storage_used(&self) -> u64 {
+        let mut total: u64 = 0;
+
+        // Local library directory
+        let library_dir = paths::get_local_library_path();
+        if library_dir.exists() {
+            total += self.calculate_dir_size(&library_dir);
+        }
+
+        // Config files
+        for path in [&self.config_path, &self.library_path, &self.sync_path] {
+            if path.exists() {
+                if let Ok(metadata) = fs::metadata(path) {
+                    total += metadata.len();
+                }
+            }
+        }
+
+        total
+    }
+
+    fn calculate_dir_size(&self, path: &PathBuf) -> u64 {
+        let mut total: u64 = 0;
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                if entry_path.is_file() {
+                    if let Ok(metadata) = fs::metadata(&entry_path) {
+                        total += metadata.len();
+                    }
+                } else if entry_path.is_dir() {
+                    total += self.calculate_dir_size(&entry_path);
+                }
+            }
+        }
+        total
+    }
 }
 
 impl Default for StorageService {

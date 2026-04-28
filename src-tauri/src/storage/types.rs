@@ -356,6 +356,8 @@ pub struct SyncStatusInfo {
     pub event: SyncEvent,
     pub last_sync_time: Option<String>,
     pub last_error: Option<String>,
+    pub storage_used: u64,
+    pub storage_total: u64,
 }
 
 // ============================================================================

@@ -239,6 +239,8 @@ pub fn storage_sync_status() -> IpcResult<SyncStatusInfo> {
     let state = storage.read_sync_state().unwrap_or_default();
     let last_error = storage.last_sync_error();
     let tracked_sync_time = storage.tracked_sync_time();
+    let storage_used = storage.calculate_storage_used();
+    const DEFAULT_QUOTA: u64 = 5_000_000_000; // 5GB default quota
 
     if !storage.is_icloud_enabled() {
         return IpcResult::success(SyncStatusInfo {
@@ -247,6 +249,8 @@ pub fn storage_sync_status() -> IpcResult<SyncStatusInfo> {
             },
             last_sync_time: tracked_sync_time.or(state.last_sync_time),
             last_error,
+            storage_used,
+            storage_total: DEFAULT_QUOTA,
         });
     }
 
@@ -258,6 +262,8 @@ pub fn storage_sync_status() -> IpcResult<SyncStatusInfo> {
             },
             last_sync_time: tracked_sync_time.or(state.last_sync_time),
             last_error,
+            storage_used,
+            storage_total: DEFAULT_QUOTA,
         });
     }
 
@@ -266,6 +272,8 @@ pub fn storage_sync_status() -> IpcResult<SyncStatusInfo> {
             event: crate::storage::SyncEvent::SyncStarted,
             last_sync_time: tracked_sync_time.or(state.last_sync_time),
             last_error,
+            storage_used,
+            storage_total: DEFAULT_QUOTA,
         });
     }
 
@@ -275,6 +283,8 @@ pub fn storage_sync_status() -> IpcResult<SyncStatusInfo> {
         },
         last_sync_time: tracked_sync_time.or(state.last_sync_time),
         last_error,
+        storage_used,
+        storage_total: DEFAULT_QUOTA,
     })
 }
 
