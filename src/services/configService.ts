@@ -1,157 +1,127 @@
-import { invokeIPC } from './ipcService';
-import type { Group, Project } from '@/stores';
+/**
+ * ConfigService - Application configuration service
+ * Re-exports from the unified storageService for backward compatibility
+ */
 
-export interface Settings {
-  theme: string;
-  language: string;
-  autoUpdateCheck: boolean;
-  autoRefreshInterval: number;
-  defaultImportCategory?: string;
-}
+import {
+  storageService,
+  configServiceCompat,
+  type Settings,
+  type IDEConfig,
+  type SkillOrgEntry,
+} from './storageService';
 
-export interface IDEConfig {
-  id: string;
-  name: string;
-  globalScopePath: string;
-  projectScopeName: string;
-  projects: Project[];
-  isEnabled: boolean;
-  icon?: string;
-}
+// Re-export types
+export type { Settings, IDEConfig, SkillOrgEntry };
 
-export interface SyncSettings {
-  enabled: boolean;
-  intervalMinutes: number;
-  lastSyncTime?: string;
-}
-
-export interface SkillOrgEntry {
-  groupId?: string;
-  categoryId?: string;
-  importedAt: string;
-}
-
-export interface OpenSkillsManagerConfig {
-  version: string;
-  createdAt: string;
-  updatedAt: string;
-  updatedBy?: string;  // client_id of last modifier
-  settings: Settings;
-  groups: Group[];
-  ideConfigs: IDEConfig[];
-  activeIdeId: string;
-  sync: SyncSettings;
-  skillOrganization: Record<string, SkillOrgEntry>;
-}
-
+// Use compatibility layer for backward compatibility
 export const configService = {
   /**
    * Get the full application config
    */
-  get: () => invokeIPC<OpenSkillsManagerConfig>('config_get'),
+  get: configServiceCompat.get,
 
   /**
-   * Set the full application config
+   * Set the full application config (not recommended, use specific setters)
    */
-  set: (config: OpenSkillsManagerConfig) =>
-    invokeIPC<void>('config_set', { config }),
+  set: async (_config: unknown) => {
+    console.warn('configService.set is deprecated, use specific setters');
+  },
 
   /**
    * Update settings only
    */
-  setSettings: (settings: Settings) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_set_settings', { settings }),
+  setSettings: storageService.setSettings,
 
   /**
    * Get the active IDE
    */
-  getActiveIDE: () => invokeIPC<IDEConfig>('config_get_active_ide'),
+  getActiveIDE: storageService.getActiveIDE,
 
   /**
    * Set the active IDE
    */
-  setActiveIDE: (ideId: string) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_set_active_ide', { ideId }),
+  setActiveIDE: storageService.setActiveIDE,
 
   /**
    * Add a new IDE configuration
    */
-  addIDE: (ideConfig: IDEConfig) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_add_ide', { ideConfig }),
+  addIDE: configServiceCompat.addIDE,
 
   /**
    * Remove an IDE configuration
    */
-  removeIDE: (ideId: string) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_remove_ide', { ideId }),
+  removeIDE: configServiceCompat.removeIDE,
 
   /**
    * Update an IDE configuration
    */
-  updateIDE: (ideId: string, ideConfig: IDEConfig) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_update_ide', { ideId, ideConfig }),
+  updateIDE: storageService.updateIDE,
 
   /**
    * Get projects for an IDE
    */
-  getProjects: (ideId?: string) =>
-    invokeIPC<Project[]>('config_get_projects', { ideId }),
+  getProjects: configServiceCompat.getProjects,
 
   /**
    * Add a project to an IDE
    */
-  addProject: (ideId: string | undefined, project: Project) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_add_project', { ideId, project }),
+  addProject: async (_ideId: string | undefined, _project: unknown) => {
+    throw new Error('Use storageService.updateIDE to modify projects');
+  },
 
   /**
    * Remove a project from an IDE
    */
-  removeProject: (ideId: string | undefined, projectId: string) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_remove_project', { ideId, projectId }),
+  removeProject: async (_ideId: string | undefined, _projectId: string) => {
+    throw new Error('Use storageService.updateIDE to modify projects');
+  },
 
   /**
    * Update a project in an IDE
    */
-  updateProject: (ideId: string | undefined, project: Project) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_update_project', { ideId, project }),
+  updateProject: async (_ideId: string | undefined, _project: unknown) => {
+    throw new Error('Use storageService.updateIDE to modify projects');
+  },
 
   /**
    * Get groups
    */
-  getGroups: () => invokeIPC<Group[]>('config_get_groups'),
+  getGroups: storageService.getGroups,
 
   /**
    * Set groups
    */
-  setGroups: (groups: Group[]) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_set_groups', { groups }),
+  setGroups: configServiceCompat.setGroups,
 
   /**
    * Get skill organization
    */
-  getSkillOrg: () =>
-    invokeIPC<Record<string, SkillOrgEntry>>('config_get_skill_org'),
+  getSkillOrg: configServiceCompat.getSkillOrg,
 
   /**
    * Set skill organization entry
    */
-  setSkillOrg: (folderName: string, entry: SkillOrgEntry) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_set_skill_org', { folderName, entry }),
+  setSkillOrg: configServiceCompat.setSkillOrg,
 
   /**
    * Remove skill organization entry
    */
-  removeSkillOrg: (folderName: string) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_remove_skill_org', { folderName }),
+  removeSkillOrg: async (folderName: string) => {
+    await storageService.removeSkill(folderName);
+    return storageService.getConfig();
+  },
 
   /**
    * Set sync settings
    */
-  setSyncSettings: (sync: SyncSettings) =>
-    invokeIPC<OpenSkillsManagerConfig>('config_set_sync_settings', { sync }),
+  setSyncSettings: configServiceCompat.setSyncSettings,
 
   /**
    * Check if migration is needed
    */
-  needsMigration: () => invokeIPC<boolean>('config_needs_migration'),
+  needsMigration: storageService.needsMigration,
 };
+
+// Export the new storage service for direct access
+export { storageService } from './storageService';

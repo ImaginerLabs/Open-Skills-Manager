@@ -1,5 +1,19 @@
-import { invokeIPC } from './ipcService';
+/**
+ * SyncService - iCloud synchronization service
+ * Re-exports from the unified storageService for backward compatibility
+ */
 
+import {
+  storageService,
+  syncServiceCompat,
+  type SyncState,
+  type SyncEvent,
+} from './storageService';
+
+// Re-export types
+export type { SyncState, SyncEvent };
+
+// Legacy types for backward compatibility
 export interface SyncStatusInfo {
   status: 'synced' | 'syncing' | 'pending' | 'offline' | 'error';
   lastSyncTime?: string;
@@ -17,29 +31,49 @@ export interface SyncResult {
   timestamp: string;
 }
 
+// Use compatibility layer for backward compatibility
 export const syncService = {
   /**
    * Get current sync status
    */
-  status: () => invokeIPC<SyncStatusInfo>('sync_status'),
+  status: syncServiceCompat.status,
 
   /**
    * Perform a full sync between local and iCloud
    */
-  full: () => invokeIPC<SyncResult>('sync_full'),
+  full: async (): Promise<SyncResult> => {
+    await storageService.forceSync();
+    const state = await storageService.getSyncState();
+    return {
+      success: true,
+      syncedItems: 0,
+      errors: [],
+      timestamp: state.lastSyncTime || new Date().toISOString(),
+    };
+  },
 
   /**
    * Enable or disable automatic sync
    */
-  enable: (enabled: boolean) => invokeIPC<void>('sync_enable', { enabled }),
+  enable: storageService.setSyncEnabled,
 
   /**
    * Get the iCloud path
    */
-  getICloudPath: () => invokeIPC<string>('sync_icloud_path'),
+  getICloudPath: syncServiceCompat.getICloudPath,
 
   /**
    * Get the local storage path
    */
-  getLocalPath: () => invokeIPC<string>('sync_local_path'),
+  getLocalPath: syncServiceCompat.getLocalPath,
+
+  // New methods from storageService
+  getSyncState: storageService.getSyncState,
+  forceSync: storageService.forceSync,
+  getSyncStatus: storageService.getSyncStatus,
+  getClientId: storageService.getClientId,
+  isICloudAvailable: storageService.isICloudAvailable,
 };
+
+// Export the new storage service for direct access
+export { storageService } from './storageService';

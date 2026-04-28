@@ -1,21 +1,22 @@
 import { invokeIPC } from './ipcService';
-import type { IDEConfig, Project } from '@/stores';
+import type { Project } from '@/stores';
+import type { IDEConfig, AppConfig } from './storageService';
 
 export const ideService = {
   /**
    * Get list of all IDE configurations
    */
-  list: () => invokeIPC<IDEConfig[]>('ide_list'),
+  list: () => invokeIPC<IDEConfig[]>('storage_ide_list'),
 
   /**
    * Get the currently active IDE configuration
    */
-  getActive: () => invokeIPC<IDEConfig>('ide_get_active'),
+  getActive: () => invokeIPC<IDEConfig>('storage_ide_get_active'),
 
   /**
    * Set the active IDE
    */
-  setActive: (ideId: string) => invokeIPC<void>('ide_set_active', { ideId }),
+  setActive: (ideId: string) => invokeIPC<AppConfig>('storage_ide_set_active', { ideId }),
 
   /**
    * Get global skills for a specific IDE
