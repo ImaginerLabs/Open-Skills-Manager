@@ -131,15 +131,40 @@ impl SkillFrontmatter {
     /// 替代现有 `parse_skill_md()` 函数的行为。
     /// 解析失败时使用文件夹名作为名称。
     pub fn from_path_or_default(path: &Path) -> Option<Self> {
-        Self::from_path(path).ok().or_else(|| {
-            // 降级：使用文件夹名作为名称
-            path.parent()
-                .and_then(|p| p.file_name())
-                .map(|name| Self {
-                    name: name.to_string_lossy().to_string(),
-                    ..Default::default()
-                })
-        })
+        // 尝试读取文件内容
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => {
+                // 文件读取失败，使用文件夹名作为名称
+                return path.parent()
+                    .and_then(|p| p.file_name())
+                    .map(|name| Self {
+                        name: name.to_string_lossy().to_string(),
+                        ..Default::default()
+                    });
+            }
+        };
+
+        // 先尝试带 fallback 的解析
+        let options = ParseOptions {
+            fallback_on_error: true,
+            extract_content: false,
+        };
+
+        if let Ok(result) = parse_with_options(&content, &options) {
+            // 如果解析成功（包括 fallback），检查是否有有效的 name
+            if !result.frontmatter.name.is_empty() {
+                return Some(result.frontmatter);
+            }
+        }
+
+        // 最终降级：使用文件夹名作为名称
+        path.parent()
+            .and_then(|p| p.file_name())
+            .map(|name| Self {
+                name: name.to_string_lossy().to_string(),
+                ..Default::default()
+            })
     }
 }
 

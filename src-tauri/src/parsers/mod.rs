@@ -7,4 +7,4 @@
 
 pub mod skill_md;
 
-pub use skill_md::{SkillFrontmatter, ParsedSkill, ParseError, ParseOptions};
+pub use skill_md::{SkillFrontmatter, ParsedSkill, ParseError, ParseOptions, parse_with_options};
