@@ -35,6 +35,8 @@ pub struct SearchResult {
     pub description: String,
     pub scope: String,
     pub path: String,
+    pub size: u64,
+    pub file_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -50,6 +52,8 @@ pub struct SearchResultWithSnippet {
     pub description: String,
     pub scope: String,
     pub path: String,
+    pub size: u64,
+    pub file_count: usize,
     pub matched_snippet: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
@@ -73,6 +77,8 @@ struct SearchableDocument {
     content: String,
     scope: String,
     path: String,
+    size: u64,
+    file_count: usize,
     project_id: Option<String>,
     category_id: Option<String>,
 }
@@ -259,6 +265,9 @@ impl SearchIndex {
             name
         };
 
+        // Calculate directory size and file count
+        let (size, file_count) = calculate_dir_stats(path);
+
         Some(SearchableDocument {
             id: skill_id.to_string(),
             name: final_name,
@@ -266,6 +275,8 @@ impl SearchIndex {
             content,
             scope: scope.to_string(),
             path: path.to_string_lossy().to_string(),
+            size,
+            file_count,
             project_id,
             category_id,
         })
@@ -300,6 +311,8 @@ impl SearchIndex {
                 description: r.description,
                 scope: r.scope,
                 path: r.path,
+                size: r.size,
+                file_count: r.file_count,
                 project_id: r.project_id,
                 category_id: r.category_id,
             })
@@ -354,6 +367,8 @@ impl SearchIndex {
                     description: doc.description.clone(),
                     scope: doc.scope.clone(),
                     path: doc.path.clone(),
+                    size: doc.size,
+                    file_count: doc.file_count,
                     matched_snippet: snippet,
                     project_id: doc.project_id.clone(),
                     category_id: doc.category_id.clone(),
@@ -527,6 +542,29 @@ fn parse_skill_md_content(content: &str) -> (String, String) {
         Ok(parsed) => (parsed.frontmatter.name, parsed.frontmatter.description),
         Err(_) => (String::new(), String::new()),
     }
+}
+
+/// Calculate total size and file count of a directory
+fn calculate_dir_stats(path: &PathBuf) -> (u64, usize) {
+    let mut total_size: u64 = 0;
+    let mut file_count: usize = 0;
+
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(metadata) = entry.metadata() {
+                if metadata.is_file() {
+                    total_size += metadata.len();
+                    file_count += 1;
+                } else if metadata.is_dir() {
+                    let (sub_size, sub_count) = calculate_dir_stats(&entry.path());
+                    total_size += sub_size;
+                    file_count += sub_count;
+                }
+            }
+        }
+    }
+
+    (total_size, file_count)
 }
 
 // ============================================================================

@@ -1,8 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
-import { SquaresFour, Globe, Folder, Export, Copy, Trash, ArrowSquareOut, ArrowDown } from '@phosphor-icons/react';
 import type { SearchResult } from '../../../stores/uiStore';
-import { ContextMenu, type ContextMenuItem } from '../../common/ContextMenu';
-import styles from './SearchOverlay.module.scss';
+import type { Skill, SkillScope } from '../SkillList/types';
+import type { LibrarySkill } from '@/types/skill';
+import type { GlobalSkill } from '@/stores/globalStore';
+import type { ProjectSkill } from '@/stores/projectStore';
+import { SkillCard } from '../SkillList/SkillCard';
+import type { SkillCardActions } from '../SkillList/types';
 
 export interface SearchResultCardProps {
   result: SearchResult;
@@ -12,20 +14,55 @@ export interface SearchResultCardProps {
   onExport?: ((result: SearchResult) => void) | undefined;
   onPull?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
+  onReveal?: ((result: SearchResult) => void) | undefined;
   onDelete?: ((result: SearchResult) => void) | undefined;
 }
 
-const SCOPE_COLORS = {
-  library: '#0A84FF',
-  global: '#30D158',
-  project: '#FF9F0A',
-};
+/**
+ * Creates a minimal Skill object for display purposes in search results
+ */
+function createSkillFromResult(result: SearchResult): Skill {
+  const scope = result.scope as SkillScope;
+  const now = new Date();
 
-const SCOPE_ICONS = {
-  library: SquaresFour,
-  global: Globe,
-  project: Folder,
-};
+  const baseFields = {
+    id: result.id,
+    name: result.name,
+    description: result.description || '',
+    path: result.path,
+    size: result.size,
+    fileCount: result.fileCount,
+    skillMdLines: 0,
+    skillMdChars: 0,
+    folderName: result.name,
+    version: '1.0.0',
+    skillMdPath: '',
+    hasResources: result.fileCount > 1,
+    isSymlink: false,
+  };
+
+  if (scope === 'library') {
+    return {
+      ...baseFields,
+      ...(result.categoryId ? { groupId: result.categoryId, categoryId: result.categoryId } : {}),
+      importedAt: now,
+      deployments: [],
+    } as LibrarySkill;
+  }
+
+  if (scope === 'global') {
+    return {
+      ...baseFields,
+      installedAt: now.toISOString(),
+    } as GlobalSkill;
+  }
+
+  return {
+    ...baseFields,
+    installedAt: now.toISOString(),
+    projectId: result.projectId ?? '',
+  } as ProjectSkill;
+}
 
 export function SearchResultCard({
   result,
@@ -35,136 +72,32 @@ export function SearchResultCard({
   onExport,
   onPull,
   onCopyPath,
+  onReveal,
   onDelete,
 }: SearchResultCardProps): React.ReactElement {
-  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const skill = createSkillFromResult(result);
+  const scope = result.scope as SkillScope;
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setMenuPosition({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  const closeMenu = useCallback(() => {
-    setMenuPosition(null);
-  }, []);
-
-  const isLibrary = result.scope === 'library';
-
-  const menuItems: ContextMenuItem[] = [
-    ...(isLibrary && onDeploy ? [{
-      id: 'deploy',
-      label: 'Deploy to...',
-      icon: ArrowSquareOut,
-      onClick: () => onDeploy(result),
-    }] : []),
-    ...(isLibrary && onExport ? [{
-      id: 'export',
-      label: 'Export',
-      icon: Export,
-      onClick: () => onExport(result),
-    }] : []),
-    ...(!isLibrary && onPull ? [{
-      id: 'pull',
-      label: 'Pull to Library',
-      icon: ArrowDown,
-      onClick: () => onPull(result),
-    }] : []),
-    ...(!isLibrary && onExport ? [{
-      id: 'export',
-      label: 'Export',
-      icon: Export,
-      onClick: () => onExport(result),
-    }] : []),
-    ...(onCopyPath ? [{
-      id: 'copy-path',
-      label: 'Copy Path',
-      icon: Copy,
-      onClick: () => onCopyPath(result),
-    }] : []),
-    ...(onDelete ? [{
-      id: 'delete',
-      label: 'Delete',
-      icon: Trash,
-      variant: 'danger' as const,
-      onClick: () => onDelete(result),
-    }] : []),
-  ];
-
-  const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
-    if (!searchTerm || searchTerm.length < 2) return text;
-
-    const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
-    const parts = text.split(regex);
-
-    return parts.map((part, index) => {
-      if (part.toLowerCase() === searchTerm.toLowerCase()) {
-        return (
-          <mark key={index} className={styles.highlight}>
-            {part}
-          </mark>
-        );
-      }
-      return part;
-    });
-  };
-
-  const escapeRegExp = (str: string): string => {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  };
-
-  const Snippet = ({ text, searchTerm }: { text: string; searchTerm: string }) => {
-    if (!text) return null;
-
-    const contextLength = 50;
-    const lowerText = text.toLowerCase();
-    const lowerTerm = searchTerm.toLowerCase();
-    const matchIndex = lowerText.indexOf(lowerTerm);
-
-    if (matchIndex === -1) return null;
-
-    const start = Math.max(0, matchIndex - contextLength);
-    const end = Math.min(text.length, matchIndex + searchTerm.length + contextLength);
-    const snippet = text.slice(start, end);
-    const displaySnippet = (start > 0 ? '...' : '') + snippet + (end < text.length ? '...' : '');
-
-    return <div className={styles.snippet}>{highlightMatch(displaySnippet, searchTerm)}</div>;
-  };
-
-  const ScopeIcon = SCOPE_ICONS[result.scope];
+  // Build actions object, only including defined callbacks
+  const actions: SkillCardActions<Skill> = {};
+  if (onDeploy) actions.onDeploy = () => onDeploy(result);
+  if (onExport) actions.onExport = () => onExport(result);
+  if (onPull) actions.onPull = () => onPull(result);
+  if (onCopyPath) actions.onCopyPath = () => onCopyPath(result);
+  if (onReveal) actions.onReveal = () => onReveal(result);
+  if (onDelete) actions.onDelete = () => onDelete(result);
 
   return (
-    <>
-      <div
-        ref={cardRef}
-        className={styles.resultCard}
-        onContextMenu={handleContextMenu}
-        onClick={() => onClick?.(result)}
-        role="button"
-        tabIndex={0}
-      >
-        <div className={styles.cardHeader}>
-          <h4 className={styles.resultName}>
-            {result.name ? highlightMatch(result.name, query) : <span className={styles.noName}>Unknown Skill</span>}
-          </h4>
-          <div
-            className={styles.scopeBadge}
-            style={{ backgroundColor: `${SCOPE_COLORS[result.scope]}15`, color: SCOPE_COLORS[result.scope] }}
-          >
-            <ScopeIcon size={12} />
-            <span>{result.scope}</span>
-          </div>
-        </div>
-        <p className={styles.resultDescription}>{result.description || 'No description available'}</p>
-        {result.matchedSnippet && <Snippet text={result.matchedSnippet} searchTerm={query} />}
-      </div>
-
-      <ContextMenu
-        isOpen={menuPosition !== null}
-        position={menuPosition ?? { x: 0, y: 0 }}
-        items={menuItems}
-        onClose={closeMenu}
-      />
-    </>
+    <SkillCard
+      skill={skill}
+      isSelected={false}
+      scope={scope}
+      actions={actions}
+      viewMode="list"
+      onClick={onClick ? () => onClick(result) : undefined}
+      searchQuery={query}
+      showScopeBadge={{ show: true, scope }}
+      matchedSnippet={result.matchedSnippet}
+    />
   );
 }

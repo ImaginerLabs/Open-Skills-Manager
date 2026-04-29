@@ -16,6 +16,7 @@ export interface SearchResultGroupProps {
   onExport?: ((result: SearchResult) => void) | undefined;
   onPull?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
+  onReveal?: ((result: SearchResult) => void) | undefined;
   onDelete?: ((result: SearchResult) => void) | undefined;
 }
 
@@ -44,6 +45,7 @@ export function SearchResultGroup({
   onExport,
   onPull,
   onCopyPath,
+  onReveal,
   onDelete,
 }: SearchResultGroupProps): React.ReactElement {
   const ScopeIcon = SCOPE_ICONS[scope];
@@ -78,6 +80,7 @@ export function SearchResultGroup({
                 onExport={onExport}
                 onPull={onPull}
                 onCopyPath={onCopyPath}
+                onReveal={onReveal}
                 onDelete={onDelete}
               />
             </div>

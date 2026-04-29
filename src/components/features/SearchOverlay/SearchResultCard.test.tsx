@@ -10,6 +10,8 @@ describe('SearchResultCard', () => {
     description: 'A test skill description',
     scope: 'library',
     path: '/test/path/skill-1',
+    size: 1024,
+    fileCount: 3,
     matchedSnippet: 'This is a matched snippet in the skill file',
   };
 
@@ -56,7 +58,8 @@ describe('SearchResultCard', () => {
   it('shows context menu on right click', () => {
     render(<SearchResultCard {...defaultProps} />);
 
-    const card = screen.getByRole('button');
+    // Find the card article element (it has role="button")
+    const card = screen.getByRole('button', { name: /skill: Test Skill/i });
     fireEvent.contextMenu(card);
 
     expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -70,7 +73,8 @@ describe('SearchResultCard', () => {
     const onDeploy = vi.fn();
     render(<SearchResultCard {...defaultProps} onDeploy={onDeploy} />);
 
-    fireEvent.contextMenu(screen.getByRole('button'));
+    const card = screen.getByRole('button', { name: /skill: Test Skill/i });
+    fireEvent.contextMenu(card);
     fireEvent.click(screen.getByRole('menuitem', { name: /Deploy/ }));
 
     expect(onDeploy).toHaveBeenCalledWith(mockResult);
@@ -80,7 +84,8 @@ describe('SearchResultCard', () => {
     const onDelete = vi.fn();
     render(<SearchResultCard {...defaultProps} onDelete={onDelete} />);
 
-    fireEvent.contextMenu(screen.getByRole('button'));
+    const card = screen.getByRole('button', { name: /skill: Test Skill/i });
+    fireEvent.contextMenu(card);
     fireEvent.click(screen.getByRole('menuitem', { name: /Delete/ }));
 
     expect(onDelete).toHaveBeenCalledWith(mockResult);
@@ -89,7 +94,8 @@ describe('SearchResultCard', () => {
   it('closes context menu when clicking outside', () => {
     render(<SearchResultCard {...defaultProps} />);
 
-    fireEvent.contextMenu(screen.getByRole('button'));
+    const card = screen.getByRole('button', { name: /skill: Test Skill/i });
+    fireEvent.contextMenu(card);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
     fireEvent.mouseDown(document.body);

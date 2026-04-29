@@ -7,6 +7,7 @@ import { SkillListLayout, SkillListHeader, SkillList } from '../../components/fe
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
 import { globalService } from '../../services/globalService';
+import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatDate } from '../../utils/formatters';
 import styles from './Global.module.scss';
@@ -176,6 +177,17 @@ export function Global(): React.ReactElement {
     }
   }, [skills, showToast]);
 
+  const handleReveal = useCallback(async (skillId: string) => {
+    const skill = skills.find((s) => s.id === skillId);
+    if (skill) {
+      try {
+        await configService.revealPath(skill.path);
+      } catch {
+        showToast('error', 'Failed to reveal in Finder');
+      }
+    }
+  }, [skills, showToast]);
+
   // Filter skills by search query
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return sortedSkills;
@@ -224,6 +236,7 @@ export function Global(): React.ReactElement {
       if (skill) handlePullToLibrary(skill);
     },
     onCopyPath: handleCopyPath,
+    onReveal: handleReveal,
   };
 
   // Render refresh button with tooltip

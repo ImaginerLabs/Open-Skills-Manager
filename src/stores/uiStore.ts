@@ -18,6 +18,8 @@ export interface SearchResult {
   description: string;
   scope: 'library' | 'global' | 'project';
   path: string;
+  size: number;
+  fileCount: number;
   matchedSnippet?: string;
   projectId?: string;
   categoryId?: string;

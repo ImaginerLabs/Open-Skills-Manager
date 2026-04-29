@@ -25,6 +25,7 @@ import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
+import { configService } from '../../../services/configService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
 
@@ -395,6 +396,17 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     [showToast]
   );
 
+  const handleSearchReveal = useCallback(
+    async (result: SearchResult) => {
+      try {
+        await configService.revealPath(result.path);
+      } catch {
+        showToast('error', 'Failed to reveal in Finder');
+      }
+    },
+    [showToast]
+  );
+
   const handleSearchDelete = useCallback(
     async (result: SearchResult) => {
       showConfirmDialog({
@@ -558,6 +570,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         onExport={handleSearchExport}
         onPull={handleSearchPull}
         onCopyPath={handleSearchCopyPath}
+        onReveal={handleSearchReveal}
         onDelete={handleSearchDelete}
       />
 

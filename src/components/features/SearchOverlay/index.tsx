@@ -19,6 +19,7 @@ export interface SearchOverlayProps {
   onExport?: (result: SearchResult) => void;
   onPull?: (result: SearchResult) => void;
   onCopyPath?: (result: SearchResult) => void;
+  onReveal?: (result: SearchResult) => void;
   onDelete?: (result: SearchResult) => void;
   onPreviewSkill?: (result: SearchResult) => void;
 }
@@ -28,6 +29,7 @@ export function SearchOverlay({
   onExport,
   onPull,
   onCopyPath,
+  onReveal,
   onDelete,
   onPreviewSkill,
 }: SearchOverlayProps): React.ReactElement | null {
@@ -247,6 +249,7 @@ export function SearchOverlay({
                   onExport={onExport}
                   onPull={onPull}
                   onCopyPath={onCopyPath}
+                  onReveal={onReveal}
                   onDelete={onDelete}
                 />
               )}
@@ -265,6 +268,7 @@ export function SearchOverlay({
                   onExport={onExport}
                   onPull={onPull}
                   onCopyPath={onCopyPath}
+                  onReveal={onReveal}
                   onDelete={onDelete}
                 />
               )}
@@ -285,6 +289,7 @@ export function SearchOverlay({
                     onDeploy={onDeploy}
                     onExport={onExport}
                     onCopyPath={onCopyPath}
+                    onReveal={onReveal}
                     onDelete={onDelete}
                   />
                 );

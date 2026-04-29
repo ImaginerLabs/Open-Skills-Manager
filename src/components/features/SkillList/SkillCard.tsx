@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
-import { DotsThree, Trash, Export, Rocket, ArrowDown, Copy, FolderOpen, Link } from '@phosphor-icons/react';
-import type { Skill, SkillScope, SkillCardActions, ViewMode } from './types';
+import { DotsThree, Trash, Export, Rocket, ArrowDown, Copy, FolderOpen, Link, Folder, SquaresFour, Globe } from '@phosphor-icons/react';
+import type { Skill, SkillScope, SkillCardActions, ViewMode, ScopeBadgeConfig } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
 import { formatSize, formatDate } from '@/utils/formatters';
+import { highlightMatch } from '@/utils/highlight';
 import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
 import styles from './SkillCard.module.scss';
 
@@ -11,6 +12,18 @@ interface ContextMenuPosition {
   y: number;
 }
 
+const SCOPE_COLORS: Record<SkillScope, string> = {
+  library: '#0A84FF',
+  global: '#30D158',
+  project: '#FF9F0A',
+};
+
+const SCOPE_ICONS: Record<SkillScope, React.ComponentType<{ size?: number }>> = {
+  library: SquaresFour,
+  global: Globe,
+  project: Folder,
+};
+
 export interface SkillCardProps<T extends Skill> {
   skill: T;
   isSelected: boolean;
@@ -18,6 +31,12 @@ export interface SkillCardProps<T extends Skill> {
   actions?: SkillCardActions<T> | undefined;
   viewMode?: ViewMode | undefined;
   onClick?: (() => void) | undefined;
+  /** Search query for highlighting matches */
+  searchQuery?: string | undefined;
+  /** Whether to show scope badge (for search results) */
+  showScopeBadge?: ScopeBadgeConfig | undefined;
+  /** Optional snippet to display (for search results) */
+  matchedSnippet?: string | undefined;
 }
 
 function isLibrarySkill(skill: Skill): skill is LibrarySkill {
@@ -51,6 +70,19 @@ function getSymlinkBadge(skill: Skill): React.ReactNode {
   return null;
 }
 
+function getScopeBadge(scope: SkillScope): React.ReactNode {
+  const ScopeIcon = SCOPE_ICONS[scope];
+  return (
+    <span
+      className={styles.scopeBadge}
+      style={{ backgroundColor: `${SCOPE_COLORS[scope]}15`, color: SCOPE_COLORS[scope] }}
+    >
+      <ScopeIcon size={12} />
+      <span>{scope}</span>
+    </span>
+  );
+}
+
 export function SkillCard<T extends Skill>({
   skill,
   isSelected,
@@ -58,6 +90,9 @@ export function SkillCard<T extends Skill>({
   actions,
   viewMode = 'grid',
   onClick,
+  searchQuery,
+  showScopeBadge,
+  matchedSnippet,
 }: SkillCardProps<T>): React.ReactElement {
   const [menuPosition, setMenuPosition] = useState<ContextMenuPosition | null>(null);
   const [isBeingDragged, setIsBeingDragged] = useState(false);
@@ -97,6 +132,12 @@ export function SkillCard<T extends Skill>({
       label: 'Export',
       icon: Export,
       onClick: () => actions.onExport!(skill),
+    }] : []),
+    ...(actions?.onReveal ? [{
+      id: 'reveal',
+      label: 'Reveal in Finder',
+      icon: FolderOpen,
+      onClick: () => actions.onReveal!(skill.id),
     }] : []),
     ...(actions?.onCopyPath ? [{
       id: 'copy-path',
@@ -139,8 +180,35 @@ export function SkillCard<T extends Skill>({
       : 'Unknown';
 
   const deploymentCount = isLibrarySkill(skill) ? skill.deployments.length : 0;
-  const canDrag = scope === 'library';
+  const canDrag = scope === 'library' && !searchQuery; // Disable drag in search mode
   const displayName = skill.name.replace(/^["']|["']$/g, '');
+
+  // Determine if we should show scope badge
+  const shouldShowScopeBadge = showScopeBadge?.show;
+  const badgeScope = showScopeBadge?.scope ?? scope;
+
+  // Render name with optional highlighting
+  const renderName = (name: string): React.ReactNode => {
+    if (searchQuery && searchQuery.length >= 2) {
+      const highlighted = highlightMatch(name, searchQuery);
+      // Check if highlighting produced marks
+      if (Array.isArray(highlighted)) {
+        return highlighted;
+      }
+    }
+    return name;
+  };
+
+  // Render description with optional highlighting
+  const renderDescription = (desc: string): React.ReactNode => {
+    if (searchQuery && searchQuery.length >= 2) {
+      const highlighted = highlightMatch(desc, searchQuery);
+      if (Array.isArray(highlighted)) {
+        return highlighted;
+      }
+    }
+    return desc || 'No description';
+  };
 
   return (
     <>
@@ -150,6 +218,7 @@ export function SkillCard<T extends Skill>({
           isSelected && styles.selected,
           isBeingDragged && styles.dragging,
           viewMode === 'list' && styles.listMode,
+          searchQuery && styles.searchMode,
         ].filter(Boolean).join(' ')}
         onContextMenu={openMenu}
         onDragStart={canDrag ? handleDragStart : undefined}
@@ -157,7 +226,7 @@ export function SkillCard<T extends Skill>({
         draggable={canDrag}
         tabIndex={0}
         role="button"
-        aria-label={`${scope === 'library' ? '' : scope.charAt(0).toUpperCase() + scope.slice(1) + ' '}skill: ${displayName}`}
+        aria-label={`${badgeScope === 'library' ? '' : badgeScope.charAt(0).toUpperCase() + badgeScope.slice(1) + ' '}skill: ${displayName}`}
         aria-selected={isSelected}
         onClick={onClick}
         onKeyDown={(e) => {
@@ -171,9 +240,10 @@ export function SkillCard<T extends Skill>({
           <>
             <div className={styles.listRow}>
               <h3 className={styles.listName} title={displayName}>
-                {displayName}
+                {renderName(displayName)}
               </h3>
               {getSymlinkBadge(skill)}
+              {shouldShowScopeBadge && getScopeBadge(badgeScope)}
               {skill.fileCount > 0 && (
                 <span className={styles.fileCountBadge}>
                   <FolderOpen size={10} weight="fill" />
@@ -207,14 +277,19 @@ export function SkillCard<T extends Skill>({
               )}
             </div>
             <p className={styles.listDescription} title={skill.description}>
-              {skill.description || 'No description'}
+              {renderDescription(skill.description)}
             </p>
+            {matchedSnippet && (
+              <div className={styles.snippet}>
+                {highlightMatch(matchedSnippet, searchQuery ?? '')}
+              </div>
+            )}
           </>
         ) : (
           <>
             <div className={styles.header}>
               <h3 className={styles.name} title={displayName}>
-                {displayName}
+                {renderName(displayName)}
               </h3>
               {menuItems.length > 0 && (
                 <button
@@ -229,11 +304,12 @@ export function SkillCard<T extends Skill>({
             </div>
 
             <p className={styles.description} title={skill.description}>
-              {skill.description || 'No description'}
+              {renderDescription(skill.description)}
             </p>
 
             <div className={styles.meta}>
               {getSymlinkBadge(skill)}
+              {shouldShowScopeBadge && getScopeBadge(badgeScope)}
               {skill.fileCount > 0 && (
                 <span className={styles.resourceBadge}>
                   <FolderOpen size={10} weight="fill" />
@@ -247,6 +323,12 @@ export function SkillCard<T extends Skill>({
               )}
               {getSourceBadge(skill, scope)}
             </div>
+
+            {matchedSnippet && (
+              <div className={styles.snippet}>
+                {highlightMatch(matchedSnippet, searchQuery ?? '')}
+              </div>
+            )}
 
             <div className={styles.footer}>
               <div className={styles.info}>

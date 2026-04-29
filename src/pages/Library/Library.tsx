@@ -9,6 +9,7 @@ import { ExportProgress } from '../../components/features/ExportProgress';
 import { DeployDialog } from '../../components/features/DeployDialog';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { libraryService } from '../../services/libraryService';
+import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import {
   SkillListLayout,
@@ -188,6 +189,17 @@ export function Library(): React.ReactElement {
     }
   }, [skills, showToast]);
 
+  const handleReveal = useCallback(async (skillId: string) => {
+    const skill = skills.find((s) => s.id === skillId);
+    if (skill) {
+      try {
+        await configService.revealPath(skill.path);
+      } catch {
+        showToast('error', 'Failed to reveal in Finder');
+      }
+    }
+  }, [skills, showToast]);
+
   const handleCloseDetail = useCallback(() => {
     selectSkill(null);
     setSkillMdContent('');
@@ -220,6 +232,7 @@ export function Library(): React.ReactElement {
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
     onCopyPath: handleCopyPath,
+    onReveal: handleReveal,
   };
 
   const hasSkills = skills.length > 0;

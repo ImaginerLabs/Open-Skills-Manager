@@ -322,6 +322,52 @@
   border-radius: var(--radius-sm);
 }
 
+// Scope badge for search results
+.scopeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  flex-shrink: 0;
+}
+
+// Search mode styles
+.searchMode {
+  // Slightly different styling when in search context
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+// Snippet display for search matches
+.snippet {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.light) & {
+    background: rgba(0, 0, 0, 0.02);
+  }
+}
+
+// Global highlight mark styling (used in name, description, and snippet)
+:global(.highlight) {
+  background: rgba(10, 132, 255, 0.2);
+  color: var(--color-primary);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 // Reduced motion
 @media (prefers-reduced-motion: reduce) {
   .card {

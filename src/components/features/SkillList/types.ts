@@ -33,6 +33,7 @@ export interface SkillCardActions<T extends Skill> {
   onDeploy?: (skill: T) => void;
   onPull?: (skillId: string) => void;
   onCopyPath?: (skillId: string) => void;
+  onReveal?: (skillId: string) => void;
   onDragStart?: (skill: T) => void;
   onDragEnd?: (skill: T) => void;
 }
@@ -75,4 +76,14 @@ export interface UseSkillSortResult<T> {
   setSortBy: (option: SortOption) => void;
   sortDirection: SortDirection;
   toggleSortDirection: () => void;
+}
+
+/**
+ * Scope badge configuration for displaying source labels
+ */
+export interface ScopeBadgeConfig {
+  /** Whether to show the scope badge */
+  show: boolean;
+  /** Optional override for the scope (useful for search results) */
+  scope?: SkillScope;
 }
