@@ -12,6 +12,7 @@ import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { SearchOverlay } from '../../features/SearchOverlay';
+import type { SearchResult } from '../../../stores/uiStore';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useGlobalStore } from '../../../stores/globalStore';
@@ -21,6 +22,7 @@ import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
+import { deployService } from '../../../services/deployService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
 
@@ -45,7 +47,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
 
   const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills, setSkills } = useLibraryStore();
   const { skills: globalSkills, setSkills: setGlobalSkills } = useGlobalStore();
-  const { showToast } = useUIStore();
+  const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
@@ -260,6 +262,83 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Search result actions
+  const handleSearchDeploy = useCallback(
+    async (result: SearchResult) => {
+      if (result.scope === 'library') {
+        const deployResult = await deployService.toGlobal(result.id);
+        if (deployResult.success) {
+          showToast('success', `Deployed ${result.name} to Global Skills`);
+        } else {
+          showToast('error', deployResult.error.message);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  const handleSearchExport = useCallback(
+    async (result: SearchResult) => {
+      if (result.scope === 'library') {
+        const exportResult = await libraryService.export(result.id, 'zip', result.name);
+        if (exportResult?.success) {
+          showToast('success', `Exported ${result.name}`);
+        } else if (exportResult?.error) {
+          showToast('error', exportResult.error.message);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  const handleSearchCopyPath = useCallback(
+    async (result: SearchResult) => {
+      // This would need a backend command to get the skill path
+      // For now, show a toast with the skill ID
+      showToast('info', `Skill ID: ${result.id}`);
+    },
+    [showToast]
+  );
+
+  const handleSearchDelete = useCallback(
+    async (result: SearchResult) => {
+      showConfirmDialog({
+        title: 'Delete Skill',
+        message: `Are you sure you want to delete "${result.name}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        onConfirm: async () => {
+          closeConfirmDialog();
+          if (result.scope === 'library') {
+            const deleteResult = await libraryService.delete(result.id);
+            if (deleteResult.success) {
+              showToast('success', `Deleted ${result.name}`);
+              // Refresh the skills list
+              const listResult = await libraryService.list();
+              if (listResult.success) {
+                setSkills(listResult.data);
+              }
+            } else {
+              showToast('error', deleteResult.error.message);
+            }
+          } else if (result.scope === 'global') {
+            const deleteResult = await globalService.delete(result.id);
+            if (deleteResult.success) {
+              showToast('success', `Deleted ${result.name}`);
+              const listResult = await globalService.list();
+              if (listResult.success) {
+                setGlobalSkills(listResult.data);
+              }
+            } else {
+              showToast('error', deleteResult.error.message);
+            }
+          }
+        },
+      });
+    },
+    [showToast, showConfirmDialog, closeConfirmDialog, setSkills, setGlobalSkills]
+  );
+
   return (
     <div className={styles.layout}>
       <aside className={styles.sidebar}>
@@ -377,7 +456,12 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         </header>
         <div className={styles.content}>{children ?? <Outlet />}</div>
       </main>
-      <SearchOverlay />
+      <SearchOverlay
+        onDeploy={handleSearchDeploy}
+        onExport={handleSearchExport}
+        onCopyPath={handleSearchCopyPath}
+        onDelete={handleSearchDelete}
+      />
     </div>
   );
 }

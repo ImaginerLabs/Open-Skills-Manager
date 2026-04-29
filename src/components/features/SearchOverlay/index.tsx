@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, MagnifyingGlass } from '@phosphor-icons/react';
 import { useUIStore, type SearchResult } from '../../../stores/uiStore';
 import { useProjectStore } from '../../../stores/projectStore';
@@ -8,6 +8,7 @@ import { SearchInput } from './SearchInput';
 import { ScopeSelector } from './ScopeSelector';
 import { CategoryFilter } from './CategoryFilter';
 import { SearchResultGroup } from './SearchResultGroup';
+import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './SearchOverlay.module.scss';
 
 export interface SearchOverlayProps {
@@ -15,6 +16,7 @@ export interface SearchOverlayProps {
   onExport?: (result: SearchResult) => void;
   onCopyPath?: (result: SearchResult) => void;
   onDelete?: (result: SearchResult) => void;
+  onPreviewSkill?: (result: SearchResult) => void;
 }
 
 export function SearchOverlay({
@@ -22,6 +24,7 @@ export function SearchOverlay({
   onExport,
   onCopyPath,
   onDelete,
+  onPreviewSkill,
 }: SearchOverlayProps): React.ReactElement | null {
   const { isOpen, closeSearch } = useSearchKeyboard();
   const { search, clearResults, isSearching, results } = useSearch();
@@ -30,6 +33,9 @@ export function SearchOverlay({
   const { projects } = useProjectStore();
 
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [previewSkill, setPreviewSkill] = useState<SkillPreviewData | null>(null);
+  const [previewContent, setPreviewContent] = useState<string>('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && searchState.searchQuery.length >= 2) {
@@ -92,6 +98,32 @@ export function SearchOverlay({
     },
     [searchActions]
   );
+
+  const handleClickSkill = useCallback(
+    (result: SearchResult) => {
+      if (onPreviewSkill) {
+        onPreviewSkill(result);
+        return;
+      }
+
+      // Default preview behavior
+      const previewData: SkillPreviewData = {
+        id: result.id,
+        name: result.name,
+        description: result.description,
+      };
+      setPreviewSkill(previewData);
+      setPreviewContent(result.matchedSnippet ?? '');
+      setIsPreviewOpen(true);
+    },
+    [onPreviewSkill]
+  );
+
+  const handleClosePreview = useCallback(() => {
+    setIsPreviewOpen(false);
+    setPreviewSkill(null);
+    setPreviewContent('');
+  }, []);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
@@ -164,6 +196,7 @@ export function SearchOverlay({
                   scope="library"
                   isCollapsed={searchState.collapsedGroups['library'] ?? false}
                   onToggleCollapse={handleToggleCollapse}
+                  onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
                   onCopyPath={onCopyPath}
@@ -180,6 +213,7 @@ export function SearchOverlay({
                   scope="global"
                   isCollapsed={searchState.collapsedGroups['global'] ?? false}
                   onToggleCollapse={handleToggleCollapse}
+                  onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
                   onCopyPath={onCopyPath}
@@ -199,6 +233,7 @@ export function SearchOverlay({
                     scope="project"
                     isCollapsed={searchState.collapsedGroups[projectId] ?? false}
                     onToggleCollapse={handleToggleCollapse}
+                    onClick={handleClickSkill}
                     onDeploy={onDeploy}
                     onExport={onExport}
                     onCopyPath={onCopyPath}
@@ -222,6 +257,13 @@ export function SearchOverlay({
           {hasResults && <span className={styles.resultCount}>{getTotalCount()} results</span>}
         </div>
       </div>
+
+      <SkillPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={handleClosePreview}
+        skill={previewSkill}
+        skillMdContent={previewContent}
+      />
     </div>
   );
 }

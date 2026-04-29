@@ -6,6 +6,7 @@ import styles from './SearchOverlay.module.scss';
 export interface SearchResultCardProps {
   result: SearchResult;
   query: string;
+  onClick?: ((result: SearchResult) => void) | undefined;
   onDeploy?: ((result: SearchResult) => void) | undefined;
   onExport?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
@@ -27,6 +28,7 @@ const SCOPE_ICONS = {
 export function SearchResultCard({
   result,
   query,
+  onClick,
   onDeploy,
   onExport,
   onCopyPath,
@@ -99,6 +101,7 @@ export function SearchResultCard({
         ref={cardRef}
         className={styles.resultCard}
         onContextMenu={handleContextMenu}
+        onClick={() => onClick?.(result)}
         role="button"
         tabIndex={0}
       >

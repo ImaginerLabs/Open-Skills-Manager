@@ -370,13 +370,30 @@ impl SearchIndex {
 
     fn calculate_relevance_score(&self, skill_id: &str, query_terms: &[String]) -> usize {
         let mut score = 0;
-        for term in query_terms {
-            if let Some(matches) = self.index.get(term) {
-                if matches.iter().any(|(id, _)| id == skill_id) {
-                    score += 1;
+
+        // Get the document to check where matches occur
+        if let Some(doc) = self.documents.get(skill_id) {
+            let name_lower = doc.name.to_lowercase();
+            let desc_lower = doc.description.to_lowercase();
+
+            for term in query_terms {
+                // Name match = 10 points (highest priority)
+                if name_lower.contains(term) {
+                    score += 10;
+                }
+                // Description match = 5 points (medium priority)
+                else if desc_lower.contains(term) {
+                    score += 5;
+                }
+                // Content match = 1 point (lowest priority)
+                else if let Some(matches) = self.index.get(term) {
+                    if matches.iter().any(|(id, _)| id == skill_id) {
+                        score += 1;
+                    }
                 }
             }
         }
+
         score
     }
 

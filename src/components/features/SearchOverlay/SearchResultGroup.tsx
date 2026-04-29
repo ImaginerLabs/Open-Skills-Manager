@@ -12,6 +12,7 @@ export interface SearchResultGroupProps {
   scope: 'library' | 'global' | 'project';
   isCollapsed: boolean;
   onToggleCollapse: (groupId: string) => void;
+  onClick?: ((result: SearchResult) => void) | undefined;
   onDeploy?: ((result: SearchResult) => void) | undefined;
   onExport?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
@@ -38,6 +39,7 @@ export function SearchResultGroup({
   scope,
   isCollapsed,
   onToggleCollapse,
+  onClick,
   onDeploy,
   onExport,
   onCopyPath,
@@ -96,6 +98,7 @@ export function SearchResultGroup({
               <SearchResultCard
                 result={result}
                 query={query}
+                onClick={onClick}
                 onDeploy={onDeploy}
                 onExport={onExport}
                 onCopyPath={onCopyPath}
