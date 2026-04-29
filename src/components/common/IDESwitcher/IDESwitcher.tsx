@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
 import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
@@ -57,6 +57,9 @@ export function IDESwitcher(): React.ReactElement | null {
   // Use configs from store, or defaults if empty - defined early for use in callbacks
   const configsToShow = ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS;
 
+  // Track if we've already initialized to prevent repeated setActiveIDE calls
+  const hasInitialized = useRef(false);
+
   // Load IDE configs on mount
   useEffect(() => {
     const loadConfigs = async () => {
@@ -70,15 +73,27 @@ export function IDESwitcher(): React.ReactElement | null {
             return existingConfig || defaultIde;
           });
           setIDEConfigs(mergedConfigs);
-          setActiveIDE(config.activeIdeId);
+          // Only set active IDE on first initialization
+          if (!hasInitialized.current) {
+            setActiveIDE(config.activeIdeId);
+            hasInitialized.current = true;
+          }
         } else {
           setIDEConfigs(DEFAULT_IDE_CONFIGS);
-          setActiveIDE('claude-code');
+          // Only set active IDE on first initialization
+          if (!hasInitialized.current) {
+            setActiveIDE('claude-code');
+            hasInitialized.current = true;
+          }
         }
       } catch (error) {
         console.error('Failed to load IDE configs:', error);
         setIDEConfigs(DEFAULT_IDE_CONFIGS);
-        setActiveIDE('claude-code');
+        // Only set active IDE on first initialization
+        if (!hasInitialized.current) {
+          setActiveIDE('claude-code');
+          hasInitialized.current = true;
+        }
       } finally {
         setLoading(false);
       }

@@ -82,7 +82,7 @@ export function Library(): React.ReactElement {
     sortDirection,
     toggleSortDirection,
     filteredSkills,
-  } = useLibraryFilters(skills, selectedCategoryId);
+  } = useLibraryFilters(skills, selectedGroupId, selectedCategoryId);
 
   useEffect(() => {
     const loadSkills = async () => {

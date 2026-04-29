@@ -18,7 +18,8 @@ interface UseLibraryFiltersResult {
 
 export function useLibraryFilters(
   skills: LibrarySkill[],
-  selectedGroupId: string | null | undefined
+  selectedGroupId: string | null | undefined,
+  selectedCategoryId: string | null | undefined
 ): UseLibraryFiltersResult {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
@@ -45,6 +46,11 @@ export function useLibraryFilters(
       result = result.filter((skill) => skill.groupId === selectedGroupId);
     }
 
+    // Filter by category if selected
+    if (selectedCategoryId) {
+      result = result.filter((skill) => skill.categoryId === selectedCategoryId);
+    }
+
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
@@ -63,7 +69,7 @@ export function useLibraryFilters(
     });
 
     return result;
-  }, [skills, searchQuery, selectedGroupId, sortBy, sortDirection]);
+  }, [skills, searchQuery, selectedGroupId, selectedCategoryId, sortBy, sortDirection]);
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
