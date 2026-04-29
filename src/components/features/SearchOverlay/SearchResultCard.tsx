@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { SquaresFour, Globe, Folder, Export, Copy, Trash, ArrowSquareOut } from '@phosphor-icons/react';
+import { useState, useRef, useCallback } from 'react';
+import { SquaresFour, Globe, Folder, Export, Copy, Trash, ArrowSquareOut, ArrowDown } from '@phosphor-icons/react';
 import type { SearchResult } from '../../../stores/uiStore';
+import { ContextMenu, type ContextMenuItem } from '../../common/ContextMenu';
 import styles from './SearchOverlay.module.scss';
 
 export interface SearchResultCardProps {
@@ -9,6 +10,7 @@ export interface SearchResultCardProps {
   onClick?: ((result: SearchResult) => void) | undefined;
   onDeploy?: ((result: SearchResult) => void) | undefined;
   onExport?: ((result: SearchResult) => void) | undefined;
+  onPull?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
   onDelete?: ((result: SearchResult) => void) | undefined;
 }
@@ -31,27 +33,57 @@ export function SearchResultCard({
   onClick,
   onDeploy,
   onExport,
+  onPull,
   onCopyPath,
   onDelete,
 }: SearchResultCardProps): React.ReactElement {
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    setMenuPosition({ x: e.clientX, y: e.clientY });
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (contextMenu && !event.defaultPrevented) {
-        setContextMenu(null);
-      }
-    };
+  const closeMenu = useCallback(() => {
+    setMenuPosition(null);
+  }, []);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [contextMenu]);
+  const isLibrary = result.scope === 'library';
+
+  const menuItems: ContextMenuItem[] = [
+    ...(isLibrary && onDeploy ? [{
+      id: 'deploy',
+      label: 'Deploy to...',
+      icon: ArrowSquareOut,
+      onClick: () => onDeploy(result),
+    }] : []),
+    ...(isLibrary && onExport ? [{
+      id: 'export',
+      label: 'Export',
+      icon: Export,
+      onClick: () => onExport(result),
+    }] : []),
+    ...(!isLibrary && onPull ? [{
+      id: 'pull',
+      label: 'Pull to Library',
+      icon: ArrowDown,
+      onClick: () => onPull(result),
+    }] : []),
+    ...(onCopyPath ? [{
+      id: 'copy-path',
+      label: 'Copy Path',
+      icon: Copy,
+      onClick: () => onCopyPath(result),
+    }] : []),
+    ...(onDelete ? [{
+      id: 'delete',
+      label: 'Delete',
+      icon: Trash,
+      variant: 'danger' as const,
+      onClick: () => onDelete(result),
+    }] : []),
+  ];
 
   const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
     if (!searchTerm || searchTerm.length < 2) return text;
@@ -119,73 +151,12 @@ export function SearchResultCard({
         {result.matchedSnippet && <Snippet text={result.matchedSnippet} searchTerm={query} />}
       </div>
 
-      {contextMenu && (
-        <>
-          <div className={styles.contextOverlay} onClick={() => setContextMenu(null)} />
-          <div
-            className={styles.contextMenu}
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            role="menu"
-          >
-            {onDeploy && (
-              <button
-                type="button"
-                className={styles.contextMenuItem}
-                onClick={() => {
-                  onDeploy(result);
-                  setContextMenu(null);
-                }}
-                role="menuitem"
-              >
-                <ArrowSquareOut size={14} />
-                <span>Deploy</span>
-              </button>
-            )}
-            {onExport && (
-              <button
-                type="button"
-                className={styles.contextMenuItem}
-                onClick={() => {
-                  onExport(result);
-                  setContextMenu(null);
-                }}
-                role="menuitem"
-              >
-                <Export size={14} />
-                <span>Export</span>
-              </button>
-            )}
-            {onCopyPath && (
-              <button
-                type="button"
-                className={styles.contextMenuItem}
-                onClick={() => {
-                  onCopyPath(result);
-                  setContextMenu(null);
-                }}
-                role="menuitem"
-              >
-                <Copy size={14} />
-                <span>Copy Path</span>
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                className={[styles.contextMenuItem, styles.danger].filter(Boolean).join(' ')}
-                onClick={() => {
-                  onDelete(result);
-                  setContextMenu(null);
-                }}
-                role="menuitem"
-              >
-                <Trash size={14} />
-                <span>Delete</span>
-              </button>
-            )}
-          </div>
-        </>
-      )}
+      <ContextMenu
+        isOpen={menuPosition !== null}
+        position={menuPosition ?? { x: 0, y: 0 }}
+        items={menuItems}
+        onClose={closeMenu}
+      />
     </>
   );
 }

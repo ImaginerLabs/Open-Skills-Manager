@@ -5,9 +5,9 @@ import type { SearchResult } from '../../../stores/uiStore';
 
 describe('SearchResultGroup', () => {
   const mockResults: SearchResult[] = [
-    { id: 'skill-1', name: 'Skill One', description: 'First skill', scope: 'library' },
-    { id: 'skill-2', name: 'Skill Two', description: 'Second skill', scope: 'library' },
-    { id: 'skill-3', name: 'Skill Three', description: 'Third skill', scope: 'library' },
+    { id: 'skill-1', name: 'Skill One', description: 'First skill', scope: 'library', path: '/test/skill-1' },
+    { id: 'skill-2', name: 'Skill Two', description: 'Second skill', scope: 'library', path: '/test/skill-2' },
+    { id: 'skill-3', name: 'Skill Three', description: 'Third skill', scope: 'library', path: '/test/skill-3' },
   ];
 
   const defaultProps = {

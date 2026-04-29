@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { DotsThree, Trash, Export, Rocket, ArrowDown, FolderOpen, Link } from '@phosphor-icons/react';
+import { useState, useCallback } from 'react';
+import { DotsThree, Trash, Export, Rocket, ArrowDown, Copy, FolderOpen, Link } from '@phosphor-icons/react';
 import type { Skill, SkillScope, SkillCardActions, ViewMode } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
 import { formatSize, formatDate } from '@/utils/formatters';
+import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
 import styles from './SkillCard.module.scss';
 
 interface ContextMenuPosition {
@@ -58,51 +59,52 @@ export function SkillCard<T extends Skill>({
   viewMode = 'grid',
   onClick,
 }: SkillCardProps<T>): React.ReactElement {
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 });
+  const [menuPosition, setMenuPosition] = useState<ContextMenuPosition | null>(null);
   const [isBeingDragged, setIsBeingDragged] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+  const openMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
-    setShowContextMenu(true);
+    setMenuPosition({ x: e.clientX, y: e.clientY });
   }, []);
 
-  const handleMenuButtonClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
-    setShowContextMenu(true);
+  const closeMenu = useCallback(() => {
+    setMenuPosition(null);
   }, []);
 
-  const handleDelete = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContextMenu(false);
-    actions?.onDelete?.(skill.id);
-  }, [actions, skill.id]);
-
-  const handleExport = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContextMenu(false);
-    actions?.onExport?.(skill.id);
-  }, [actions, skill.id]);
-
-  const handleDeploy = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContextMenu(false);
-    if (actions?.onDeploy) {
-      actions.onDeploy(skill);
-    }
-  }, [actions, skill]);
-
-  const handlePull = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContextMenu(false);
-    if (actions?.onPull) {
-      actions.onPull(skill.id);
-    }
-  }, [actions, skill.id]);
+  const menuItems: ContextMenuItem[] = [
+    ...(scope === 'library' && actions?.onDeploy ? [{
+      id: 'deploy',
+      label: 'Deploy to...',
+      icon: Rocket,
+      onClick: () => actions.onDeploy!(skill),
+    }] : []),
+    ...(scope === 'library' && actions?.onExport ? [{
+      id: 'export',
+      label: 'Export',
+      icon: Export,
+      onClick: () => actions.onExport!(skill.id),
+    }] : []),
+    ...((scope === 'global' || scope === 'project') && actions?.onPull ? [{
+      id: 'pull',
+      label: 'Pull to Library',
+      icon: ArrowDown,
+      onClick: () => actions.onPull!(skill.id),
+    }] : []),
+    ...(actions?.onCopyPath ? [{
+      id: 'copy-path',
+      label: 'Copy Path',
+      icon: Copy,
+      onClick: () => actions.onCopyPath!(skill.id),
+    }] : []),
+    ...(actions?.onDelete ? [{
+      id: 'delete',
+      label: 'Delete',
+      icon: Trash,
+      variant: 'danger' as const,
+      onClick: () => actions.onDelete!(skill.id),
+    }] : []),
+  ];
 
   const handleDragStart = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -121,30 +123,6 @@ export function SkillCard<T extends Skill>({
     setIsBeingDragged(false);
     actions?.onDragEnd?.(skill);
   }, [skill, actions]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowContextMenu(false);
-      }
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowContextMenu(false);
-      }
-    };
-
-    if (showContextMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [showContextMenu]);
 
   const formattedSize = formatSize(skill.size);
   const formattedDate = 'importedAt' in skill
@@ -166,7 +144,7 @@ export function SkillCard<T extends Skill>({
           isBeingDragged && styles.dragging,
           viewMode === 'list' && styles.listMode,
         ].filter(Boolean).join(' ')}
-        onContextMenu={handleContextMenu}
+        onContextMenu={openMenu}
         onDragStart={canDrag ? handleDragStart : undefined}
         onDragEnd={canDrag ? handleDragEnd : undefined}
         draggable={canDrag}
@@ -183,7 +161,6 @@ export function SkillCard<T extends Skill>({
         }}
       >
         {viewMode === 'list' ? (
-          // List mode layout
           <>
             <div className={styles.listRow}>
               <h3 className={styles.listName} title={displayName}>
@@ -211,34 +188,37 @@ export function SkillCard<T extends Skill>({
                   <span>{deploymentCount}</span>
                 </span>
               )}
-              <button
-                type="button"
-                className={styles.menuButton}
-                onClick={handleMenuButtonClick}
-                aria-label="Open context menu"
-              >
-                <DotsThree size={16} weight="bold" />
-              </button>
+              {menuItems.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.menuButton}
+                  onClick={openMenu}
+                  aria-label="Open context menu"
+                >
+                  <DotsThree size={16} weight="bold" />
+                </button>
+              )}
             </div>
             <p className={styles.listDescription} title={skill.description}>
               {skill.description || 'No description'}
             </p>
           </>
         ) : (
-          // Grid mode layout (original)
           <>
             <div className={styles.header}>
               <h3 className={styles.name} title={displayName}>
                 {displayName}
               </h3>
-              <button
-                type="button"
-                className={styles.menuButton}
-                onClick={handleMenuButtonClick}
-                aria-label="Open context menu"
-              >
-                <DotsThree size={16} weight="bold" />
-              </button>
+              {menuItems.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.menuButton}
+                  onClick={openMenu}
+                  aria-label="Open context menu"
+                >
+                  <DotsThree size={16} weight="bold" />
+                </button>
+              )}
             </div>
 
             <p className={styles.description} title={skill.description}>
@@ -277,59 +257,12 @@ export function SkillCard<T extends Skill>({
         )}
       </article>
 
-      {showContextMenu && (
-        <div
-          ref={menuRef}
-          className={styles.contextMenu}
-          style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-          role="menu"
-        >
-          {scope === 'library' && actions?.onDeploy && (
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={handleDeploy}
-              role="menuitem"
-            >
-              <Rocket size={16} />
-              <span>Deploy to...</span>
-            </button>
-          )}
-          {scope === 'library' && actions?.onExport && (
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={handleExport}
-              role="menuitem"
-            >
-              <Export size={16} />
-              <span>Export</span>
-            </button>
-          )}
-          {(scope === 'global' || scope === 'project') && actions?.onPull && (
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={handlePull}
-              role="menuitem"
-            >
-              <ArrowDown size={16} />
-              <span>Pull to Library</span>
-            </button>
-          )}
-          {actions?.onDelete && (
-            <button
-              type="button"
-              className={[styles.menuItem, styles.danger].filter(Boolean).join(' ')}
-              onClick={handleDelete}
-              role="menuitem"
-            >
-              <Trash size={16} />
-              <span>Delete</span>
-            </button>
-          )}
-        </div>
-      )}
+      <ContextMenu
+        isOpen={menuPosition !== null}
+        position={menuPosition ?? { x: 0, y: 0 }}
+        items={menuItems}
+        onClose={closeMenu}
+      />
     </>
   );
 }

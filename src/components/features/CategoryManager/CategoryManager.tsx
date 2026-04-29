@@ -3,6 +3,12 @@ import { Plus, FolderSimple, PencilSimple, Trash } from '@phosphor-icons/react';
 import type { Group } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { useContextMenu } from '../../../hooks/useContextMenu';
+
+interface CategoryMenuData {
+  type: 'group' | 'category';
+  groupId: string;
+  categoryId?: string | undefined;
+}
 import { ContextMenu, type ContextMenuItem } from '../../common/ContextMenu';
 import { CreateEntityDialog } from '../../common/CreateEntityDialog';
 import { SidebarItem } from '../../common/SidebarItem';
@@ -58,7 +64,7 @@ export function CategoryManager({
   const { dragOverState, handleDragOver, handleDragLeave, handleDrop } =
     useCategoryDragDrop(onOrganizeSkill);
 
-  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
+  const { contextMenu, open, close } = useContextMenu<CategoryMenuData>();
 
   // Ensure groups is always an array (defensive against corrupted localStorage)
   const safeGroups = Array.isArray(groups) ? groups : [];
@@ -93,9 +99,9 @@ export function CategoryManager({
   const startEditing = useCallback(
     (type: 'group' | 'category', groupId: string, categoryId?: string, currentValue?: string) => {
       setEditing({ type, groupId, categoryId, value: currentValue || '' });
-      closeContextMenu();
+      close();
     },
-    [closeContextMenu]
+    [close]
   );
 
   const handleEditSubmit = useCallback(() => {
@@ -115,14 +121,14 @@ export function CategoryManager({
 
   const handleDelete = useCallback(() => {
     if (!contextMenu) return;
-    const { type, groupId, categoryId } = contextMenu;
+    const { type, groupId, categoryId } = contextMenu.data;
     if (type === 'group') {
       onDeleteGroup?.(groupId);
     } else if (categoryId) {
       onDeleteCategory?.(groupId, categoryId);
     }
-    closeContextMenu();
-  }, [contextMenu, onDeleteGroup, onDeleteCategory, closeContextMenu]);
+    close();
+  }, [contextMenu, onDeleteGroup, onDeleteCategory, close]);
 
   const handleCreateEntity = useCallback(
     (name: string, icon?: string, notes?: string) => {
@@ -154,12 +160,13 @@ export function CategoryManager({
           label: 'Rename',
           icon: PencilSimple,
           onClick: () => {
-            const group = safeGroups.find((g) => g.id === contextMenu.groupId);
+            const { type, groupId, categoryId } = contextMenu.data;
+            const group = safeGroups.find((g) => g.id === groupId);
             const currentValue =
-              contextMenu.type === 'group'
+              type === 'group'
                 ? group?.name
-                : group?.categories.find((c) => c.id === contextMenu.categoryId)?.name;
-            startEditing(contextMenu.type, contextMenu.groupId, contextMenu.categoryId, currentValue);
+                : group?.categories.find((c) => c.id === categoryId)?.name;
+            startEditing(type, groupId, categoryId, currentValue);
           },
         },
         {
@@ -218,7 +225,7 @@ export function CategoryManager({
                 isDragOver={isDragOver}
                 editingValue={editing?.value || ''}
                 onGroupClick={() => handleGroupClick(group.id)}
-                onContextMenu={(e) => handleContextMenu(e, 'group', group.id)}
+                onContextMenu={(e) => open(e, { type: 'group', groupId: group.id })}
                 onDragOver={(e) => handleDragOver(e, group.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, group.id)}
@@ -251,7 +258,7 @@ export function CategoryManager({
                         isDragOver={isCategoryDragOver}
                         editingValue={editing?.value || ''}
                         onCategoryClick={() => handleCategoryClick(group.id, category.id)}
-                        onContextMenu={(e) => handleContextMenu(e, 'category', group.id, category.id)}
+                        onContextMenu={(e) => open(e, { type: 'category', groupId: group.id, categoryId: category.id })}
                         onDragOver={(e) => handleDragOver(e, group.id, category.id)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, group.id, category.id)}
@@ -279,7 +286,7 @@ export function CategoryManager({
           isOpen={true}
           position={{ x: contextMenu.x, y: contextMenu.y }}
           items={contextMenuItems}
-          onClose={closeContextMenu}
+          onClose={close}
         />
       )}
 

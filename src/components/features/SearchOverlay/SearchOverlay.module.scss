@@ -1,5 +1,4 @@
 @use '../../../styles/variables' as *;
-@use '../../../styles/glassmorphism' as glass;
 
 // =============================================================================
 // SearchOverlay - Full-screen search modal
@@ -454,63 +453,6 @@
 }
 
 // =============================================================================
-// Context Menu
-// =============================================================================
-
-.contextOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-}
-
-.contextMenu {
-  position: fixed;
-  z-index: 101;
-  min-width: 160px;
-  padding: var(--space-2);
-  background: rgba(28, 28, 30, 0.95);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: var(--shadow-lg);
-  animation: dropdownIn var(--duration-fast) var(--ease-out-expo);
-
-  .light & {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-}
-
-.contextMenuItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-  text-align: left;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  &.danger {
-    color: var(--color-error);
-  }
-
-  .light &:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-}
-
-// =============================================================================
 // Results Container
 // =============================================================================
 
@@ -665,7 +607,6 @@
   .overlay,
   .container,
   .dropdown,
-  .contextMenu,
   .resultItem {
     animation: none;
   }

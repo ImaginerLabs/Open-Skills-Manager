@@ -15,6 +15,7 @@ export interface SearchResultGroupProps {
   onClick?: ((result: SearchResult) => void) | undefined;
   onDeploy?: ((result: SearchResult) => void) | undefined;
   onExport?: ((result: SearchResult) => void) | undefined;
+  onPull?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
   onDelete?: ((result: SearchResult) => void) | undefined;
 }
@@ -42,6 +43,7 @@ export function SearchResultGroup({
   onClick,
   onDeploy,
   onExport,
+  onPull,
   onCopyPath,
   onDelete,
 }: SearchResultGroupProps): React.ReactElement {
@@ -101,6 +103,7 @@ export function SearchResultGroup({
                 onClick={onClick}
                 onDeploy={onDeploy}
                 onExport={onExport}
+                onPull={onPull}
                 onCopyPath={onCopyPath}
                 onDelete={onDelete}
               />

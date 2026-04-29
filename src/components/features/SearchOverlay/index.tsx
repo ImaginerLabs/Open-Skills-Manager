@@ -9,11 +9,15 @@ import { ScopeSelector } from './ScopeSelector';
 import { CategoryFilter } from './CategoryFilter';
 import { SearchResultGroup } from './SearchResultGroup';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
+import { libraryService } from '../../../services/libraryService';
+import { globalService } from '../../../services/globalService';
+import { projectService } from '../../../services/projectService';
 import styles from './SearchOverlay.module.scss';
 
 export interface SearchOverlayProps {
   onDeploy?: (result: SearchResult) => void;
   onExport?: (result: SearchResult) => void;
+  onPull?: (result: SearchResult) => void;
   onCopyPath?: (result: SearchResult) => void;
   onDelete?: (result: SearchResult) => void;
   onPreviewSkill?: (result: SearchResult) => void;
@@ -22,6 +26,7 @@ export interface SearchOverlayProps {
 export function SearchOverlay({
   onDeploy,
   onExport,
+  onPull,
   onCopyPath,
   onDelete,
   onPreviewSkill,
@@ -100,21 +105,62 @@ export function SearchOverlay({
   );
 
   const handleClickSkill = useCallback(
-    (result: SearchResult) => {
+    async (result: SearchResult) => {
       if (onPreviewSkill) {
         onPreviewSkill(result);
         return;
       }
 
-      // Default preview behavior
       const previewData: SkillPreviewData = {
         id: result.id,
         name: result.name,
         description: result.description,
       };
       setPreviewSkill(previewData);
-      setPreviewContent(result.matchedSnippet ?? '');
       setIsPreviewOpen(true);
+
+      try {
+        let content = '';
+        if (result.scope === 'library') {
+          const res = await libraryService.get(result.id);
+          if (res.success && res.data) {
+            content = res.data.skillMdContent ?? '';
+            previewData.size = res.data.size;
+            previewData.fileCount = res.data.fileCount;
+            previewData.date = res.data.importedAt as unknown as string;
+          }
+        } else if (result.scope === 'global') {
+          // Search index uses "global-{folderName}" as id, but global_get expects folderName
+          const realId = result.id.startsWith('global-')
+            ? result.id.slice('global-'.length)
+            : result.id;
+          const res = await globalService.get(realId);
+          if (res.success && res.data) {
+            content = res.data.skillMdContent ?? '';
+            previewData.size = res.data.size;
+            previewData.fileCount = res.data.fileCount;
+            previewData.date = res.data.installedAt as unknown as string;
+            previewData.sourceLibrarySkillId = res.data.sourceLibrarySkillId;
+          }
+        } else if (result.scope === 'project' && result.projectId) {
+          // Search index uses "pskill-{projectId}-{folderName}" as id, but project_skill_get expects folderName
+          const prefix = `pskill-${result.projectId}-`;
+          const realId = result.id.startsWith(prefix)
+            ? result.id.slice(prefix.length)
+            : result.id;
+          const res = await projectService.getSkill(result.projectId, realId);
+          if (res.success && res.data) {
+            content = res.data.skillMdContent ?? '';
+            previewData.size = res.data.size;
+            previewData.fileCount = res.data.fileCount;
+            previewData.date = res.data.installedAt as unknown as string;
+          }
+        }
+        setPreviewContent(content);
+        setPreviewSkill({ ...previewData });
+      } catch {
+        setPreviewContent('');
+      }
     },
     [onPreviewSkill]
   );
@@ -199,6 +245,7 @@ export function SearchOverlay({
                   onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
+                  onPull={onPull}
                   onCopyPath={onCopyPath}
                   onDelete={onDelete}
                 />
@@ -216,6 +263,7 @@ export function SearchOverlay({
                   onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
+                  onPull={onPull}
                   onCopyPath={onCopyPath}
                   onDelete={onDelete}
                 />

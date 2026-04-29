@@ -9,6 +9,7 @@ describe('SearchResultCard', () => {
     name: 'Test Skill',
     description: 'A test skill description',
     scope: 'library',
+    path: '/test/path/skill-1',
     matchedSnippet: 'This is a matched snippet in the skill file',
   };
 
@@ -59,7 +60,7 @@ describe('SearchResultCard', () => {
     fireEvent.contextMenu(card);
 
     expect(screen.getByRole('menu')).toBeInTheDocument();
-    expect(screen.getByText('Deploy')).toBeInTheDocument();
+    expect(screen.getByText('Deploy to...')).toBeInTheDocument();
     expect(screen.getByText('Export')).toBeInTheDocument();
     expect(screen.getByText('Copy Path')).toBeInTheDocument();
     expect(screen.getByText('Delete')).toBeInTheDocument();
