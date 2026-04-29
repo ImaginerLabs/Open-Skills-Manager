@@ -133,7 +133,7 @@ pub fn get_default_ide_configs() -> Vec<IDEConfig> {
             global_scope_path: "~/.cursor/skills".to_string(),
             project_scope_name: ".cursor".to_string(),
             projects: vec![],
-            is_enabled: false,
+            is_enabled: true,
             icon: Some("cursor".to_string()),
         },
         IDEConfig {
@@ -142,7 +142,7 @@ pub fn get_default_ide_configs() -> Vec<IDEConfig> {
             global_scope_path: "~/.gemini/skills".to_string(),
             project_scope_name: ".gemini".to_string(),
             projects: vec![],
-            is_enabled: false,
+            is_enabled: true,
             icon: Some("gemini".to_string()),
         },
     ]

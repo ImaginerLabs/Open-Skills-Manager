@@ -273,6 +273,12 @@
   gap: var(--space-2);
 }
 
+.syncIconWrapper {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
 .syncIcon {
   color: var(--color-text-tertiary);
   cursor: pointer;

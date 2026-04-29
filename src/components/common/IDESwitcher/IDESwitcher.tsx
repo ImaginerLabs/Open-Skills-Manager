@@ -33,7 +33,7 @@ const DEFAULT_IDE_CONFIGS = [
     globalScopePath: '~/.cursor/skills',
     projectScopeName: '.cursor',
     projects: [],
-    isEnabled: false, // Coming soon
+    isEnabled: true,
     icon: 'cursor',
   },
   {
@@ -42,7 +42,7 @@ const DEFAULT_IDE_CONFIGS = [
     globalScopePath: '~/.gemini/skills',
     projectScopeName: '.gemini',
     projects: [],
-    isEnabled: false, // Coming soon
+    isEnabled: true,
     icon: 'gemini',
   },
 ];
@@ -67,10 +67,13 @@ export function IDESwitcher(): React.ReactElement | null {
       try {
         const config = await configService.get();
         if (config.ideConfigs && config.ideConfigs.length > 0) {
-          // Merge backend configs with defaults to ensure new IDEs are included
+          // Merge backend configs with defaults — isEnabled always from defaults
           const mergedConfigs = DEFAULT_IDE_CONFIGS.map((defaultIde) => {
             const existingConfig = config.ideConfigs.find((ide) => ide.id === defaultIde.id);
-            return existingConfig || defaultIde;
+            if (existingConfig) {
+              return { ...existingConfig, isEnabled: defaultIde.isEnabled };
+            }
+            return defaultIde;
           });
           setIDEConfigs(mergedConfigs);
           // Only set active IDE on first initialization
@@ -129,7 +132,8 @@ export function IDESwitcher(): React.ReactElement | null {
         setProjects(projectsResult.data);
       }
 
-      showToast('success', `Switched to ${ideId === 'claude-code' ? 'Claude Code' : 'OpenCode'}`);
+      const ideName = configsToShow.find((ide) => ide.id === ideId)?.name || ideId;
+      showToast('success', `Switched to ${ideName}`);
     } catch (error) {
       console.error('Failed to refresh data:', error);
       showToast('error', 'Failed to refresh data after IDE switch');
@@ -192,7 +196,7 @@ export function IDESwitcher(): React.ReactElement | null {
           key={ide.id}
           className={`${styles.tab} ${activeIdeId === ide.id ? styles.active : ''} ${!ide.isEnabled ? styles.disabled : ''}`}
           onClick={() => handleIDESwitch(ide.id)}
-          title={ide.isEnabled ? ide.name : `${ide.name} (Coming Soon)`}
+          title={ide.name}
         >
           <div className={styles.iconWrapper}>{getIcon(ide.icon || ide.id)}</div>
         </button>
