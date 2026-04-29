@@ -308,16 +308,29 @@ impl SearchIndex {
             return vec![];
         }
 
-        // Find matching documents
-        let mut matching_ids: HashSet<String> = HashSet::new();
+        // Find matching documents (ALL terms must match — AND logic)
+        let mut matching_ids: Option<HashSet<String>> = None;
 
         for term in &query_terms {
-            if let Some(matches) = self.index.get(term) {
-                for (skill_id, _) in matches {
-                    matching_ids.insert(skill_id.clone());
-                }
+            let term_ids: HashSet<String> = self
+                .index
+                .get(term)
+                .map(|matches| matches.iter().map(|(id, _)| id.clone()).collect())
+                .unwrap_or_default();
+
+            if term_ids.is_empty() {
+                // If any term has zero matches, no results
+                matching_ids = Some(HashSet::new());
+                break;
             }
+
+            matching_ids = Some(match matching_ids {
+                None => term_ids,
+                Some(ids) => ids.intersection(&term_ids).cloned().collect(),
+            });
         }
+
+        let matching_ids = matching_ids.unwrap_or_default();
 
         // Build results with filtering
         let mut results: Vec<SearchResultWithSnippet> = matching_ids
@@ -383,15 +396,27 @@ impl SearchIndex {
             let desc_lower = doc.description.to_lowercase();
 
             for term in query_terms {
-                // Name match = 10 points (highest priority)
-                if name_lower.contains(term) {
+                // Exact name match = 20 points
+                if name_lower == *term {
+                    score += 20;
+                }
+                // Word-boundary match in name = 15 points
+                else if name_lower.split_whitespace().any(|w| w == *term) {
+                    score += 15;
+                }
+                // Name starts with term (prefix match) = 12 points
+                else if name_lower.starts_with(term) {
+                    score += 12;
+                }
+                // Name contains term = 10 points
+                else if name_lower.contains(term) {
                     score += 10;
                 }
-                // Description match = 5 points (medium priority)
+                // Description match = 5 points
                 else if desc_lower.contains(term) {
                     score += 5;
                 }
-                // Content match = 1 point (lowest priority)
+                // Content match = 1 point
                 else if let Some(matches) = self.index.get(term) {
                     if matches.iter().any(|(id, _)| id == skill_id) {
                         score += 1;
@@ -407,15 +432,22 @@ impl SearchIndex {
         let content_lower = content.to_lowercase();
         let query_lower = query.to_lowercase();
 
-        // Find the first occurrence of the query
-        if let Some(pos) = content_lower.find(&query_lower) {
+        // Try full query first, then individual terms
+        let match_pos = content_lower.find(&query_lower).or_else(|| {
+            tokenize(&query_lower)
+                .iter()
+                .filter_map(|term| content_lower.find(term))
+                .min()
+        });
+
+        if let Some(pos) = match_pos {
             // Use char_indices to safely handle UTF-8 boundaries
             let char_indices: Vec<(usize, char)> = content.char_indices().collect();
 
             // Find the character index for the byte position
             let char_pos = char_indices.iter().position(|(i, _)| *i >= pos).unwrap_or(0);
-            let start_char = char_pos.saturating_sub(20); // 20 characters before
-            let end_char = (char_pos + query.chars().count() + 30).min(char_indices.len()); // 30 characters after
+            let start_char = char_pos.saturating_sub(20);
+            let end_char = (char_pos + query.chars().count() + 30).min(char_indices.len());
 
             // Get byte positions for safe slicing
             let start_byte = char_indices.get(start_char).map(|(i, _)| *i).unwrap_or(0);
@@ -436,10 +468,9 @@ impl SearchIndex {
             }
 
             // Clean up the snippet
-            snippet = snippet.replace('\n', " ");
-            snippet
+            snippet.replace('\n', " ")
         } else {
-            // If exact query not found, return beginning of content (safe UTF-8 handling)
+            // If no match found, return beginning of content
             let snippet: String = content.chars().take(50).collect();
             if content.chars().count() > 50 {
                 format!("{}...", snippet.replace('\n', " "))
