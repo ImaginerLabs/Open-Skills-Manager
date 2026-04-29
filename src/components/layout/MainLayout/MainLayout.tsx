@@ -13,7 +13,7 @@ import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { SearchOverlay } from '../../features/SearchOverlay';
 import { DeployDialog } from '../../features/DeployDialog';
-import { ExportDialog } from '../../features/ExportDialog';
+import { ExportDialog, type ExportableSkill } from '../../features/ExportDialog';
 import { PullToLibraryDialog } from '../../features/GlobalSkillsView/PullToLibraryDialog';
 import type { SearchResult } from '../../../stores/uiStore';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../../stores/libraryStore';
@@ -58,7 +58,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   // Dialog state for search actions
   const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
-  const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
+  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
   const [pullSkillProjectId, setPullSkillProjectId] = useState<string | undefined>(undefined);
@@ -302,23 +302,30 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
 
   const handleSearchExport = useCallback(
     async (result: SearchResult) => {
-      if (result.scope !== 'library') return;
-      const res = await libraryService.get(result.id);
-      if (res.success && res.data) {
-        setExportSkills([res.data]);
-        setShowExportDialog(true);
+      if (result.scope === 'library') {
+        const res = await libraryService.get(result.id);
+        if (res.success && res.data) {
+          setExportSkills([res.data]);
+          setShowExportDialog(true);
+        } else {
+          showToast('error', 'Failed to load skill data');
+        }
       } else {
-        showToast('error', 'Failed to load skill data');
+        setExportSkills([{ id: result.id, name: result.name, path: result.path, scope: result.scope as 'global' | 'project' }]);
+        setShowExportDialog(true);
       }
     },
     [showToast]
   );
 
   const handleExportStart = useCallback(
-    async (format: 'zip' | 'folder', skillsToExport: LibrarySkill[]) => {
+    async (format: 'zip' | 'folder', skillsToExport: ExportableSkill[]) => {
       setShowExportDialog(false);
       for (const skill of skillsToExport) {
-        const exportResult = await libraryService.export(skill.id, format, skill.name);
+        const isLibrary = !skill.scope || skill.scope === 'library';
+        const exportResult = isLibrary
+          ? await libraryService.export(skill.id, format, skill.name)
+          : await libraryService.exportFromPath(skill.path!, skill.name, format);
         if (exportResult?.success) {
           showToast('success', `Exported ${skill.name}`);
         } else if (exportResult?.error) {
@@ -535,6 +542,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
           </div>
           <div className={styles.topBarActions}>
             <IDESwitcher />
+          </div>
+          <div className={styles.syncIconWrapper}>
             <ICloudStatus
               status={syncStatus}
               lastSyncTime={lastSyncTime}

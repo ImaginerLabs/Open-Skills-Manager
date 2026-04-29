@@ -58,7 +58,7 @@ export function SearchResultCard({
       icon: ArrowSquareOut,
       onClick: () => onDeploy(result),
     }] : []),
-    ...(isLibrary && onExport ? [{
+    ...(onExport ? [{
       id: 'export',
       label: 'Export',
       icon: Export,

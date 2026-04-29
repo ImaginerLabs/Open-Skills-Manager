@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
-import { useLibraryStore, type LibrarySkill } from '../../../stores/libraryStore';
+import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { libraryService } from '../../../services/libraryService';
-import type { ExportFormat } from '../../../components/features/ExportDialog';
+import type { ExportFormat, ExportableSkill } from '../../../components/features/ExportDialog';
 
 interface UseLibraryExportResult {
-  handleExportStart: (format: ExportFormat, skillsToExport: LibrarySkill[]) => Promise<void>;
+  handleExportStart: (format: ExportFormat, skillsToExport: ExportableSkill[]) => Promise<void>;
 }
 
 export function useLibraryExport(): UseLibraryExportResult {
@@ -17,7 +17,7 @@ export function useLibraryExport(): UseLibraryExportResult {
   const showToast = useUIStore((state) => state.showToast);
 
   const handleExportStart = useCallback(
-    async (format: ExportFormat, skillsToExport: LibrarySkill[]) => {
+    async (format: ExportFormat, skillsToExport: ExportableSkill[]) => {
       startExport(skillsToExport.length);
 
       try {
@@ -39,7 +39,10 @@ export function useLibraryExport(): UseLibraryExportResult {
           for (let i = 0; i < skillsToExport.length; i++) {
             const skill = skillsToExport[i]!;
             updateExportProgress(i + 1, skill.name);
-            const result = await libraryService.export(skill.id, format, skill.name);
+            const isLibrary = !skill.scope || skill.scope === 'library';
+            const result = isLibrary
+              ? await libraryService.export(skill.id, format, skill.name)
+              : await libraryService.exportFromPath(skill.path!, skill.name, format);
             if (result === null) {
               resetExport();
               return;

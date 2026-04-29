@@ -7,6 +7,7 @@ import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
 import { PullToLibraryDialog } from '../GlobalSkillsView/PullToLibraryDialog';
+import { ExportDialog, type ExportableSkill } from '../ExportDialog';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
@@ -23,6 +24,8 @@ export function ProjectSkillsView(): React.ReactElement {
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
   const [showPullDialog, setShowPullDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<ProjectSkill | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
   const { isRefreshing, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
@@ -156,8 +159,35 @@ export function ProjectSkillsView(): React.ReactElement {
 
   const hasSkills = skills.length > 0;
 
+  const handleExportSkill = useCallback((skill: ProjectSkill) => {
+    setExportSkills([{ id: skill.id, name: skill.name, path: skill.path, scope: 'project' }]);
+    setShowExportDialog(true);
+  }, []);
+
+  const handleExportStart = useCallback(
+    async (format: 'zip' | 'folder', skillsToExport: ExportableSkill[]) => {
+      setShowExportDialog(false);
+      const { libraryService } = await import('../../../services/libraryService');
+      for (const s of skillsToExport) {
+        const result = await libraryService.exportFromPath(s.path!, s.name, format);
+        if (result?.success) {
+          showToast('success', `Exported ${s.name}`);
+        } else if (result?.error) {
+          showToast('error', result.error.message);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  const handleExportClose = useCallback(() => {
+    setShowExportDialog(false);
+    setExportSkills([]);
+  }, []);
+
   const cardActions = {
     onDelete: handleDeleteSkill,
+    onExport: handleExportSkill,
     onPull: handlePullSkill,
     onCopyPath: handleCopyPath,
   };
@@ -266,6 +296,13 @@ export function ProjectSkillsView(): React.ReactElement {
         onClose={handlePullComplete}
         onComplete={handlePullComplete}
         projectId={projectId}
+      />
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        skills={exportSkills}
+        onClose={handleExportClose}
+        onExportStart={handleExportStart}
       />
     </SkillListLayout>
   );

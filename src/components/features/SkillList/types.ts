@@ -29,7 +29,7 @@ export interface SkillListHeaderProps {
 
 export interface SkillCardActions<T extends Skill> {
   onDelete?: (skillId: string) => void;
-  onExport?: (skillId: string) => void;
+  onExport?: (skill: T) => void;
   onDeploy?: (skill: T) => void;
   onPull?: (skillId: string) => void;
   onCopyPath?: (skillId: string) => void;

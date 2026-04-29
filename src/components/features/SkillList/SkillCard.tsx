@@ -79,11 +79,11 @@ export function SkillCard<T extends Skill>({
       icon: Rocket,
       onClick: () => actions.onDeploy!(skill),
     }] : []),
-    ...(scope === 'library' && actions?.onExport ? [{
+    ...(actions?.onExport ? [{
       id: 'export',
       label: 'Export',
       icon: Export,
-      onClick: () => actions.onExport!(skill.id),
+      onClick: () => actions.onExport!(skill),
     }] : []),
     ...((scope === 'global' || scope === 'project') && actions?.onPull ? [{
       id: 'pull',

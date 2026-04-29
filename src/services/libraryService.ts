@@ -25,6 +25,24 @@ export const libraryService = {
       return invokeIPC<string>('library_export', { id, format, destPath });
     }
   },
+  exportFromPath: async (sourcePath: string, name: string, format: 'zip' | 'folder') => {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+
+    if (format === 'zip') {
+      const destPath = await save({
+        defaultPath: `${name}.zip`,
+        filters: [{ name: 'Zip', extensions: ['zip'] }],
+      });
+      if (!destPath) return null;
+      return invokeIPC<string>('export_skill_from_path', { sourcePath, format, destPath });
+    } else {
+      const destPath = await save({
+        defaultPath: name,
+      });
+      if (!destPath) return null;
+      return invokeIPC<string>('export_skill_from_path', { sourcePath, format, destPath });
+    }
+  },
   exportBatch: async (ids: string[], defaultName?: string) => {
     const { save } = await import('@tauri-apps/plugin-dialog');
     const destPath = await save({

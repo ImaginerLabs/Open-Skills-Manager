@@ -4,7 +4,7 @@ import { useLibraryStore, type LibrarySkill, type Deployment } from '../../store
 import { useUIStore } from '../../stores/uiStore';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
-import { ExportDialog } from '../../components/features/ExportDialog';
+import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
 import { DeployDialog } from '../../components/features/DeployDialog';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
@@ -62,7 +62,7 @@ export function Library(): React.ReactElement {
   );
 
   const onExportStart = useCallback(
-    async (format: Parameters<typeof handleExportStart>[0], skillsToExport: LibrarySkill[]) => {
+    async (format: Parameters<typeof handleExportStart>[0], skillsToExport: ExportableSkill[]) => {
       setExportDialog(false);
       setExportProgress(true);
       await handleExportStart(format, skillsToExport);
@@ -71,7 +71,7 @@ export function Library(): React.ReactElement {
   );
 
   const [skillMdContent, setSkillMdContent] = useState<string>('');
-  const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
+  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
 
   const {
@@ -157,13 +157,10 @@ export function Library(): React.ReactElement {
     [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
   );
 
-  const handleExportSkill = useCallback((skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      setExportSkills([skill]);
-      setExportDialog(true);
-    }
-  }, [skills, setExportDialog]);
+  const handleExportSkill = useCallback((skill: LibrarySkill) => {
+    setExportSkills([skill]);
+    setExportDialog(true);
+  }, [setExportDialog]);
 
   const handleDeploySkill = useCallback((skill: LibrarySkill) => {
     setDeploySkill(skill);

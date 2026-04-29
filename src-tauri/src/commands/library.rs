@@ -793,6 +793,66 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 }
 
 #[tauri::command]
+pub fn export_skill_from_path(source_path: String, format: String, dest_path: Option<String>) -> IpcResult<String> {
+    let source = PathBuf::from(&source_path);
+    let folder_name = source.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    if format == "zip" {
+        let dest = match dest_path {
+            Some(p) => p,
+            None => return IpcResult::error("E002", "Destination path required for zip export"),
+        };
+
+        let dest_buf = PathBuf::from(&dest);
+        let file = match fs::File::create(&dest_buf) {
+            Ok(f) => f,
+            Err(e) => return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip file: {}", e)).code(),
+                &format!("Failed to create zip file: {}", e)
+            ),
+        };
+
+        let mut zip = ZipWriter::new(file);
+        let options = FileOptions::<()>::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        if let Err(e) = add_dir_to_zip(&mut zip, &source, &folder_name, options) {
+            return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip archive: {}", e)).code(),
+                &format!("Failed to add skill to zip: {}", e)
+            );
+        }
+
+        if let Err(e) = zip.finish() {
+            return IpcResult::error(
+                AppError::E102WriteFailed(format!("Zip finalization: {}", e)).code(),
+                &format!("Failed to finalize zip: {}", e)
+            );
+        }
+
+        IpcResult::success(dest)
+    } else {
+        let dest = match dest_path {
+            Some(p) => p,
+            None => return IpcResult::error("E002", "Destination path required for folder export"),
+        };
+
+        let dest_buf = PathBuf::from(&dest);
+
+        if let Err(e) = copy_dir_all(&source, &dest_buf) {
+            return IpcResult::error(
+                AppError::E105CopyFailed(format!("Skill folder: {}", e)).code(),
+                &format!("Failed to copy skill folder: {}", e)
+            );
+        }
+
+        IpcResult::success(dest)
+    }
+}
+
+#[tauri::command]
 pub fn library_export_batch(ids: Vec<String>, dest_path: String) -> IpcResult<String> {
     let library_path = get_library_path();
     let dest = PathBuf::from(&dest_path);

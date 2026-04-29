@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
+import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
@@ -30,6 +31,8 @@ export function Global(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('');
   const [showPullDialog, setShowPullDialog] = useState(false);
   const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -187,8 +190,35 @@ export function Global(): React.ReactElement {
 
   const hasSkills = skills.length > 0;
 
+  const handleExportSkill = useCallback((skill: GlobalSkill) => {
+    setExportSkills([{ id: skill.id, name: skill.name, path: skill.path, scope: 'global' }]);
+    setShowExportDialog(true);
+  }, []);
+
+  const handleExportStart = useCallback(
+    async (format: 'zip' | 'folder', skillsToExport: ExportableSkill[]) => {
+      setShowExportDialog(false);
+      const { libraryService } = await import('../../services/libraryService');
+      for (const s of skillsToExport) {
+        const result = await libraryService.exportFromPath(s.path!, s.name, format);
+        if (result?.success) {
+          showToast('success', `Exported ${s.name}`);
+        } else if (result?.error) {
+          showToast('error', result.error.message);
+        }
+      }
+    },
+    [showToast]
+  );
+
+  const handleExportClose = useCallback(() => {
+    setShowExportDialog(false);
+    setExportSkills([]);
+  }, []);
+
   const cardActions = {
     onDelete: handleDeleteSkill,
+    onExport: handleExportSkill,
     onPull: (skillId: string) => {
       const skill = skills.find((s) => s.id === skillId);
       if (skill) handlePullToLibrary(skill);
@@ -272,6 +302,13 @@ export function Global(): React.ReactElement {
         skill={pullSkill}
         onClose={handlePullComplete}
         onComplete={handlePullComplete}
+      />
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        skills={exportSkills}
+        onClose={handleExportClose}
+        onExportStart={handleExportStart}
       />
     </SkillListLayout>
   );

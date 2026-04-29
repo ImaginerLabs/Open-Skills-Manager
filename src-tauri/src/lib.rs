@@ -35,6 +35,7 @@ pub fn run() {
             library::library_import,
             library::library_export,
             library::library_export_batch,
+            library::export_skill_from_path,
             library::library_groups_list,
             library::library_groups_create,
             library::library_groups_rename,

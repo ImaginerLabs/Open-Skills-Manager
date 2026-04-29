@@ -1,20 +1,26 @@
 import { useState, useCallback, useEffect } from 'react';
 import { FileZip, FolderSimple, Export } from '@phosphor-icons/react';
 import { Modal, Button, ModalFooter } from '../../ui';
-import type { LibrarySkill } from '../../../stores/libraryStore';
 import styles from './ExportDialog.module.scss';
 
 export type ExportFormat = 'zip' | 'folder';
+
+export interface ExportableSkill {
+  id: string;
+  name: string;
+  path?: string;
+  scope?: 'library' | 'global' | 'project';
+}
 
 export interface ExportDialogProps {
   /** Dialog open state */
   isOpen: boolean;
   /** Skills to export */
-  skills: LibrarySkill[];
+  skills: ExportableSkill[];
   /** Close handler */
   onClose: () => void;
   /** Export start handler */
-  onExportStart: (format: ExportFormat, skills: LibrarySkill[]) => void;
+  onExportStart: (format: ExportFormat, skills: ExportableSkill[]) => void;
 }
 
 export function ExportDialog({
