@@ -3,6 +3,10 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
+use crate::commands::global::get_global_skills_path;
+use crate::commands::library::load_skill_metadata;
+use crate::commands::project::{get_active_ide_project_scope_name, load_projects};
+use crate::paths::get_library_path;
 use crate::parsers::SkillFrontmatter;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -84,22 +88,29 @@ impl SearchIndex {
         self.documents.clear();
 
         // Index library skills
-        self.index_library_skills();
+        let library_count = self.index_library_skills();
+        println!("[SearchIndex] Indexed {} library skills", library_count);
 
         // Index global skills
-        self.index_global_skills();
+        let global_count = self.index_global_skills();
+        println!("[SearchIndex] Indexed {} global skills", global_count);
 
         // Index project skills
-        self.index_project_skills();
+        let project_count = self.index_project_skills();
+        println!("[SearchIndex] Indexed {} project skills", project_count);
+
+        println!("[SearchIndex] Total documents: {}, Total terms: {}", self.documents.len(), self.index.len());
     }
 
-    fn index_library_skills(&mut self) {
+    fn index_library_skills(&mut self) -> usize {
         let library_path = get_library_path();
         if !library_path.exists() {
-            return;
+            println!("[SearchIndex] Library path does not exist: {:?}", library_path);
+            return 0;
         }
 
         let skill_metadata = load_skill_metadata();
+        let mut count = 0;
 
         if let Ok(entries) = fs::read_dir(&library_path) {
             for entry in entries.flatten() {
@@ -130,18 +141,24 @@ impl SearchIndex {
                             category_id,
                         ) {
                             self.add_document(doc);
+                            count += 1;
                         }
                     }
                 }
             }
         }
+        count
     }
 
-    fn index_global_skills(&mut self) {
+    fn index_global_skills(&mut self) -> usize {
         let global_path = get_global_skills_path();
         if !global_path.exists() {
-            return;
+            println!("[SearchIndex] Global skills path does not exist: {:?}", global_path);
+            return 0;
         }
+
+        println!("[SearchIndex] Global skills path: {:?}", global_path);
+        let mut count = 0;
 
         if let Ok(entries) = fs::read_dir(&global_path) {
             for entry in entries.flatten() {
@@ -160,15 +177,19 @@ impl SearchIndex {
                             self.read_skill_document(&skill_id, &path, "global", None, None)
                         {
                             self.add_document(doc);
+                            count += 1;
                         }
                     }
                 }
             }
         }
+        count
     }
 
-    fn index_project_skills(&mut self) {
+    fn index_project_skills(&mut self) -> usize {
         let projects = load_projects();
+        let project_scope_name = get_active_ide_project_scope_name();
+        let mut count = 0;
 
         for project in projects {
             let project_path = PathBuf::from(&project.path);
@@ -176,7 +197,7 @@ impl SearchIndex {
                 continue;
             }
 
-            let skills_dir = project_path.join(".claude").join("skills");
+            let skills_dir = project_path.join(&project_scope_name).join("skills");
             if !skills_dir.exists() {
                 continue;
             }
@@ -202,12 +223,14 @@ impl SearchIndex {
                                 None,
                             ) {
                                 self.add_document(doc);
+                                count += 1;
                             }
                         }
                     }
                 }
             }
         }
+        count
     }
 
     fn read_skill_document(
@@ -321,9 +344,9 @@ impl SearchIndex {
     }
 
     fn matches_filters(&self, doc: &SearchableDocument, options: &SearchOptions) -> bool {
-        // Filter by scope
+        // Filter by scope (but "all" means no filtering)
         if let Some(ref scope) = options.scope {
-            if &doc.scope != scope {
+            if scope != "all" && &doc.scope != scope {
                 return false;
             }
         }
@@ -363,16 +386,29 @@ impl SearchIndex {
 
         // Find the first occurrence of the query
         if let Some(pos) = content_lower.find(&query_lower) {
-            let start = pos.saturating_sub(50);
-            let end = (pos + query.len() + 50).min(content.len());
+            // Use char_indices to safely handle UTF-8 boundaries
+            let char_indices: Vec<(usize, char)> = content.char_indices().collect();
 
-            let mut snippet = content[start..end].to_string();
+            // Find the character index for the byte position
+            let char_pos = char_indices.iter().position(|(i, _)| *i >= pos).unwrap_or(0);
+            let start_char = char_pos.saturating_sub(20); // 20 characters before
+            let end_char = (char_pos + query.chars().count() + 30).min(char_indices.len()); // 30 characters after
+
+            // Get byte positions for safe slicing
+            let start_byte = char_indices.get(start_char).map(|(i, _)| *i).unwrap_or(0);
+            let end_byte = if end_char >= char_indices.len() {
+                content.len()
+            } else {
+                char_indices[end_char].0
+            };
+
+            let mut snippet = content[start_byte..end_byte].to_string();
 
             // Add ellipsis if truncated
-            if start > 0 {
+            if start_char > 0 {
                 snippet = format!("...{}", snippet);
             }
-            if end < content.len() {
+            if end_char < char_indices.len() {
                 snippet = format!("{}...", snippet);
             }
 
@@ -380,13 +416,13 @@ impl SearchIndex {
             snippet = snippet.replace('\n', " ");
             snippet
         } else {
-            // If exact query not found, return beginning of content
-            let end = 100.min(content.len());
-            let mut snippet = content[..end].to_string();
-            if end < content.len() {
-                snippet.push_str("...");
+            // If exact query not found, return beginning of content (safe UTF-8 handling)
+            let snippet: String = content.chars().take(50).collect();
+            if content.chars().count() > 50 {
+                format!("{}...", snippet.replace('\n', " "))
+            } else {
+                snippet.replace('\n', " ")
             }
-            snippet.replace('\n', " ")
         }
     }
 }
@@ -418,80 +454,6 @@ fn parse_skill_md_content(content: &str) -> (String, String) {
     match SkillFrontmatter::from_content(content) {
         Ok(fm) => (fm.name, fm.description),
         Err(_) => (String::new(), String::new()),
-    }
-}
-
-fn get_library_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Mobile Documents")
-        .join("com~apple~CloudDocs")
-        .join("ClaudeCode")
-        .join("Skills")
-}
-
-fn get_global_skills_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home).join(".claude").join("skills")
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct SkillMetadataEntry {
-    #[allow(dead_code)]
-    pub id: String,
-    #[allow(dead_code)]
-    pub folder_name: String,
-    pub category_id: Option<String>,
-}
-
-fn get_skill_metadata_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("skill_metadata.json")
-}
-
-fn load_skill_metadata() -> HashMap<String, SkillMetadataEntry> {
-    let path = get_skill_metadata_path();
-    if path.exists() {
-        fs::read_to_string(&path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
-    } else {
-        HashMap::new()
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct Project {
-    pub id: String,
-    #[allow(dead_code)]
-    pub name: String,
-    pub path: String,
-}
-
-fn get_projects_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(&home)
-        .join("Library")
-        .join("Application Support")
-        .join("claude-code-skills-manager")
-        .join("projects.json")
-}
-
-fn load_projects() -> Vec<Project> {
-    let path = get_projects_path();
-    if path.exists() {
-        fs::read_to_string(&path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
-    } else {
-        Vec::new()
     }
 }
 

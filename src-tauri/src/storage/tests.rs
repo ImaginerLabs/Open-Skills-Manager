@@ -120,6 +120,7 @@ mod tests {
             skill_count: 0,
             is_custom: true,
             created_at: chrono::Utc::now().to_rfc3339(),
+            updated_at: None,
         };
 
         groups.push(new_group.clone());

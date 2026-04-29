@@ -19,6 +19,7 @@ export interface SearchResult {
   scope: 'library' | 'global' | 'project';
   matchedSnippet?: string;
   projectId?: string;
+  categoryId?: string;
 }
 
 export interface GroupedSearchResults {

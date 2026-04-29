@@ -11,12 +11,14 @@ import { CategoryManager, ALL_GROUP_ID } from '../../features/CategoryManager';
 import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
+import { SearchOverlay } from '../../features/SearchOverlay';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useGlobalStore } from '../../../stores/globalStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
+import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
 import styles from './MainLayout.module.scss';
@@ -38,7 +40,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['library', 'scopes'])
   );
-  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,6 +49,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
+  const { openSearch } = useSearchKeyboard();
 
   // Set default selection to "All" group on initial mount if on library page
   useEffect(() => {
@@ -359,8 +361,9 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             <Input
               placeholder="Search skills..."
               icon={<MagnifyingGlass size={16} />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onClick={openSearch}
+              readOnly
+              style={{ cursor: 'pointer' }}
             />
           </div>
           <div className={styles.topBarActions}>
@@ -374,6 +377,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         </header>
         <div className={styles.content}>{children ?? <Outlet />}</div>
       </main>
+      <SearchOverlay />
     </div>
   );
 }

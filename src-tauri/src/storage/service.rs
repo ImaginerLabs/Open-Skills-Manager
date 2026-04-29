@@ -402,8 +402,21 @@ impl StorageService {
         let content = fs::read_to_string(&self.config_path)
             .map_err(|e| format!("Failed to read config: {}", e))?;
 
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse config: {}", e))
+        // Try to parse as new format, fallback to defaults for missing fields
+        let mut config: AppConfig = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse config: {}", e))?;
+
+        // Ensure active_ide_id has a valid default if missing or empty
+        if config.active_ide_id.is_empty() {
+            config.active_ide_id = "claude-code".to_string();
+        }
+
+        // Ensure ide_configs is not empty
+        if config.ide_configs.is_empty() {
+            config.ide_configs = get_default_ide_configs();
+        }
+
+        Ok(config)
     }
 
     fn read_library_file(&self) -> Result<LibraryData, String> {

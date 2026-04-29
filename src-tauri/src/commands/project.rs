@@ -51,7 +51,7 @@ fn get_ide_config_from_storage(ide_id: &str) -> Option<crate::storage::IDEConfig
     }
 }
 
-fn get_active_ide_project_scope_name() -> String {
+pub fn get_active_ide_project_scope_name() -> String {
     let storage = get_storage();
     match storage.read_config() {
         Ok(config) => {
@@ -68,7 +68,7 @@ fn generate_id() -> String {
     format!("project-{}", uuid::Uuid::new_v4())
 }
 
-fn load_projects() -> Vec<Project> {
+pub fn load_projects() -> Vec<Project> {
     let storage = get_storage();
     match storage.read_config() {
         Ok(config) => {

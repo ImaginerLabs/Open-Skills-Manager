@@ -44,11 +44,14 @@ export function useSearch(): UseSearchResult {
   const abortController = useRef<AbortController | null>(null);
 
   const performSearch = useCallback(async (query: string) => {
+    console.log('[useSearch] performSearch called with query:', query);
+
     if (abortController.current) {
       abortController.current.abort();
     }
 
     if (query.length < MIN_QUERY_LENGTH) {
+      console.log('[useSearch] Query too short, clearing results');
       searchActions.setSearchResults(null);
       searchActions.setSearching(false);
       return;
@@ -74,16 +77,23 @@ export function useSearch(): UseSearchResult {
       searchOptions.categoryId = searchState.selectedCategoryId;
     }
 
+    console.log('[useSearch] Calling searchService.search with options:', searchOptions);
+
     try {
       const result = await searchService.search(searchOptions);
 
+      console.log('[useSearch] Search result:', result);
+
       if (result.success) {
         const grouped = groupResults(result.data);
+        console.log('[useSearch] Grouped results:', grouped);
         searchActions.setSearchResults(grouped);
       } else {
+        console.error('[useSearch] Search failed:', result.error);
         searchActions.setSearchResults(null);
       }
-    } catch {
+    } catch (error) {
+      console.error('[useSearch] Search exception:', error);
       if (!abortController.current?.signal.aborted) {
         searchActions.setSearchResults(null);
       }

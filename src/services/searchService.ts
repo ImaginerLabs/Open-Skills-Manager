@@ -7,13 +7,20 @@ export interface SearchResult {
   scope: 'library' | 'global' | 'project';
   matchedSnippet?: string;
   projectId?: string;
+  categoryId?: string;
 }
 
 export const searchService = {
-  search: (options: {
+  search: async (options: {
     query: string;
     scope?: 'library' | 'global' | 'project' | 'all';
     projectId?: string;
     categoryId?: string;
-  }) => invokeIPC<SearchResult[]>('search', options),
+  }) => {
+    console.log('[searchService] Invoking IPC search with options:', options);
+    // Backend expects { options: SearchOptionsInput }
+    const result = await invokeIPC<SearchResult[]>('search', { options });
+    console.log('[searchService] IPC result:', result);
+    return result;
+  },
 };
