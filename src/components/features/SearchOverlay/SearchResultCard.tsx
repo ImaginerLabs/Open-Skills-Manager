@@ -144,7 +144,9 @@ export function SearchResultCard({
         tabIndex={0}
       >
         <div className={styles.cardHeader}>
-          <h4 className={styles.resultName}>{highlightMatch(result.name, query)}</h4>
+          <h4 className={styles.resultName}>
+            {result.name ? highlightMatch(result.name, query) : <span className={styles.noName}>Unknown Skill</span>}
+          </h4>
           <div
             className={styles.scopeBadge}
             style={{ backgroundColor: `${SCOPE_COLORS[result.scope]}15`, color: SCOPE_COLORS[result.scope] }}
@@ -153,7 +155,7 @@ export function SearchResultCard({
             <span>{result.scope}</span>
           </div>
         </div>
-        <p className={styles.resultDescription}>{result.description}</p>
+        <p className={styles.resultDescription}>{result.description || 'No description available'}</p>
         {result.matchedSnippet && <Snippet text={result.matchedSnippet} searchTerm={query} />}
       </div>
 

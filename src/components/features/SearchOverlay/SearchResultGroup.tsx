@@ -68,14 +68,8 @@ export function SearchResultGroup({
 
       {!isCollapsed && (
         <div className={styles.groupResults}>
-          {results.map((result, index) => (
-            <div
-              key={result.id}
-              className={styles.resultItem}
-              style={{
-                animationDelay: `${index * 30}ms`,
-              }}
-            >
+          {results.map((result) => (
+            <div key={result.id} className={styles.resultItem}>
               <SearchResultCard
                 result={result}
                 query={query}

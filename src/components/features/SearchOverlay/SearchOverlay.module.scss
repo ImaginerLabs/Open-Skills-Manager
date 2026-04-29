@@ -358,8 +358,7 @@
 }
 
 .resultItem {
-  animation: staggerIn var(--duration-normal) var(--ease-out-expo) both;
-  will-change: transform, opacity;
+  // No animation - prevents scroll-triggered flicker on first open
 }
 
 // =============================================================================
@@ -409,6 +408,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.noName {
+  color: var(--color-text-tertiary);
+  font-style: italic;
 }
 
 .scopeBadge {
@@ -606,11 +610,14 @@
 // Reduced Motion
 // =============================================================================
 
+// =============================================================================
+// Reduced Motion
+// =============================================================================
+
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .container,
-  .dropdown,
-  .resultItem {
+  .dropdown {
     animation: none;
   }
 

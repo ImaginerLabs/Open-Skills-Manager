@@ -250,9 +250,18 @@ impl SearchIndex {
         // Parse frontmatter
         let (name, description) = parse_skill_md_content(&content);
 
+        // Use folder name as fallback if parsing failed
+        let final_name = if name.is_empty() {
+            path.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| skill_id.to_string())
+        } else {
+            name
+        };
+
         Some(SearchableDocument {
             id: skill_id.to_string(),
-            name,
+            name: final_name,
             description,
             content,
             scope: scope.to_string(),
@@ -308,33 +317,33 @@ impl SearchIndex {
             return vec![];
         }
 
-        // Find matching documents (ALL terms must match — AND logic)
-        let mut matching_ids: Option<HashSet<String>> = None;
+        // Find matching documents using OR logic with scoring
+        // Each term contributes to a score, documents are ranked by total score
+        let mut doc_scores: HashMap<String, usize> = HashMap::new();
 
         for term in &query_terms {
-            let term_ids: HashSet<String> = self
-                .index
-                .get(term)
-                .map(|matches| matches.iter().map(|(id, _)| id.clone()).collect())
-                .unwrap_or_default();
-
-            if term_ids.is_empty() {
-                // If any term has zero matches, no results
-                matching_ids = Some(HashSet::new());
-                break;
+            // Exact term match from index
+            if let Some(matches) = self.index.get(term) {
+                for (id, _scope) in matches {
+                    *doc_scores.entry(id.clone()).or_insert(0) += 10;
+                }
             }
 
-            matching_ids = Some(match matching_ids {
-                None => term_ids,
-                Some(ids) => ids.intersection(&term_ids).cloned().collect(),
-            });
+            // Prefix matching for short queries (2-3 chars) - more lenient
+            if term.len() <= 3 {
+                for (index_term, matches) in &self.index {
+                    if index_term.starts_with(term) && index_term != term {
+                        for (id, _scope) in matches {
+                            *doc_scores.entry(id.clone()).or_insert(0) += 5;
+                        }
+                    }
+                }
+            }
         }
 
-        let matching_ids = matching_ids.unwrap_or_default();
-
         // Build results with filtering
-        let mut results: Vec<SearchResultWithSnippet> = matching_ids
-            .iter()
+        let mut results: Vec<SearchResultWithSnippet> = doc_scores
+            .keys()
             .filter_map(|id| self.documents.get(id))
             .filter(|doc| self.matches_filters(doc, options))
             .map(|doc| {
@@ -352,10 +361,12 @@ impl SearchIndex {
             })
             .collect();
 
-        // Sort by relevance (number of matching terms)
+        // Sort by relevance score
         results.sort_by(|a, b| {
-            let score_a = self.calculate_relevance_score(&a.id, &query_terms);
-            let score_b = self.calculate_relevance_score(&b.id, &query_terms);
+            let score_a = doc_scores.get(&a.id).copied().unwrap_or(0)
+                + self.calculate_relevance_score(&a.id, &query_terms);
+            let score_b = doc_scores.get(&b.id).copied().unwrap_or(0)
+                + self.calculate_relevance_score(&b.id, &query_terms);
             score_b.cmp(&score_a)
         });
 
@@ -500,13 +511,20 @@ fn tokenize(text: &str) -> Vec<String> {
                 .filter(|c| c.is_alphanumeric() || *c == '-')
                 .collect::<String>()
         })
-        .filter(|word| word.len() > 1) // Skip single characters
+        .filter(|word| !word.is_empty()) // Only skip empty strings
         .collect()
 }
 
 fn parse_skill_md_content(content: &str) -> (String, String) {
-    match SkillFrontmatter::from_content(content) {
-        Ok(fm) => (fm.name, fm.description),
+    use crate::parsers::{parse_with_options, ParseOptions};
+
+    let options = ParseOptions {
+        fallback_on_error: true,
+        extract_content: false,
+    };
+
+    match parse_with_options(content, &options) {
+        Ok(parsed) => (parsed.frontmatter.name, parsed.frontmatter.description),
         Err(_) => (String::new(), String::new()),
     }
 }
@@ -534,7 +552,8 @@ mod tests {
     #[test]
     fn test_tokenize_skips_single_chars() {
         let tokens = tokenize("A B Test");
-        assert_eq!(tokens, vec!["test"]);
+        // Single chars are now kept for better short query support
+        assert_eq!(tokens, vec!["a", "b", "test"]);
     }
 
     #[test]
