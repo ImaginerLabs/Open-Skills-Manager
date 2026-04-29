@@ -292,8 +292,9 @@ impl SearchIndex {
         let skill_id = doc.id.clone();
         let scope = doc.scope.clone();
 
-        // Tokenize and index all searchable text
-        let searchable_text = format!("{} {} {} {}", doc.name, doc.description, doc.folder_name, doc.content);
+        // Tokenize and index searchable text (name, description, folder_name)
+        // Note: We intentionally do NOT search content to match frontend filter behavior
+        let searchable_text = format!("{} {} {}", doc.name, doc.description, doc.folder_name);
         let terms = tokenize(&searchable_text);
 
         for term in terms {
@@ -452,12 +453,6 @@ impl SearchIndex {
                 // Description match = 5 points
                 else if desc_lower.contains(term) {
                     score += 5;
-                }
-                // Content match = 1 point
-                else if let Some(matches) = self.index.get(term) {
-                    if matches.iter().any(|(id, _)| id == skill_id) {
-                        score += 1;
-                    }
                 }
             }
         }
