@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
 import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
@@ -53,6 +54,7 @@ export function IDESwitcher(): React.ReactElement | null {
   const { setSkills: setGlobalSkills } = useGlobalStore();
   const { setProjects } = useProjectStore();
   const { showToast } = useUIStore();
+  const navigate = useNavigate();
 
   // Use configs from store, or defaults if empty - defined early for use in callbacks
   const configsToShow = ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS;
@@ -155,6 +157,8 @@ export function IDESwitcher(): React.ReactElement | null {
       const result = await ideService.setActive(ideId);
       if (result.success) {
         setActiveIDE(ideId);
+        // Navigate to library to avoid showing stale project data from previous IDE
+        navigate('/library');
         // Refresh all data after switching
         await refreshAllData(ideId);
       }
