@@ -74,6 +74,7 @@ struct SearchableDocument {
     id: String,
     name: String,
     description: String,
+    folder_name: String,
     content: String,
     scope: String,
     path: String,
@@ -256,11 +257,15 @@ impl SearchIndex {
         // Parse frontmatter
         let (name, description) = parse_skill_md_content(&content);
 
+        // Get folder name from path
+        let folder_name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+
         // Use folder name as fallback if parsing failed
         let final_name = if name.is_empty() {
-            path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| skill_id.to_string())
+            folder_name.clone()
         } else {
             name
         };
@@ -272,6 +277,7 @@ impl SearchIndex {
             id: skill_id.to_string(),
             name: final_name,
             description,
+            folder_name,
             content,
             scope: scope.to_string(),
             path: path.to_string_lossy().to_string(),
@@ -287,7 +293,7 @@ impl SearchIndex {
         let scope = doc.scope.clone();
 
         // Tokenize and index all searchable text
-        let searchable_text = format!("{} {} {}", doc.name, doc.description, doc.content);
+        let searchable_text = format!("{} {} {} {}", doc.name, doc.description, doc.folder_name, doc.content);
         let terms = tokenize(&searchable_text);
 
         for term in terms {
@@ -420,6 +426,7 @@ impl SearchIndex {
         if let Some(doc) = self.documents.get(skill_id) {
             let name_lower = doc.name.to_lowercase();
             let desc_lower = doc.description.to_lowercase();
+            let folder_lower = doc.folder_name.to_lowercase();
 
             for term in query_terms {
                 // Exact name match = 20 points
@@ -437,6 +444,10 @@ impl SearchIndex {
                 // Name contains term = 10 points
                 else if name_lower.contains(term) {
                     score += 10;
+                }
+                // Folder name match = 8 points
+                else if folder_lower.contains(term) {
+                    score += 8;
                 }
                 // Description match = 5 points
                 else if desc_lower.contains(term) {

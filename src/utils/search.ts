@@ -7,9 +7,12 @@
  *
  * Search Rules:
  * - Minimum query length: 2 characters (configurable)
- * - Match fields: name, description, folderName
+ * - Match fields (frontend filter): name, description, folderName
+ * - Match fields (backend search): name, description, folderName, content (SKILL.md)
  * - Case insensitive
  * - Partial matching (substring)
+ *
+ * Note: Backend search also searches SKILL.md content, so may return more results.
  */
 
 /** Minimum characters required to perform search */
