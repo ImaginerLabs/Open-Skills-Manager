@@ -6,6 +6,7 @@ import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
 import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
 import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
 import { ideService, configService, libraryService } from '@/services';
+import { ALL_GROUP_ID } from '@/components/features/CategoryManager';
 import styles from './IDESwitcher.module.scss';
 
 // Default IDE configs
@@ -157,8 +158,11 @@ export function IDESwitcher(): React.ReactElement | null {
       const result = await ideService.setActive(ideId);
       if (result.success) {
         setActiveIDE(ideId);
-        // Navigate to library to avoid showing stale project data from previous IDE
+        // Navigate to library and reset sidebar to "All" — avoid showing stale
+        // project/group selections from the previous IDE
         navigate('/library');
+        useProjectStore.getState().selectProject(null);
+        useLibraryStore.getState().selectGroup(ALL_GROUP_ID);
         // Refresh all data after switching
         await refreshAllData(ideId);
       }
