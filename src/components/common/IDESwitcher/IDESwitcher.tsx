@@ -74,7 +74,8 @@ export function IDESwitcher(): React.ReactElement | null {
           const mergedConfigs = DEFAULT_IDE_CONFIGS.map((defaultIde) => {
             const existingConfig = config.ideConfigs.find((ide) => ide.id === defaultIde.id);
             if (existingConfig) {
-              return { ...existingConfig, isEnabled: defaultIde.isEnabled };
+              // Merge: defaultIde provides fallback for missing fields (like icon)
+              return { ...defaultIde, ...existingConfig, isEnabled: defaultIde.isEnabled };
             }
             return defaultIde;
           });
@@ -178,6 +179,7 @@ export function IDESwitcher(): React.ReactElement | null {
     const size = 14;
     switch (iconName) {
       case 'claude-code':
+      case 'claude':
         return <ClaudeCodeAvatar size={size} />;
       case 'opencode':
         return <OpenCodeAvatar size={size} />;
