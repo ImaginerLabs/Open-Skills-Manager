@@ -332,40 +332,19 @@ impl SearchIndex {
             return vec![];
         }
 
-        let query_terms = tokenize(&options.query);
-        if query_terms.is_empty() {
-            return vec![];
-        }
+        let query_lower = options.query.to_lowercase();
 
-        // Find matching documents using OR logic with scoring
-        // Each term contributes to a score, documents are ranked by total score
-        let mut doc_scores: HashMap<String, usize> = HashMap::new();
-
-        for term in &query_terms {
-            // Exact term match from index
-            if let Some(matches) = self.index.get(term) {
-                for (id, _scope) in matches {
-                    *doc_scores.entry(id.clone()).or_insert(0) += 10;
-                }
-            }
-
-            // Prefix matching for short queries (2-3 chars) - more lenient
-            if term.len() <= 3 {
-                for (index_term, matches) in &self.index {
-                    if index_term.starts_with(term) && index_term != term {
-                        for (id, _scope) in matches {
-                            *doc_scores.entry(id.clone()).or_insert(0) += 5;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Build results with filtering
-        let mut results: Vec<SearchResultWithSnippet> = doc_scores
-            .keys()
-            .filter_map(|id| self.documents.get(id))
+        // Find matching documents using substring matching (consistent with frontend filter)
+        let mut results: Vec<SearchResultWithSnippet> = self
+            .documents
+            .values()
             .filter(|doc| self.matches_filters(doc, options))
+            .filter(|doc| {
+                // Substring match in name, description, or folder_name
+                doc.name.to_lowercase().contains(&query_lower)
+                    || doc.description.to_lowercase().contains(&query_lower)
+                    || doc.folder_name.to_lowercase().contains(&query_lower)
+            })
             .map(|doc| {
                 let snippet = self.extract_snippet(&doc.content, &options.query);
                 SearchResultWithSnippet {
@@ -385,10 +364,8 @@ impl SearchIndex {
 
         // Sort by relevance score
         results.sort_by(|a, b| {
-            let score_a = doc_scores.get(&a.id).copied().unwrap_or(0)
-                + self.calculate_relevance_score(&a.id, &query_terms);
-            let score_b = doc_scores.get(&b.id).copied().unwrap_or(0)
-                + self.calculate_relevance_score(&b.id, &query_terms);
+            let score_a = self.calculate_relevance_score(&a.id, &query_lower);
+            let score_b = self.calculate_relevance_score(&b.id, &query_lower);
             score_b.cmp(&score_a)
         });
 
@@ -420,7 +397,7 @@ impl SearchIndex {
         true
     }
 
-    fn calculate_relevance_score(&self, skill_id: &str, query_terms: &[String]) -> usize {
+    fn calculate_relevance_score(&self, skill_id: &str, query_lower: &str) -> usize {
         let mut score = 0;
 
         // Get the document to check where matches occur
@@ -429,31 +406,29 @@ impl SearchIndex {
             let desc_lower = doc.description.to_lowercase();
             let folder_lower = doc.folder_name.to_lowercase();
 
-            for term in query_terms {
-                // Exact name match = 20 points
-                if name_lower == *term {
-                    score += 20;
-                }
-                // Word-boundary match in name = 15 points
-                else if name_lower.split_whitespace().any(|w| w == *term) {
-                    score += 15;
-                }
-                // Name starts with term (prefix match) = 12 points
-                else if name_lower.starts_with(term) {
-                    score += 12;
-                }
-                // Name contains term = 10 points
-                else if name_lower.contains(term) {
-                    score += 10;
-                }
-                // Folder name match = 8 points
-                else if folder_lower.contains(term) {
-                    score += 8;
-                }
-                // Description match = 5 points
-                else if desc_lower.contains(term) {
-                    score += 5;
-                }
+            // Exact name match = 20 points
+            if name_lower == query_lower {
+                score += 20;
+            }
+            // Word-boundary match in name = 15 points
+            else if name_lower.split_whitespace().any(|w| w == query_lower) {
+                score += 15;
+            }
+            // Name starts with query (prefix match) = 12 points
+            else if name_lower.starts_with(query_lower) {
+                score += 12;
+            }
+            // Name contains query = 10 points
+            else if name_lower.contains(query_lower) {
+                score += 10;
+            }
+            // Folder name match = 8 points
+            else if folder_lower.contains(query_lower) {
+                score += 8;
+            }
+            // Description match = 5 points
+            else if desc_lower.contains(query_lower) {
+                score += 5;
             }
         }
 
