@@ -274,6 +274,7 @@ export function Library(): React.ReactElement {
           emptyTitle="Your library is empty"
           emptyText="Import skills from folders or zip files to get started"
           hasSkills={hasSkills}
+          searchQuery={searchQuery}
         />
       </div>
 

@@ -51,6 +51,8 @@ export interface SkillListProps<T extends Skill> {
   emptyText: string;
   hasSkills: boolean;
   onSkillClick?: ((skill: T) => void) | undefined;
+  /** Search query for highlighting matches in skill cards */
+  searchQuery?: string | undefined;
 }
 
 export interface SkillListItemProps<T extends Skill> {
@@ -62,6 +64,8 @@ export interface SkillListItemProps<T extends Skill> {
   animationDelay?: number | undefined;
   viewMode?: ViewMode | undefined;
   onClick?: (() => void) | undefined;
+  /** Search query for highlighting matches in skill cards */
+  searchQuery?: string | undefined;
 }
 
 export interface SkillDetailPanelProps {

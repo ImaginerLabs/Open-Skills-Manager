@@ -20,6 +20,7 @@ export function SkillList<T extends Skill>({
   emptyText,
   hasSkills,
   onSkillClick,
+  searchQuery,
 }: SkillListProps<T>): React.ReactElement {
   const { viewMode } = useUIStore();
   const isEmpty = skills.length === 0 && !isLoading;
@@ -70,6 +71,7 @@ export function SkillList<T extends Skill>({
             animationDelay={delay}
             viewMode={viewMode}
             onClick={handleClick}
+            searchQuery={searchQuery}
           />
         );
       })}

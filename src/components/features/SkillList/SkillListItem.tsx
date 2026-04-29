@@ -12,6 +12,7 @@ export function SkillListItem<T extends Skill>({
   animationDelay = 0,
   viewMode = 'grid',
   onClick,
+  searchQuery,
 }: SkillListItemProps<T>): React.ReactElement {
   const handleClick = useCallback(() => {
     onClick?.();
@@ -39,6 +40,7 @@ export function SkillListItem<T extends Skill>({
         actions={actions}
         viewMode={viewMode}
         onClick={onClick}
+        searchQuery={searchQuery}
       />
     </div>
   );

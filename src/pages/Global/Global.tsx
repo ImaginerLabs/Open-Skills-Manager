@@ -300,6 +300,7 @@ export function Global(): React.ReactElement {
           emptyTitle="No global skills installed"
           emptyText="Global skills are stored in ~/.claude/skills/ and available across all projects"
           hasSkills={hasSkills}
+          searchQuery={searchQuery}
         />
       </div>
 
