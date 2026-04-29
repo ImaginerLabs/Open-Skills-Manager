@@ -58,7 +58,7 @@ export function SearchResultCard({
       icon: ArrowSquareOut,
       onClick: () => onDeploy(result),
     }] : []),
-    ...(onExport ? [{
+    ...(isLibrary && onExport ? [{
       id: 'export',
       label: 'Export',
       icon: Export,
@@ -69,6 +69,12 @@ export function SearchResultCard({
       label: 'Pull to Library',
       icon: ArrowDown,
       onClick: () => onPull(result),
+    }] : []),
+    ...(!isLibrary && onExport ? [{
+      id: 'export',
+      label: 'Export',
+      icon: Export,
+      onClick: () => onExport(result),
     }] : []),
     ...(onCopyPath ? [{
       id: 'copy-path',

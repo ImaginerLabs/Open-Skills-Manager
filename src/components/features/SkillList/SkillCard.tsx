@@ -72,24 +72,31 @@ export function SkillCard<T extends Skill>({
     setMenuPosition(null);
   }, []);
 
+  const isLibrary = scope === 'library';
   const menuItems: ContextMenuItem[] = [
-    ...(scope === 'library' && actions?.onDeploy ? [{
+    ...(isLibrary && actions?.onDeploy ? [{
       id: 'deploy',
       label: 'Deploy to...',
       icon: Rocket,
       onClick: () => actions.onDeploy!(skill),
     }] : []),
-    ...(actions?.onExport ? [{
+    ...(isLibrary && actions?.onExport ? [{
       id: 'export',
       label: 'Export',
       icon: Export,
       onClick: () => actions.onExport!(skill),
     }] : []),
-    ...((scope === 'global' || scope === 'project') && actions?.onPull ? [{
+    ...(!isLibrary && actions?.onPull ? [{
       id: 'pull',
       label: 'Pull to Library',
       icon: ArrowDown,
       onClick: () => actions.onPull!(skill.id),
+    }] : []),
+    ...(!isLibrary && actions?.onExport ? [{
+      id: 'export',
+      label: 'Export',
+      icon: Export,
+      onClick: () => actions.onExport!(skill),
     }] : []),
     ...(actions?.onCopyPath ? [{
       id: 'copy-path',
