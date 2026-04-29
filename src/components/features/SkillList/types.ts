@@ -32,6 +32,7 @@ export interface SkillCardActions<T extends Skill> {
   onExport?: (skillId: string) => void;
   onDeploy?: (skill: T) => void;
   onPull?: (skillId: string) => void;
+  onCopyPath?: (skillId: string) => void;
   onDragStart?: (skill: T) => void;
   onDragEnd?: (skill: T) => void;
 }

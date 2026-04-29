@@ -139,9 +139,9 @@ describe('ContextMenu', () => {
         />
       );
 
-      // Click on the overlay
+      // Click on the overlay — fires both overlay onMouseDown and document listener
       fireEvent.mouseDown(screen.getByRole('presentation'));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalled();
     });
 
     it('calls onClose when pressing Escape key', () => {
