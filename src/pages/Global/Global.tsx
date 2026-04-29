@@ -10,6 +10,7 @@ import { globalService } from '../../services/globalService';
 import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatDate } from '../../utils/formatters';
+import { filterByQuery, isValidQuery } from '../../utils/search';
 import styles from './Global.module.scss';
 
 export function Global(): React.ReactElement {
@@ -188,16 +189,10 @@ export function Global(): React.ReactElement {
     }
   }, [skills, showToast]);
 
-  // Filter skills by search query
+  // Filter skills by search query using unified search logic
   const filteredSkills = useMemo(() => {
-    if (!searchQuery) return sortedSkills;
-    const lowerQuery = searchQuery.toLowerCase();
-    return sortedSkills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(lowerQuery) ||
-        skill.description.toLowerCase().includes(lowerQuery) ||
-        skill.folderName.toLowerCase().includes(lowerQuery)
-    );
+    if (!searchQuery || !isValidQuery(searchQuery)) return sortedSkills;
+    return filterByQuery(sortedSkills, searchQuery);
   }, [sortedSkills, searchQuery]);
 
   const hasSkills = skills.length > 0;

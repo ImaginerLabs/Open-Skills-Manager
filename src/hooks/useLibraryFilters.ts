@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { LibrarySkill } from '../stores/libraryStore';
 import { ALL_GROUP_ID } from '../components/features/CategoryManager/CategoryManager';
+import { filterByQuery, isValidQuery } from '../utils/search';
 
 type SortOption = 'name' | 'date' | 'size';
 type SortDirection = 'asc' | 'desc';
@@ -32,13 +33,9 @@ export function useLibraryFilters(
     }
     let result = [...skills];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (skill) =>
-          skill.name.toLowerCase().includes(query) ||
-          skill.description.toLowerCase().includes(query)
-      );
+    // Filter by search query using unified search logic
+    if (searchQuery && isValidQuery(searchQuery)) {
+      result = filterByQuery(result, searchQuery);
     }
 
     // Filter by group, but skip filtering for "All" group
