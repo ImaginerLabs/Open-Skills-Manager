@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout/MainLayout';
 import { Library } from '../pages/Library/Library';
@@ -6,6 +7,7 @@ import { Settings } from '../pages/Settings/Settings';
 import { ProjectSkillsView } from '../components/features/ProjectSkillsView';
 import { ToastContainer, ConfirmDialog } from '../components/ui';
 import { useThemeEffect } from '../hooks/useThemeEffect';
+import { useSettingsStore } from '../stores/settingsStore';
 
 // Placeholder pages - will be implemented in later epics
 function SkillDetailPage(): React.ReactElement {
@@ -19,6 +21,12 @@ function ProjectsPage(): React.ReactElement {
 function RootLayout(): React.ReactElement {
   // Apply theme based on settings
   useThemeEffect();
+
+  // Initialize settings from backend on first load
+  useEffect(() => {
+    const { initializeFromBackend } = useSettingsStore.getState();
+    initializeFromBackend();
+  }, []);
 
   return (
     <>

@@ -66,7 +66,7 @@ export function PullToLibraryDialog({
           Pull <strong>{skill.name}</strong> from Global Skills to your Library?
         </p>
         <p className={styles.pullHint}>
-          This will copy the skill to your iCloud-synced Library folder.
+          This will copy the skill to your Library folder.
         </p>
       </div>
       <div className={styles.pullActions}>

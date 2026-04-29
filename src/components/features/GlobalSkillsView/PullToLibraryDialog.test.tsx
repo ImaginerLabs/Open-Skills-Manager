@@ -59,7 +59,7 @@ describe('PullToLibraryDialog', () => {
 
     expect(screen.getByRole('heading', { name: 'Pull to Library' })).toBeInTheDocument();
     expect(screen.getByText('Test Skill')).toBeInTheDocument();
-    expect(screen.getByText(/iCloud-synced Library folder/)).toBeInTheDocument();
+    expect(screen.getByText(/Library folder/)).toBeInTheDocument();
   });
 
   it('calls onClose when Cancel is clicked', () => {

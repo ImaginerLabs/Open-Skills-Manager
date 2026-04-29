@@ -769,8 +769,26 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 
         IpcResult::success(dest)
     } else {
-        // Folder format - return the path to the skill folder
-        IpcResult::success(skill_path.to_string_lossy().to_string())
+        // Folder format - copy skill folder to destination
+        let dest = match dest_path {
+            Some(p) => p,
+            None => return IpcResult::error(
+                "E002",
+                "Destination path required for folder export"
+            ),
+        };
+
+        let dest_buf = PathBuf::from(&dest);
+
+        // Copy skill folder to destination
+        if let Err(e) = copy_dir_all(&skill_path, &dest_buf) {
+            return IpcResult::error(
+                AppError::E105CopyFailed(format!("Skill folder: {}", e)).code(),
+                &format!("Failed to copy skill folder: {}", e)
+            );
+        }
+
+        IpcResult::success(dest)
     }
 }
 

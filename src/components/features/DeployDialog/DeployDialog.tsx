@@ -62,7 +62,7 @@ export function DeployDialog({
         };
       } else {
         const project = selectedTarget.project;
-        result = await deployService.toProject(skill.id, project.id);
+        result = await deployService.toProject(skill.id, project.path);
         deployment = {
           id: crypto.randomUUID(),
           skillId: skill.id,

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileZip, FolderSimple, Export } from '@phosphor-icons/react';
 import { Modal, Button, ModalFooter } from '../../ui';
 import type { LibrarySkill } from '../../../stores/libraryStore';
@@ -25,6 +25,13 @@ export function ExportDialog({
 }: ExportDialogProps): React.ReactElement {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('zip');
   const [isExporting, setIsExporting] = useState(false);
+
+  // Reset isExporting when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsExporting(false);
+    }
+  }, [isOpen]);
 
   const skillCount = skills.length;
   const isMultiExport = skillCount > 1;

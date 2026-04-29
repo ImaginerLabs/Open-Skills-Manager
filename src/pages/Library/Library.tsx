@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
+import { useUIStore } from '../../stores/uiStore';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog } from '../../components/features/ExportDialog';
@@ -34,6 +35,12 @@ export function Library(): React.ReactElement {
     setLoading,
     setError,
   } = useLibraryStore();
+
+  const {
+    showToast,
+    showConfirmDialog,
+    closeConfirmDialog,
+  } = useUIStore();
 
   const {
     showImportDialog,
@@ -114,16 +121,40 @@ export function Library(): React.ReactElement {
 
   const handleDeleteSkill = useCallback(
     async (skillId: string) => {
-      try {
-        const result = await libraryService.delete(skillId);
-        if (result.success) {
-          removeSkill(skillId);
-        }
-      } catch {
-        setError('Failed to delete skill');
-      }
+      const skill = skills.find((s) => s.id === skillId);
+      showConfirmDialog({
+        title: 'Delete Library Skill',
+        message: `Are you sure you want to delete "${skill?.name ?? 'this skill'}"? This will remove the skill from your library. This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        onConfirm: async () => {
+          closeConfirmDialog();
+          setLoading(true);
+          try {
+            const result = await libraryService.delete(skillId);
+            if (result.success) {
+              removeSkill(skillId);
+              // Deselect if the deleted skill was selected
+              if (selectedSkill?.id === skillId) {
+                selectSkill(null);
+                setSkillMdContent('');
+              }
+              showToast('success', 'Skill deleted from library');
+            } else {
+              setError(result.error.message);
+              showToast('error', `Failed to delete: ${result.error.message}`);
+            }
+          } catch (e) {
+            const message = e instanceof Error ? e.message : 'Unknown error';
+            setError(message);
+            showToast('error', `Failed to delete: ${message}`);
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
     },
-    [removeSkill, setError]
+    [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
   );
 
   const handleExportSkill = useCallback((skillId: string) => {

@@ -63,7 +63,9 @@ export function useIcloudSync(): UseIcloudSyncResult {
       setSyncState(state);
       setSyncStatusInfo(statusInfo);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      setError(errorMessage);
+      throw e; // Re-throw to allow caller to handle
     } finally {
       setIsLoading(false);
     }

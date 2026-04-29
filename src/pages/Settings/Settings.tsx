@@ -6,6 +6,11 @@ import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
+// Stores imported for getState() access during factory reset
+import { useLibraryStore } from '../../stores/libraryStore';
+import { useGlobalStore } from '../../stores/globalStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useIDEStore } from '../../stores/ideStore';
 import styles from './Settings.module.scss';
 
 function formatBytes(bytes: number): string {
@@ -41,11 +46,13 @@ export function Settings(): React.ReactElement {
   }, []);
 
   const handleForceSync = useCallback(async () => {
-    await forceSync();
-    if (!error) {
-      showToast('success', 'Sync initiated');
+    try {
+      await forceSync();
+      showToast('success', 'Sync completed successfully');
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Sync failed');
     }
-  }, [forceSync, error, showToast]);
+  }, [forceSync, showToast]);
 
   const handleViewInFinder = useCallback(async () => {
     if (!containerPath) {
@@ -82,10 +89,26 @@ export function Settings(): React.ReactElement {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
+          // Reset backend storage (config, library, sync state, iCloud data)
           await storageService.resetToDefaults();
-          // Reset local store state
+
+          // Reset all frontend stores
           setTheme('system');
           setLanguage('auto');
+
+          // Clear library store (skills and groups)
+          useLibraryStore.getState().setSkills([]);
+          useLibraryStore.getState().setGroups([]);
+
+          // Clear global store
+          useGlobalStore.getState().setSkills([]);
+
+          // Clear project store
+          useProjectStore.getState().setProjects([]);
+
+          // Reset IDE store to defaults
+          useIDEStore.getState().reset();
+
           showToast('success', 'All data has been reset to factory defaults');
         } catch (e) {
           showToast('error', e instanceof Error ? e.message : 'Failed to reset settings');
