@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FolderOpen, Gear, PaintBrush, Translate, Warning } from '@phosphor-icons/react';
+import { FolderOpen, Gear, PaintBrush, Warning } from '@phosphor-icons/react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
 import { configService, storageService } from '../../services/configService';
@@ -25,7 +25,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function Settings(): React.ReactElement {
-  const { theme, language, setTheme, setLanguage } = useSettingsStore();
+  const { theme, setTheme, setLanguage } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const [appVersion, setAppVersion] = useState<string>('');
   const [appName, setAppName] = useState<string>('');
@@ -147,31 +147,6 @@ export function Settings(): React.ReactElement {
                 <option value="system">System</option>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <header className={styles.sectionHeader}>
-            <Translate size={18} className={styles.sectionIcon} />
-            <h2 className={styles.sectionTitle}>Language</h2>
-          </header>
-
-          <div className={styles.settingRow}>
-            <div className={styles.settingLabel}>
-              <span className={styles.settingName}>Interface Language</span>
-              <span className={styles.settingDescription}>Select the display language</span>
-            </div>
-            <div className={styles.settingValue}>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as 'auto' | 'en' | 'zh-CN')}
-                className={styles.select}
-              >
-                <option value="auto">Auto</option>
-                <option value="en">English</option>
-                <option value="zh-CN">中文 (简体)</option>
               </select>
             </div>
           </div>
