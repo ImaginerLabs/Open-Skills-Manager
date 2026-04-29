@@ -33,6 +33,8 @@ export function SkillListHeader({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className={styles.searchInput}
+            spellCheck={false}
+            autoComplete="off"
           />
         </div>
         {showViewToggle && (

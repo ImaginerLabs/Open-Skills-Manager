@@ -37,6 +37,8 @@ export function SearchInput({
         placeholder={placeholder}
         className={styles.searchInput}
         aria-label="Search skills"
+        spellCheck={false}
+        autoComplete="off"
       />
       {isLoading && <Spinner size={16} className={styles.loadingIcon} />}
       {value && !isLoading && (

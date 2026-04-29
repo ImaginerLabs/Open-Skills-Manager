@@ -133,6 +133,8 @@ export function DeployDialog({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
+                spellCheck={false}
+                autoComplete="off"
               />
             </div>
           )}

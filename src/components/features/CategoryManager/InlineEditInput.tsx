@@ -41,6 +41,8 @@ export function InlineEditInput({
       onClick={onClick}
       placeholder={placeholder}
       autoFocus={autoFocus}
+      spellCheck={false}
+      autoComplete="off"
     />
   );
 }

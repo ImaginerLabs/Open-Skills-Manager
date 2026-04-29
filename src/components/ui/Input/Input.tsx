@@ -34,7 +34,7 @@ export function Input({
       {label && <label className={styles.label}>{label}</label>}
       <div className={styles.iconWrapper}>
         {icon && <span className={styles.icon}>{icon}</span>}
-        <input className={inputClassNames} {...props} />
+        <input className={inputClassNames} spellCheck={false} autoComplete="off" {...props} />
       </div>
       {errorMessage && <span className={styles.errorMessage}>{errorMessage}</span>}
     </div>
