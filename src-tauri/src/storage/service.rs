@@ -157,22 +157,34 @@ impl StorageService {
 
     /// Ensure default config and library files exist
     fn ensure_default_files(&self) -> Result<(), String> {
-        // Create default config.json if not exists
-        if !self.config_path.exists() {
+        // Create default config.json if not exists or is empty/corrupted
+        let needs_config = !self.config_path.exists() || {
+            let content = fs::read_to_string(&self.config_path).unwrap_or_default();
+            content.trim().is_empty() || serde_json::from_str::<AppConfig>(&content).is_err()
+        };
+        if needs_config {
             let default_config = AppConfig::default();
             self.write_config_file_atomic(&default_config)?;
             println!("Created default config.json");
         }
 
-        // Create default library.json if not exists
-        if !self.library_path.exists() {
+        // Create default library.json if not exists or is empty/corrupted
+        let needs_library = !self.library_path.exists() || {
+            let content = fs::read_to_string(&self.library_path).unwrap_or_default();
+            content.trim().is_empty() || serde_json::from_str::<LibraryData>(&content).is_err()
+        };
+        if needs_library {
             let default_library = LibraryData::default();
             self.write_library_file_atomic(&default_library)?;
             println!("Created default library.json");
         }
 
-        // Create default sync.json if not exists
-        if !self.sync_path.exists() {
+        // Create default sync.json if not exists or is empty/corrupted
+        let needs_sync = !self.sync_path.exists() || {
+            let content = fs::read_to_string(&self.sync_path).unwrap_or_default();
+            content.trim().is_empty() || serde_json::from_str::<SyncState>(&content).is_err()
+        };
+        if needs_sync {
             let default_sync = SyncState::default();
             self.write_sync_file_atomic(&default_sync)?;
             println!("Created default sync.json");
