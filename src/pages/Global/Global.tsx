@@ -161,6 +161,18 @@ export function Global(): React.ReactElement {
     setPullSkill(null);
   }, []);
 
+  const handleCopyPath = useCallback(async (skillId: string) => {
+    const skill = skills.find((s) => s.id === skillId);
+    if (skill) {
+      try {
+        await navigator.clipboard.writeText(skill.path);
+        showToast('success', `Copied path: ${skill.path}`);
+      } catch {
+        showToast('error', 'Failed to copy path');
+      }
+    }
+  }, [skills, showToast]);
+
   // Filter skills by search query
   const filteredSkills = useMemo(() => {
     if (!searchQuery) return sortedSkills;
@@ -181,6 +193,7 @@ export function Global(): React.ReactElement {
       const skill = skills.find((s) => s.id === skillId);
       if (skill) handlePullToLibrary(skill);
     },
+    onCopyPath: handleCopyPath,
   };
 
   // Render refresh button with tooltip

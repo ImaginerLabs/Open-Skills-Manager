@@ -6,6 +6,8 @@ import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
+import { PullToLibraryDialog } from '../GlobalSkillsView/PullToLibraryDialog';
+import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './ProjectSkillsView.module.scss';
@@ -19,6 +21,8 @@ export function ProjectSkillsView(): React.ReactElement {
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
+  const [showPullDialog, setShowPullDialog] = useState(false);
+  const [pullSkill, setPullSkill] = useState<ProjectSkill | null>(null);
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
 
   const { isRefreshing, lastRefreshAt, refreshError, refresh } = useProjectRefresh(
@@ -26,7 +30,8 @@ export function ProjectSkillsView(): React.ReactElement {
     { autoRefresh: true }
   );
 
-  const { loadSkills, getSkill, deleteSkill, pullSkill } = useProjectSkills();
+  const { loadSkills, getSkill, deleteSkill } = useProjectSkills();
+  const { showToast } = useUIStore();
 
   // Get project info
   const project = useMemo(() => {
@@ -104,13 +109,32 @@ export function ProjectSkillsView(): React.ReactElement {
   );
 
   const handlePullSkill = useCallback(
-    async (skillId: string) => {
-      if (projectId) {
-        await pullSkill(projectId, skillId);
+    (skillId: string) => {
+      const skill = skills.find((s) => s.id === skillId);
+      if (skill) {
+        setPullSkill(skill);
+        setShowPullDialog(true);
       }
     },
-    [projectId, pullSkill]
+    [skills]
   );
+
+  const handlePullComplete = useCallback(() => {
+    setShowPullDialog(false);
+    setPullSkill(null);
+  }, []);
+
+  const handleCopyPath = useCallback(async (skillId: string) => {
+    const skill = skills.find((s) => s.id === skillId);
+    if (skill) {
+      try {
+        await navigator.clipboard.writeText(skill.path);
+        showToast('success', `Copied path: ${skill.path}`);
+      } catch {
+        showToast('error', 'Failed to copy path');
+      }
+    }
+  }, [skills, showToast]);
 
   const handleRefresh = useCallback(() => {
     if (projectId) {
@@ -135,6 +159,7 @@ export function ProjectSkillsView(): React.ReactElement {
   const cardActions = {
     onDelete: handleDeleteSkill,
     onPull: handlePullSkill,
+    onCopyPath: handleCopyPath,
   };
 
   if (!project) {
@@ -233,6 +258,14 @@ export function ProjectSkillsView(): React.ReactElement {
         skillMdContent={skillMdContent}
         onDelete={handleDeleteSkill}
         onPull={handlePullSkill}
+      />
+
+      <PullToLibraryDialog
+        isOpen={showPullDialog}
+        skill={pullSkill}
+        onClose={handlePullComplete}
+        onComplete={handlePullComplete}
+        projectId={projectId}
       />
     </SkillListLayout>
   );

@@ -179,6 +179,18 @@ export function Library(): React.ReactElement {
     setDeploySkill(null);
   }, [setDeployDialog]);
 
+  const handleCopyPath = useCallback(async (skillId: string) => {
+    const skill = skills.find((s) => s.id === skillId);
+    if (skill) {
+      try {
+        await navigator.clipboard.writeText(skill.path);
+        showToast('success', `Copied path: ${skill.path}`);
+      } catch {
+        showToast('error', 'Failed to copy path');
+      }
+    }
+  }, [skills, showToast]);
+
   const handleCloseDetail = useCallback(() => {
     selectSkill(null);
     setSkillMdContent('');
@@ -210,6 +222,7 @@ export function Library(): React.ReactElement {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
+    onCopyPath: handleCopyPath,
   };
 
   const hasSkills = skills.length > 0;

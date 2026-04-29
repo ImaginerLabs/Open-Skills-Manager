@@ -12,17 +12,19 @@ import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { SearchOverlay } from '../../features/SearchOverlay';
+import { DeployDialog } from '../../features/DeployDialog';
+import { ExportDialog } from '../../features/ExportDialog';
+import { PullToLibraryDialog } from '../../features/GlobalSkillsView/PullToLibraryDialog';
 import type { SearchResult } from '../../../stores/uiStore';
-import { useLibraryStore } from '../../../stores/libraryStore';
+import { useLibraryStore, type LibrarySkill, type Deployment } from '../../../stores/libraryStore';
 import { useProjectStore } from '../../../stores/projectStore';
-import { useGlobalStore } from '../../../stores/globalStore';
+import { useGlobalStore, type GlobalSkill } from '../../../stores/globalStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
-import { deployService } from '../../../services/deployService';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
 
@@ -52,6 +54,15 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
   const { openSearch } = useSearchKeyboard();
+
+  // Dialog state for search actions
+  const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
+  const [showDeployDialog, setShowDeployDialog] = useState(false);
+  const [exportSkills, setExportSkills] = useState<LibrarySkill[]>([]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
+  const [pullSkillProjectId, setPullSkillProjectId] = useState<string | undefined>(undefined);
+  const [showPullDialog, setShowPullDialog] = useState(false);
 
   // Set default selection to "All" group on initial mount if on library page
   useEffect(() => {
@@ -265,24 +276,51 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   // Search result actions
   const handleSearchDeploy = useCallback(
     async (result: SearchResult) => {
-      if (result.scope === 'library') {
-        const deployResult = await deployService.toGlobal(result.id);
-        if (deployResult.success) {
-          showToast('success', `Deployed ${result.name} to Global Skills`);
-        } else {
-          showToast('error', deployResult.error.message);
-        }
+      if (result.scope !== 'library') return;
+      const res = await libraryService.get(result.id);
+      if (res.success && res.data) {
+        setDeploySkill(res.data);
+        setShowDeployDialog(true);
+      } else {
+        showToast('error', 'Failed to load skill data');
       }
     },
     [showToast]
   );
 
+  const handleDeployConfirm = useCallback(
+    (_skillId: string, _deployment: Deployment) => {
+      // Deployment is handled inside DeployDialog
+    },
+    []
+  );
+
+  const handleDeployClose = useCallback(() => {
+    setShowDeployDialog(false);
+    setDeploySkill(null);
+  }, []);
+
   const handleSearchExport = useCallback(
     async (result: SearchResult) => {
-      if (result.scope === 'library') {
-        const exportResult = await libraryService.export(result.id, 'zip', result.name);
+      if (result.scope !== 'library') return;
+      const res = await libraryService.get(result.id);
+      if (res.success && res.data) {
+        setExportSkills([res.data]);
+        setShowExportDialog(true);
+      } else {
+        showToast('error', 'Failed to load skill data');
+      }
+    },
+    [showToast]
+  );
+
+  const handleExportStart = useCallback(
+    async (format: 'zip' | 'folder', skillsToExport: LibrarySkill[]) => {
+      setShowExportDialog(false);
+      for (const skill of skillsToExport) {
+        const exportResult = await libraryService.export(skill.id, format, skill.name);
         if (exportResult?.success) {
-          showToast('success', `Exported ${result.name}`);
+          showToast('success', `Exported ${skill.name}`);
         } else if (exportResult?.error) {
           showToast('error', exportResult.error.message);
         }
@@ -291,11 +329,61 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     [showToast]
   );
 
+  const handleExportClose = useCallback(() => {
+    setShowExportDialog(false);
+    setExportSkills([]);
+  }, []);
+
+  const handleSearchPull = useCallback(
+    async (result: SearchResult) => {
+      if (result.scope === 'global') {
+        const realId = result.id.startsWith('global-')
+          ? result.id.slice('global-'.length)
+          : result.id;
+        const res = await globalService.get(realId);
+        if (res.success && res.data) {
+          setPullSkill(res.data);
+          setPullSkillProjectId(undefined);
+          setShowPullDialog(true);
+        } else {
+          showToast('error', 'Failed to load skill data');
+        }
+      } else if (result.scope === 'project' && result.projectId) {
+        const realId = result.id.startsWith(`pskill-${result.projectId}-`)
+          ? result.id.slice(`pskill-${result.projectId}-`.length)
+          : result.id;
+        try {
+          const { projectService } = await import('../../../services/projectService');
+          const res = await projectService.getSkill(result.projectId, realId);
+          if (res.success && res.data) {
+            setPullSkill(res.data as unknown as GlobalSkill);
+            setPullSkillProjectId(result.projectId);
+            setShowPullDialog(true);
+          } else {
+            showToast('error', 'Failed to load skill data');
+          }
+        } catch {
+          showToast('error', 'Failed to load skill data');
+        }
+      }
+    },
+    [showToast]
+  );
+
+  const handlePullComplete = useCallback(() => {
+    setShowPullDialog(false);
+    setPullSkill(null);
+    setPullSkillProjectId(undefined);
+  }, []);
+
   const handleSearchCopyPath = useCallback(
     async (result: SearchResult) => {
-      // This would need a backend command to get the skill path
-      // For now, show a toast with the skill ID
-      showToast('info', `Skill ID: ${result.id}`);
+      try {
+        await navigator.clipboard.writeText(result.path);
+        showToast('success', `Copied path: ${result.path}`);
+      } catch {
+        showToast('error', 'Failed to copy path');
+      }
     },
     [showToast]
   );
@@ -313,7 +401,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             const deleteResult = await libraryService.delete(result.id);
             if (deleteResult.success) {
               showToast('success', `Deleted ${result.name}`);
-              // Refresh the skills list
               const listResult = await libraryService.list();
               if (listResult.success) {
                 setSkills(listResult.data);
@@ -399,6 +486,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                         <div className={styles.scopeItem}>
                           <NavLink
                             to="/global"
+                            draggable={false}
                             onClick={handleSelectGlobalSkills}
                             className={({ isActive }) =>
                               [styles.scopeItemLink, isActive && styles.active].filter(Boolean).join(' ')
@@ -459,8 +547,31 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       <SearchOverlay
         onDeploy={handleSearchDeploy}
         onExport={handleSearchExport}
+        onPull={handleSearchPull}
         onCopyPath={handleSearchCopyPath}
         onDelete={handleSearchDelete}
+      />
+
+      <DeployDialog
+        open={showDeployDialog}
+        skill={deploySkill}
+        onClose={handleDeployClose}
+        onDeploy={handleDeployConfirm}
+      />
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        skills={exportSkills}
+        onClose={handleExportClose}
+        onExportStart={handleExportStart}
+      />
+
+      <PullToLibraryDialog
+        isOpen={showPullDialog}
+        skill={pullSkill}
+        onClose={handlePullComplete}
+        onComplete={handlePullComplete}
+        projectId={pullSkillProjectId}
       />
     </div>
   );
