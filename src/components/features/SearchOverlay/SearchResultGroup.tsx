@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { SquaresFour, Globe, Folder, CaretDown } from '@phosphor-icons/react';
 import type { SearchResult } from '../../../stores/uiStore';
 import { SearchResultCard } from './SearchResultCard';
@@ -47,26 +46,6 @@ export function SearchResultGroup({
   onCopyPath,
   onDelete,
 }: SearchResultGroupProps): React.ReactElement {
-  const [visibleCount, setVisibleCount] = useState(0);
-
-  useEffect(() => {
-    if (!isCollapsed) {
-      setVisibleCount(0);
-      const timer = setInterval(() => {
-        setVisibleCount((prev) => {
-          if (prev >= results.length) {
-            clearInterval(timer);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 30);
-
-      return () => clearInterval(timer);
-    }
-    return undefined;
-  }, [isCollapsed, results.length]);
-
   const ScopeIcon = SCOPE_ICONS[scope];
   const count = results.length;
 
@@ -89,7 +68,7 @@ export function SearchResultGroup({
 
       {!isCollapsed && (
         <div className={styles.groupResults}>
-          {results.slice(0, visibleCount).map((result, index) => (
+          {results.map((result, index) => (
             <div
               key={result.id}
               className={styles.resultItem}

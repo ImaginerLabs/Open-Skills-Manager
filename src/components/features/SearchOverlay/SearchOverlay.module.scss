@@ -11,7 +11,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: var(--space-8) var(--space-4);
+  padding: var(--space-12) var(--space-4);
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -23,14 +23,15 @@
   flex-direction: column;
   width: 100%;
   max-width: 800px;
-  max-height: calc(100vh - var(--space-8) * 2);
+  max-height: calc(100vh - var(--space-12) * 2);
   background: rgba(28, 28, 30, 0.92);
-  backdrop-filter: blur(32px) saturate(220%);
-  -webkit-backdrop-filter: blur(32px) saturate(220%);
+  backdrop-filter: blur(16px) saturate(200%);
+  -webkit-backdrop-filter: blur(16px) saturate(200%);
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   animation: slideIn var(--duration-slow) var(--ease-out-expo);
+  will-change: transform, opacity;
 
   .light & {
     background: rgba(255, 255, 255, 0.92);
@@ -43,7 +44,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -294,7 +295,7 @@
 // =============================================================================
 
 .resultGroup {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .groupHeader {
@@ -302,7 +303,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-3);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -310,7 +311,7 @@
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: background var(--duration-fast) ease;
   text-align: left;
 
   &:hover {
@@ -352,11 +353,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-left: var(--space-4);
+  padding-left: var(--space-5);
+  padding-top: var(--space-2);
 }
 
 .resultItem {
-  animation: staggerIn var(--duration-normal) var(--ease-out-expo) backwards;
+  animation: staggerIn var(--duration-normal) var(--ease-out-expo) both;
+  will-change: transform, opacity;
 }
 
 // =============================================================================
@@ -364,17 +367,17 @@
 // =============================================================================
 
 .resultCard {
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: rgba(44, 44, 46, 0.85);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out-expo);
+  transition: transform var(--duration-fast) var(--ease-out-expo),
+              border-color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     border-color: var(--color-border-hover);
     box-shadow: var(--shadow-md);
   }
@@ -459,10 +462,10 @@
 .resultsContainer {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
 
   &::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
 
   &::-webkit-scrollbar-track {
@@ -474,7 +477,7 @@
     border-radius: var(--radius-full);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.2);
     }
   }
 }
@@ -490,8 +493,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-8);
+  gap: var(--space-4);
+  padding: var(--space-16) var(--space-4);
   color: var(--color-text-tertiary);
   text-align: center;
 
@@ -509,7 +512,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border);
 }
 
