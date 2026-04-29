@@ -17,6 +17,7 @@ export interface SearchResult {
   name: string;
   description: string;
   scope: 'library' | 'global' | 'project';
+  path: string;
   matchedSnippet?: string;
   projectId?: string;
   categoryId?: string;

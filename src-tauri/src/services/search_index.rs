@@ -34,6 +34,7 @@ pub struct SearchResult {
     pub name: String,
     pub description: String,
     pub scope: String,
+    pub path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -48,6 +49,7 @@ pub struct SearchResultWithSnippet {
     pub name: String,
     pub description: String,
     pub scope: String,
+    pub path: String,
     pub matched_snippet: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
@@ -70,6 +72,7 @@ struct SearchableDocument {
     description: String,
     content: String,
     scope: String,
+    path: String,
     project_id: Option<String>,
     category_id: Option<String>,
 }
@@ -253,6 +256,7 @@ impl SearchIndex {
             description,
             content,
             scope: scope.to_string(),
+            path: path.to_string_lossy().to_string(),
             project_id,
             category_id,
         })
@@ -286,6 +290,7 @@ impl SearchIndex {
                 name: r.name,
                 description: r.description,
                 scope: r.scope,
+                path: r.path,
                 project_id: r.project_id,
                 category_id: r.category_id,
             })
@@ -326,6 +331,7 @@ impl SearchIndex {
                     name: doc.name.clone(),
                     description: doc.description.clone(),
                     scope: doc.scope.clone(),
+                    path: doc.path.clone(),
                     matched_snippet: snippet,
                     project_id: doc.project_id.clone(),
                     category_id: doc.category_id.clone(),
