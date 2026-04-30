@@ -56,6 +56,7 @@ interface ProjectActions {
   setRefreshError: (error: string | null) => void;
   setError: (error: string | null) => void;
   clearProjectSkills: (projectId: string) => void;
+  reset: () => void;
 }
 
 export type ProjectStore = ProjectState & ProjectActions;
@@ -112,6 +113,18 @@ export const useProjectStore = create<ProjectStore>()(
             newMap.delete(projectId);
             return { projectSkills: newMap };
           }),
+
+        reset: () => set({
+          projects: [],
+          selectedProject: null,
+          projectSkills: new Map(),
+          isLoading: false,
+          isRefreshing: false,
+          refreshingProjectId: null,
+          lastRefreshAt: new Map(),
+          refreshError: null,
+          error: null,
+        }),
       }),
       {
         name: 'project-store',

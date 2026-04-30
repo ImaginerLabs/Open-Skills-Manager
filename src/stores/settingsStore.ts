@@ -21,6 +21,7 @@ interface SettingsActions {
   setAutoRefreshInterval: (interval: number) => void;
   setDefaultImportCategory: (categoryId: string | undefined) => void;
   initializeFromBackend: () => Promise<void>;
+  reset: () => void;
 }
 
 export type SettingsStore = SettingsState & SettingsActions;
@@ -150,6 +151,15 @@ export const useSettingsStore = create<SettingsStore>()(
             console.error('Failed to initialize settings from backend:', error);
           }
         },
+
+        reset: () => set({
+          theme: 'system',
+          language: 'auto',
+          autoUpdateCheck: true,
+          autoRefreshInterval: 5,
+          defaultImportCategory: undefined,
+          _initialized: false,
+        }),
       }),
       {
         name: 'settings-store',

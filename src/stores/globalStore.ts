@@ -36,6 +36,7 @@ interface GlobalActions {
   setLoading: (loading: boolean) => void;
   setRefreshing: (refreshing: boolean) => void;
   setError: (error: string | null) => void;
+  reset: () => void;
 }
 
 export type GlobalStore = GlobalState & GlobalActions;
@@ -59,6 +60,14 @@ export const useGlobalStore = create<GlobalStore>()(
       setLoading: (isLoading) => set({ isLoading }),
       setRefreshing: (isRefreshing) => set({ isRefreshing }),
       setError: (error) => set({ error }),
+
+      reset: () => set({
+        skills: [],
+        selectedSkill: null,
+        isLoading: false,
+        isRefreshing: false,
+        error: null,
+      }),
     }),
     { name: 'global-store' }
   )

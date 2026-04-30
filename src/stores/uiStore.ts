@@ -89,6 +89,7 @@ interface UIActions {
   }) => void;
   closeConfirmDialog: () => void;
   searchActions: SearchUIActions;
+  reset: () => void;
 }
 
 export type UIStore = UIState & UIActions;
@@ -170,6 +171,15 @@ export const useUIStore = create<UIStore>()(
           })),
           resetSearch: () => set({ search: initialSearchState }),
         },
+
+        reset: () => set({
+          sidebarState: 'expanded',
+          activeView: 'library',
+          viewMode: 'list',
+          toasts: [],
+          confirmDialog: null,
+          search: initialSearchState,
+        }),
       }),
       {
         name: 'ui-storage',
