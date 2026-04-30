@@ -1,8 +1,8 @@
-use super::library::{IpcResult, parse_skill_md, count_skill_md_stats};
+use super::library::IpcResult;
 use super::AppError;
 use crate::storage::service::get_storage;
 use crate::storage::Project;
-use crate::utils::fs::{count_files, has_resources};
+use crate::services::skill::{SkillService, ScanOptions};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -113,60 +113,30 @@ fn count_skills_in_project(project_path: &PathBuf) -> u32 {
 fn scan_project_skills(project_id: &str, project_path: &PathBuf) -> Vec<ProjectSkill> {
     let scope_name = get_active_ide_project_scope_name();
     let skills_dir = project_path.join(&scope_name).join("skills");
-    let mut skills = Vec::new();
 
     if !skills_dir.exists() {
-        return skills;
+        return Vec::new();
     }
 
-    if let Ok(entries) = fs::read_dir(&skills_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let folder_name = path.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
+    let scanned = SkillService::scan_skills_dir(&skills_dir, ScanOptions::default());
 
-                    let metadata = parse_skill_md(&skill_md);
-                    let (size, file_count) = count_files(&path);
-                    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
-
-                    // Get folder modification time as installed_at
-                    let installed_at = fs::metadata(&path)
-                        .ok()
-                        .and_then(|m| m.modified().ok())
-                        .map(|t| {
-                            let datetime: chrono::DateTime<chrono::Utc> = t.into();
-                            datetime.to_rfc3339()
-                        })
-                        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-
-                    let skill = ProjectSkill {
-                        id: folder_name.clone(),
-                        name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
-                        folder_name,
-                        version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
-                        description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
-                        path: path.to_string_lossy().to_string(),
-                        skill_md_path: skill_md.to_string_lossy().to_string(),
-                        skill_md_content: None,
-                        skill_md_lines,
-                        skill_md_chars,
-                        size,
-                        file_count,
-                        has_resources: has_resources(&path),
-                        project_id: project_id.to_string(),
-                        installed_at,
-                    };
-                    skills.push(skill);
-                }
-            }
-        }
-    }
-
-    skills
+    scanned.into_iter().map(|s| ProjectSkill {
+        id: s.id,
+        name: s.name,
+        folder_name: s.folder_name,
+        version: s.version,
+        description: s.description,
+        path: s.path,
+        skill_md_path: s.skill_md_path,
+        skill_md_content: None,
+        skill_md_lines: s.skill_md_lines,
+        skill_md_chars: s.skill_md_chars,
+        size: s.size,
+        file_count: s.file_count,
+        has_resources: s.has_resources,
+        project_id: project_id.to_string(),
+        installed_at: s.installed_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+    }).collect()
 }
 
 // ============================================================================
@@ -428,49 +398,35 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let folder_name = path.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
+                let folder_name = path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
 
-                    // Match by folder name or path containing skill_id
-                    let is_match = folder_name == skill_id || path.to_string_lossy().contains(&skill_id);
+                // Match by folder name or path containing skill_id
+                let is_match = folder_name == skill_id || path.to_string_lossy().contains(&skill_id);
 
-                    if is_match {
-                        let metadata = parse_skill_md(&skill_md);
-                        let (size, file_count) = count_files(&path);
-                        let skill_md_content = fs::read_to_string(&skill_md).ok();
-                        let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
+                if is_match {
+                    if let Some(scanned) = SkillService::scan_skill(&path, &ScanOptions::default()) {
+                        let skill_md_path = PathBuf::from(&scanned.skill_md_path);
+                        let skill_md_content = SkillService::read_skill_md_content(&skill_md_path);
 
-                        // Get folder modification time as installed_at
-                        let installed_at = fs::metadata(&path)
-                            .ok()
-                            .and_then(|m| m.modified().ok())
-                            .map(|t| {
-                                let datetime: chrono::DateTime<chrono::Utc> = t.into();
-                                datetime.to_rfc3339()
-                            })
-                            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
-
-                        let skill = ProjectSkill {
+                        return IpcResult::success(ProjectSkill {
                             id: skill_id.clone(),
-                            name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
-                            folder_name,
-                            version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
-                            description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
-                            path: path.to_string_lossy().to_string(),
-                            skill_md_path: skill_md.to_string_lossy().to_string(),
+                            name: scanned.name,
+                            folder_name: scanned.folder_name,
+                            version: scanned.version,
+                            description: scanned.description,
+                            path: scanned.path,
+                            skill_md_path: scanned.skill_md_path,
                             skill_md_content,
-                            skill_md_lines,
-                            skill_md_chars,
-                            size,
-                            file_count,
-                            has_resources: has_resources(&path),
+                            skill_md_lines: scanned.skill_md_lines,
+                            skill_md_chars: scanned.skill_md_chars,
+                            size: scanned.size,
+                            file_count: scanned.file_count,
+                            has_resources: scanned.has_resources,
                             project_id,
-                            installed_at,
-                        };
-                        return IpcResult::success(skill);
+                            installed_at: scanned.installed_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                        });
                     }
                 }
             }
@@ -622,11 +578,8 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
         );
     }
 
-    // Create LibrarySkill result
-    let skill_md = dest.join("SKILL.md");
-    let metadata = parse_skill_md(&skill_md);
-    let (size, file_count) = count_files(&dest);
-    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
+    // Create LibrarySkill result using SkillService
+    let scanned = SkillService::scan_skill(&dest, &ScanOptions::default());
     let imported_at = chrono::Utc::now().to_rfc3339();
     let skill_id_new = format!("skill-{}", uuid::Uuid::new_v4());
 
@@ -636,22 +589,22 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
 
     let skill = LibrarySkill {
         id: skill_id_new.clone(),
-        name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
+        name: scanned.as_ref().map(|s| s.name.clone()).unwrap_or_else(|| folder_name.clone()),
         folder_name: folder_name.clone(),
-        version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
-        description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
+        version: scanned.as_ref().map(|s| s.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
+        description: scanned.as_ref().map(|s| s.description.clone()).unwrap_or_default(),
         path: dest.to_string_lossy().to_string(),
-        skill_md_path: skill_md.to_string_lossy().to_string(),
+        skill_md_path: dest.join("SKILL.md").to_string_lossy().to_string(),
         skill_md_content: None,
-        skill_md_lines,
-        skill_md_chars,
+        skill_md_lines: scanned.as_ref().map(|s| s.skill_md_lines).unwrap_or(0),
+        skill_md_chars: scanned.as_ref().map(|s| s.skill_md_chars).unwrap_or(0),
         category_id: category_id.clone(),
         group_id: group_id.clone(),
         imported_at: imported_at.clone(),
         updated_at: None,
-        size,
-        file_count,
-        has_resources: has_resources(&dest),
+        size: scanned.as_ref().map(|s| s.size).unwrap_or(0),
+        file_count: scanned.as_ref().map(|s| s.file_count).unwrap_or(0),
+        has_resources: scanned.as_ref().map(|s| s.has_resources).unwrap_or(false),
         deployments: vec![],
         is_symlink: false, // Imported from project, always a copy
     };

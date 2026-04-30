@@ -1,6 +1,7 @@
-use super::library::{IpcResult, parse_skill_md, count_skill_md_stats, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
+use super::library::{IpcResult, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
 use crate::storage::service::get_storage;
-use crate::utils::fs::{count_files, has_resources, copy_dir_all, is_symlink};
+use crate::services::skill::{SkillService, ScanOptions};
+use crate::utils::fs::copy_dir_all;
 use std::fs;
 use std::path::PathBuf;
 use crate::paths;
@@ -56,55 +57,26 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
         return IpcResult::success(vec![]);
     }
 
-    let mut skills = Vec::new();
+    let scanned = SkillService::scan_skills_dir(&global_path, ScanOptions::default());
 
-    if let Ok(entries) = fs::read_dir(&global_path) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let folder_name = path.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
-
-                    let metadata = parse_skill_md(&skill_md);
-                    let (size, file_count) = count_files(&path);
-                    let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
-                    let is_symlink = is_symlink(&path);
-
-                    // Get folder modification time as installed_at
-                    let installed_at = fs::metadata(&path)
-                        .ok()
-                        .and_then(|m| m.modified().ok())
-                        .map(|t| {
-                            let datetime: chrono::DateTime<chrono::Utc> = t.into();
-                            datetime.to_rfc3339()
-                        });
-
-                    let skill = GlobalSkill {
-                        id: folder_name.clone(),
-                        name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
-                        folder_name: folder_name.clone(),
-                        version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
-                        description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
-                        path: path.to_string_lossy().to_string(),
-                        skill_md_path: skill_md.to_string_lossy().to_string(),
-                        skill_md_content: None,
-                        skill_md_lines,
-                        skill_md_chars,
-                        installed_at,
-                        size,
-                        file_count,
-                        has_resources: has_resources(&path),
-                        source_library_skill_id: None, // TODO: Track deployment source
-                        is_symlink,
-                    };
-                    skills.push(skill);
-                }
-            }
-        }
-    }
+    let skills = scanned.into_iter().map(|s| GlobalSkill {
+        id: s.id,
+        name: s.name,
+        folder_name: s.folder_name,
+        version: s.version,
+        description: s.description,
+        path: s.path,
+        skill_md_path: s.skill_md_path,
+        skill_md_content: None,
+        skill_md_lines: s.skill_md_lines,
+        skill_md_chars: s.skill_md_chars,
+        installed_at: s.installed_at,
+        size: s.size,
+        file_count: s.file_count,
+        has_resources: s.has_resources,
+        source_library_skill_id: None,
+        is_symlink: s.is_symlink,
+    }).collect();
 
     IpcResult::success(skills)
 }
@@ -117,50 +89,36 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let folder_name = path.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_default();
+                let folder_name = path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
 
-                    // Match by folder name or path containing id
-                    let is_match = folder_name == id || path.to_string_lossy().contains(&id);
+                // Match by folder name or path containing id
+                let is_match = folder_name == id || path.to_string_lossy().contains(&id);
 
-                    if is_match {
-                        let metadata = parse_skill_md(&skill_md);
-                        let (size, file_count) = count_files(&path);
-                        let skill_md_content = fs::read_to_string(&skill_md).ok();
-                        let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
-                        let is_symlink = is_symlink(&path);
+                if is_match {
+                    if let Some(scanned) = SkillService::scan_skill(&path, &ScanOptions::default()) {
+                        let skill_md_path = PathBuf::from(&scanned.skill_md_path);
+                        let skill_md_content = SkillService::read_skill_md_content(&skill_md_path);
 
-                        // Get folder modification time as installed_at
-                        let installed_at = fs::metadata(&path)
-                            .ok()
-                            .and_then(|m| m.modified().ok())
-                            .map(|t| {
-                                let datetime: chrono::DateTime<chrono::Utc> = t.into();
-                                datetime.to_rfc3339()
-                            });
-
-                        let skill = GlobalSkill {
+                        return IpcResult::success(GlobalSkill {
                             id: id.clone(),
-                            name: metadata.as_ref().map(|m| m.name.clone()).unwrap_or_else(|| folder_name.clone()),
-                            folder_name: folder_name.clone(),
-                            version: metadata.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| "0.0.0".to_string()),
-                            description: metadata.as_ref().map(|m| m.description.clone()).unwrap_or_default(),
-                            path: path.to_string_lossy().to_string(),
-                            skill_md_path: skill_md.to_string_lossy().to_string(),
+                            name: scanned.name,
+                            folder_name: scanned.folder_name,
+                            version: scanned.version,
+                            description: scanned.description,
+                            path: scanned.path,
+                            skill_md_path: scanned.skill_md_path,
                             skill_md_content,
-                            skill_md_lines,
-                            skill_md_chars,
-                            installed_at,
-                            size,
-                            file_count,
-                            has_resources: has_resources(&path),
+                            skill_md_lines: scanned.skill_md_lines,
+                            skill_md_chars: scanned.skill_md_chars,
+                            installed_at: scanned.installed_at,
+                            size: scanned.size,
+                            file_count: scanned.file_count,
+                            has_resources: scanned.has_resources,
                             source_library_skill_id: None,
-                            is_symlink,
-                        };
-                        return IpcResult::success(skill);
+                            is_symlink: scanned.is_symlink,
+                        });
                     }
                 }
             }
@@ -186,10 +144,10 @@ pub fn global_delete(id: String) -> IpcResult<()> {
                 let is_match = folder_name == id || path.to_string_lossy().contains(&id);
 
                 if is_match {
-                    if let Err(e) = fs::remove_dir_all(&path) {
-                        return IpcResult::error("E104", &format!("Failed to delete skill: {}", e));
+                    match SkillService::delete_skill(&path) {
+                        Ok(()) => return IpcResult::success(()),
+                        Err(e) => return IpcResult::error("E104", &format!("Failed to delete skill: {}", e)),
                     }
-                    return IpcResult::success(());
                 }
             }
         }
