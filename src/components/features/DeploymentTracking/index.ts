@@ -9,3 +9,6 @@ export type { BatchDeployDialogProps } from './BatchDeployDialog';
 
 export { DeployResultSummary } from './DeployResultSummary';
 export type { DeployResultSummaryProps } from './DeployResultSummary';
+
+export { BatchDeployTargetDialog } from './BatchDeployTargetDialog';
+export type { BatchDeployTargetDialogProps, DeployTarget, DeployTargetType } from './BatchDeployTargetDialog';
