@@ -248,6 +248,16 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                 let skill_md = path.join("SKILL.md");
                 if skill_md.exists() {
                     let folder_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+
+                    // Skip if this skill was deleted (tombstoned)
+                    if library_data.deleted_skills.contains_key(&folder_name) {
+                        // Clean up zombie folder that was restored by iCloud sync
+                        if let Err(e) = fs::remove_dir_all(&path) {
+                            eprintln!("Warning: Failed to remove tombstoned folder {}: {}", folder_name, e);
+                        }
+                        continue;
+                    }
+
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
 
