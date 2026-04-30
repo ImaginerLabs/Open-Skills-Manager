@@ -11,7 +11,7 @@ export interface SidebarItemProps {
   isDisabled?: boolean;
   isMissing?: boolean;
   isDragOver?: boolean;
-  isForbidden?: boolean;
+  isForbidden?: boolean | undefined;
 
   expandIcon?: ReactNode;
   isExpanded?: boolean;

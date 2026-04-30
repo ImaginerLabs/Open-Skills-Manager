@@ -236,6 +236,31 @@
     background: rgba(10, 132, 255, 0.1);
     color: var(--color-primary);
   }
+
+  // Group nodes are not selectable - only expandable
+  &.groupNode {
+    cursor: default;
+    color: var(--color-text-secondary);
+
+    &:hover {
+      background: transparent;
+    }
+
+    .light &:hover {
+      background: transparent;
+    }
+  }
+}
+
+.emptyCategory {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.emptyHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
 }
 
 .treeIndent {

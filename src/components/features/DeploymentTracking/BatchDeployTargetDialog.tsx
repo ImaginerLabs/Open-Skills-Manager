@@ -222,10 +222,10 @@ export function BatchDeployTargetDialog({
     </div>
   );
 
-  // Render library tree
+  // Render library tree - only Category level can be selected
   const renderLibraryTree = () => (
     <div className={styles.section}>
-      <h3 className={styles.sectionTitle}>Select Group/Category</h3>
+      <h3 className={styles.sectionTitle}>Select Category</h3>
       <div className={styles.tree}>
         {/* Root: No group */}
         <button
@@ -252,24 +252,17 @@ export function BatchDeployTargetDialog({
 
         {groups.map((group) => {
           const isExpanded = expandedGroups.has(group.id);
-          const isSelected = selectedGroupId === group.id && !selectedCategoryId;
 
           return (
             <div key={group.id} className={styles.treeBranch}>
-              {/* Group node */}
+              {/* Group node - expandable only, not selectable */}
               <button
                 type="button"
                 className={[
                   styles.treeNode,
-                  isSelected && !isExpanded && styles.selected,
+                  styles.groupNode,
                 ].filter(Boolean).join(' ')}
-                onClick={() => {
-                  toggleGroup(group.id);
-                  if (!isExpanded) {
-                    setSelectedGroupId(group.id);
-                    setSelectedCategoryId(undefined);
-                  }
-                }}
+                onClick={() => toggleGroup(group.id)}
               >
                 <button
                   type="button"
@@ -287,60 +280,43 @@ export function BatchDeployTargetDialog({
                   <span className={styles.nodeLabel}>{group.name}</span>
                   <span className={styles.nodeHint}>{group.categories.length} categories</span>
                 </div>
-                {isSelected && <Check size={16} weight="bold" className={styles.checkIcon} />}
               </button>
 
-              {/* Category children */}
+              {/* Category children - only categories are selectable */}
               {isExpanded && (
                 <div className={styles.treeChildren}>
-                  {/* Select group only (no category) */}
-                  <button
-                    type="button"
-                    className={[
-                      styles.treeNode,
-                      selectedGroupId === group.id && selectedCategoryId === undefined && styles.selected,
-                    ].filter(Boolean).join(' ')}
-                    onClick={() => {
-                      setSelectedGroupId(group.id);
-                      setSelectedCategoryId(undefined);
-                    }}
-                  >
-                    <span className={styles.treeIndent} />
-                    <span className={styles.treeIndent} />
-                    <Tag size={16} weight="duotone" />
-                    <div className={styles.nodeInfo}>
-                      <span className={styles.nodeLabel}>No category</span>
-                      <span className={styles.nodeHint}>Add to group only</span>
+                  {group.categories.length === 0 ? (
+                    <div className={styles.emptyCategory}>
+                      <span className={styles.treeIndent} />
+                      <span className={styles.treeIndent} />
+                      <span className={styles.emptyHint}>No categories</span>
                     </div>
-                    {selectedGroupId === group.id && selectedCategoryId === undefined && (
-                      <Check size={16} weight="bold" className={styles.checkIcon} />
-                    )}
-                  </button>
-
-                  {group.categories.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      className={[
-                        styles.treeNode,
-                        selectedGroupId === group.id && selectedCategoryId === category.id && styles.selected,
-                      ].filter(Boolean).join(' ')}
-                      onClick={() => {
-                        setSelectedGroupId(group.id);
-                        setSelectedCategoryId(category.id);
-                      }}
-                    >
-                      <span className={styles.treeIndent} />
-                      <span className={styles.treeIndent} />
-                      <Tag size={16} weight="duotone" />
-                      <div className={styles.nodeInfo}>
-                        <span className={styles.nodeLabel}>{category.name}</span>
-                      </div>
-                      {selectedGroupId === group.id && selectedCategoryId === category.id && (
-                        <Check size={16} weight="bold" className={styles.checkIcon} />
-                      )}
-                    </button>
-                  ))}
+                  ) : (
+                    group.categories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        className={[
+                          styles.treeNode,
+                          selectedGroupId === group.id && selectedCategoryId === category.id && styles.selected,
+                        ].filter(Boolean).join(' ')}
+                        onClick={() => {
+                          setSelectedGroupId(group.id);
+                          setSelectedCategoryId(category.id);
+                        }}
+                      >
+                        <span className={styles.treeIndent} />
+                        <span className={styles.treeIndent} />
+                        <Tag size={16} weight="duotone" />
+                        <div className={styles.nodeInfo}>
+                          <span className={styles.nodeLabel}>{category.name}</span>
+                        </div>
+                        {selectedGroupId === group.id && selectedCategoryId === category.id && (
+                          <Check size={16} weight="bold" className={styles.checkIcon} />
+                        )}
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>
