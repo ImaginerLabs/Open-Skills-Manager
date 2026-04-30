@@ -62,6 +62,8 @@ pub fn run() {
             deploy::deploy_to_global,
             deploy::deploy_to_project,
             deploy::deploy_from_global,
+            deploy::deploy_to_global_for_ide,
+            deploy::deploy_to_project_for_ide,
             // Search commands
             search::search,
             search::search_with_snippets,
