@@ -468,6 +468,12 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
               showToast('error', `Failed to add "${skill.name}" to Library: ${result.error.message}`);
             }
           }
+          // Refresh Library skills and groups (to update sidebar counts)
+          const listResult = await libraryService.list();
+          if (listResult.success) {
+            setSkills(listResult.data);
+          }
+          await categoryManager.loadGroups();
           resetBatchDeploy();
         } else {
           // Copy within library - update skill metadata
@@ -491,14 +497,23 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
           }
           resetBatchDeploy();
         }
-      } else {
-        // Deploy to global or project
-        const options: { targetScope: 'global' | 'project'; targetIdeId?: string; projectId?: string; sourceScope?: 'library' | 'global' | 'project' } = {
-          targetScope: target.type,
+      } else if (target.type === 'global') {
+        // Deploy to global
+        const options: { targetScope: 'global'; targetIdeId?: string; sourceScope?: 'library' | 'global' | 'project' } = {
+          targetScope: 'global',
+        };
+        if (target.ideId) options.targetIdeId = target.ideId;
+        if (batchDeploySourceInfo.sourceType) {
+          options.sourceScope = batchDeploySourceInfo.sourceType;
+        }
+        startBatchDeploy(batchDeploySkills, options);
+      } else if (target.type === 'project') {
+        // Deploy to project
+        const options: { targetScope: 'project'; targetIdeId?: string; projectId?: string; sourceScope?: 'library' | 'global' | 'project' } = {
+          targetScope: 'project',
         };
         if (target.ideId) options.targetIdeId = target.ideId;
         if (target.projectId) options.projectId = target.projectId;
-        // Pass source scope if deploying from global/project
         if (batchDeploySourceInfo.sourceType) {
           options.sourceScope = batchDeploySourceInfo.sourceType;
         }
@@ -511,6 +526,25 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const handleBatchDeployDialogClose = useCallback(() => {
     resetBatchDeploy();
   }, [resetBatchDeploy]);
+
+  // Refresh sidebar counts when batch deploy completes
+  useEffect(() => {
+    if (batchDeployStatus === 'completed' && batchDeployResult) {
+      // Refresh Library skills and groups
+      libraryService.list().then((result) => {
+        if (result.success) {
+          setSkills(result.data);
+        }
+      });
+      categoryManager.loadGroups();
+      // Refresh Global skills count
+      globalService.list().then((result) => {
+        if (result.success) {
+          setGlobalSkills(result.data);
+        }
+      });
+    }
+  }, [batchDeployStatus, batchDeployResult, setSkills, setGlobalSkills, categoryManager]);
 
   // Handle deploying all global skills
   const handleDeployAllGlobalSkills = useCallback(() => {
