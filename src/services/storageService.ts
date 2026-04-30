@@ -165,6 +165,18 @@ export const storageService = {
   updateIDE: (ideId: string, ideConfig: IDEConfig) =>
     unwrap(invokeIPC<AppConfig>('storage_ide_update', { ideId, ideConfig })),
 
+  /**
+   * Add a new IDE configuration
+   */
+  addIDE: (ideConfig: IDEConfig) =>
+    unwrap(invokeIPC<AppConfig>('storage_ide_add', { ideConfig })),
+
+  /**
+   * Remove an IDE configuration
+   */
+  removeIDE: (ideId: string) =>
+    unwrap(invokeIPC<AppConfig>('storage_ide_remove', { ideId })),
+
   // ==========================================================================
   // Library Operations
   // ==========================================================================

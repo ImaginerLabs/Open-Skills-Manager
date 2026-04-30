@@ -1,0 +1,106 @@
+.dialog {
+  max-width: 480px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+
+  &:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+}
+
+.pathRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.pathInput {
+  flex: 1;
+}
+
+.selectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  height: 38px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--color-text-primary);
+  }
+}
+
+.iconPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.85);
+  margin-top: var(--space-2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-4);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--color-error);
+}

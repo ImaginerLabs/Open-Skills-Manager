@@ -5,7 +5,8 @@
   align-items: center;
 }
 
-.tab {
+.tab,
+.addTab {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +41,16 @@
     }
   }
 
+  // Custom IDE icons need white color on black background
+  .customIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.tab {
   &.active {
     border-color: #22c55e;
     animation: breathe 2s ease-in-out infinite;
@@ -67,6 +78,19 @@
       opacity: 0.45;
       transform: none;
     }
+  }
+}
+
+.addTab {
+  opacity: 0.5;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  .iconWrapper {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
   }
 }
 

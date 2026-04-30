@@ -127,6 +127,62 @@ pub fn storage_ide_update(ide_id: String, ide_config: crate::storage::IDEConfig)
     }
 }
 
+#[tauri::command]
+pub fn storage_ide_add(ide_config: crate::storage::IDEConfig) -> IpcResult<AppConfig> {
+    let storage = get_storage();
+
+    // Check if IDE with same ID already exists before writing
+    match storage.read_config() {
+        Ok(config) => {
+            if config.ide_configs.iter().any(|ide| ide.id == ide_config.id) {
+                return IpcResult::error(
+                    AppError::E002InvalidInput("IDE with this ID already exists".to_string()).code(),
+                    "IDE with this ID already exists",
+                );
+            }
+        }
+        Err(e) => {
+            return IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            );
+        }
+    }
+
+    match storage.write_config(|config| {
+        config.ide_configs.push(ide_config);
+    }) {
+        Ok(config) => IpcResult::success(config),
+        Err(e) => IpcResult::error(
+            AppError::E102WriteFailed(e.clone()).code(),
+            &e,
+        ),
+    }
+}
+
+#[tauri::command]
+pub fn storage_ide_remove(ide_id: String) -> IpcResult<AppConfig> {
+    let storage = get_storage();
+    match storage.write_config(|config| {
+        // Don't allow removing default IDEs
+        let default_ids = ["claude-code", "opencode", "cursor", "gemini"];
+        if default_ids.contains(&ide_id.as_str()) {
+            return;
+        }
+        config.ide_configs.retain(|ide| ide.id != ide_id);
+        // If we removed the active IDE, switch to claude-code
+        if config.active_ide_id == ide_id {
+            config.active_ide_id = "claude-code".to_string();
+        }
+    }) {
+        Ok(config) => IpcResult::success(config),
+        Err(e) => IpcResult::error(
+            AppError::E102WriteFailed(e.clone()).code(),
+            &e,
+        ),
+    }
+}
+
 // ============================================================================
 // Library Commands
 // ============================================================================

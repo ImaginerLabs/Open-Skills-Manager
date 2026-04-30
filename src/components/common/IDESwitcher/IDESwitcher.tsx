@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus } from '@phosphor-icons/react';
 import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
 import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
@@ -7,6 +8,8 @@ import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
 import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
 import { ideService, configService, libraryService } from '@/services';
 import { ALL_GROUP_ID } from '@/components/features/CategoryManager';
+import { AddIDEDialog } from '@/components/features/IDEDialog';
+import { getIconByName, isIDEIcon } from '@/components/ui/IconPicker';
 import styles from './IDESwitcher.module.scss';
 
 // Default IDE configs
@@ -50,12 +53,13 @@ const DEFAULT_IDE_CONFIGS = [
 ];
 
 export function IDESwitcher(): React.ReactElement | null {
-  const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading } = useIDEStore();
+  const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading, addIDE: addIDEToStore } = useIDEStore();
   const { setSkills: setLibrarySkills, setGroups } = useLibraryStore();
   const { setSkills: setGlobalSkills } = useGlobalStore();
   const { setProjects } = useProjectStore();
   const { showToast } = useUIStore();
   const navigate = useNavigate();
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Use configs from store, or defaults if empty - defined early for use in callbacks
   const configsToShow = ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS;
@@ -177,6 +181,7 @@ export function IDESwitcher(): React.ReactElement | null {
 
   const getIcon = (iconName: string) => {
     const size = 14;
+    // Built-in IDE icons (lobehub icons with custom colors)
     switch (iconName) {
       case 'claude-code':
       case 'claude':
@@ -187,10 +192,21 @@ export function IDESwitcher(): React.ReactElement | null {
         return <CursorAvatar size={size} />;
       case 'gemini':
         return <GeminiAvatar size={size} />;
-      default:
-        return null;
     }
+    // Try to get icon from IconPicker (IDE avatars or Phosphor icons)
+    const icon = getIconByName(iconName, size);
+    if (!icon) return null;
+    // IDE avatars have their own colors, Phosphor icons need white wrapper
+    if (isIDEIcon(iconName)) {
+      return icon;
+    }
+    return <span className={styles.customIcon}>{icon}</span>;
   };
+
+  const handleAddIDE = useCallback((newIDE: typeof ideConfigs[0]) => {
+    addIDEToStore(newIDE);
+    showToast('success', `Added ${newIDE.name}`);
+  }, [addIDEToStore, showToast]);
 
   // Show all IDEs (including disabled ones for "coming soon" display)
   const allIDEs = configsToShow;
@@ -200,17 +216,34 @@ export function IDESwitcher(): React.ReactElement | null {
   }
 
   return (
-    <div className={styles.switcher}>
-      {allIDEs.map((ide) => (
+    <>
+      <div className={styles.switcher}>
+        {allIDEs.map((ide) => (
+          <button
+            key={ide.id}
+            className={`${styles.tab} ${activeIdeId === ide.id ? styles.active : ''} ${!ide.isEnabled ? styles.disabled : ''}`}
+            onClick={() => handleIDESwitch(ide.id)}
+            title={ide.name}
+          >
+            <div className={styles.iconWrapper}>{getIcon(ide.icon || ide.id)}</div>
+          </button>
+        ))}
         <button
-          key={ide.id}
-          className={`${styles.tab} ${activeIdeId === ide.id ? styles.active : ''} ${!ide.isEnabled ? styles.disabled : ''}`}
-          onClick={() => handleIDESwitch(ide.id)}
-          title={ide.name}
+          className={styles.addTab}
+          onClick={() => setShowAddDialog(true)}
+          title="Add Custom IDE"
         >
-          <div className={styles.iconWrapper}>{getIcon(ide.icon || ide.id)}</div>
+          <div className={styles.iconWrapper}>
+            <Plus size={14} />
+          </div>
         </button>
-      ))}
-    </div>
+      </div>
+
+      <AddIDEDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onAdd={handleAddIDE}
+      />
+    </>
   );
 }

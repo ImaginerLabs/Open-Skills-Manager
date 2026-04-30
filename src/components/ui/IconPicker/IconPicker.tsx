@@ -16,14 +16,34 @@ import {
   MagnifyingGlass,
   Cube,
 } from '@phosphor-icons/react';
+import WindsurfAvatar from '@lobehub/icons/es/Windsurf/components/Avatar';
+import ReplitAvatar from '@lobehub/icons/es/Replit/components/Avatar';
+import CopilotAvatar from '@lobehub/icons/es/Copilot/components/Avatar';
+import TraeAvatar from '@lobehub/icons/es/Trae/components/Avatar';
 import styles from './IconPicker.module.scss';
 
 export interface IconOption {
   name: string;
   icon: ReactNode;
+  /** Whether this is an IDE icon (uses lobehub icons) */
+  isIDE?: boolean;
 }
 
+// IDE icon names for external use
+export const IDE_ICONS = [
+  'windsurf',
+  'replit',
+  'copilot',
+  'trae',
+] as const;
+
 export const ICON_OPTIONS: IconOption[] = [
+  // IDE Icons (using lobehub icons)
+  { name: 'windsurf', icon: <WindsurfAvatar size={20} />, isIDE: true },
+  { name: 'replit', icon: <ReplitAvatar size={20} />, isIDE: true },
+  { name: 'copilot', icon: <CopilotAvatar size={20} />, isIDE: true },
+  { name: 'trae', icon: <TraeAvatar size={20} />, isIDE: true },
+  // Generic icons
   { name: 'folder', icon: <FolderSimple size={20} /> },
   { name: 'code', icon: <Code size={20} /> },
   { name: 'wrench', icon: <Wrench size={20} /> },
@@ -41,8 +61,8 @@ export const ICON_OPTIONS: IconOption[] = [
   { name: 'cube', icon: <Cube size={20} /> },
 ];
 
-// Icon components for rendering at different sizes
-const ICON_COMPONENTS = {
+// Phosphor icon components for rendering at different sizes
+const PHOSPHOR_ICONS = {
   folder: FolderSimple,
   code: Code,
   wrench: Wrench,
@@ -58,6 +78,14 @@ const ICON_COMPONENTS = {
   terminal: Terminal,
   search: MagnifyingGlass,
   cube: Cube,
+};
+
+// IDE Avatar components
+const IDE_AVATARS: Record<string, React.ComponentType<{ size: number }>> = {
+  windsurf: WindsurfAvatar,
+  replit: ReplitAvatar,
+  copilot: CopilotAvatar,
+  trae: TraeAvatar,
 };
 
 export interface IconPickerProps {
@@ -92,15 +120,31 @@ export function IconPicker({ value, onChange, label }: IconPickerProps): React.R
 
 /**
  * Get icon component by name with specified size
+ * Supports both Phosphor icons and IDE avatars
  */
 export function getIconByName(iconName: string | undefined, size: number = 16): ReactNode {
   if (!iconName) return null;
 
-  const IconComponent = ICON_COMPONENTS[iconName as keyof typeof ICON_COMPONENTS];
-  if (IconComponent) {
-    return <IconComponent size={size} />;
+  // Check if it's an IDE icon
+  const IDEAvatar = IDE_AVATARS[iconName];
+  if (IDEAvatar) {
+    return <IDEAvatar size={size} />;
   }
+
+  // Check if it's a Phosphor icon
+  const PhosphorIcon = PHOSPHOR_ICONS[iconName as keyof typeof PHOSPHOR_ICONS];
+  if (PhosphorIcon) {
+    return <PhosphorIcon size={size} />;
+  }
+
   return null;
+}
+
+/**
+ * Check if an icon name is an IDE icon
+ */
+export function isIDEIcon(iconName: string): boolean {
+  return iconName in IDE_AVATARS;
 }
 
 /**

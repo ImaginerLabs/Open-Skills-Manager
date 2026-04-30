@@ -7,4 +7,14 @@ export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Toast, ToastContainer, type ToastProps } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
 export { ViewToggle, type ViewToggleProps } from './ViewToggle';
-export { IconPicker, ICON_OPTIONS, type IconPickerProps, type IconOption } from './IconPicker';
+export {
+  IconPicker,
+  ICON_OPTIONS,
+  IDE_ICONS,
+  type IconPickerProps,
+  type IconOption,
+  getIconByName,
+  isIDEIcon,
+  getDefaultIcon,
+  getIconWithDefault,
+} from './IconPicker';
