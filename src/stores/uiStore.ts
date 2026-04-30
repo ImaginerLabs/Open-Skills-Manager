@@ -46,7 +46,6 @@ export type ViewMode = 'grid' | 'list';
 
 interface UIState {
   sidebarState: 'expanded' | 'collapsed';
-  searchQuery: string;
   activeView: 'library' | 'global' | 'project' | 'settings';
   viewMode: ViewMode;
   toasts: Toast[];
@@ -77,7 +76,6 @@ interface SearchUIActions {
 interface UIActions {
   toggleSidebar: () => void;
   setSidebarState: (state: 'expanded' | 'collapsed') => void;
-  setSearchQuery: (query: string) => void;
   setActiveView: (view: 'library' | 'global' | 'project' | 'settings') => void;
   setViewMode: (mode: ViewMode) => void;
   showToast: (type: ToastType, message: string, duration?: number) => void;
@@ -113,7 +111,6 @@ export const useUIStore = create<UIStore>()(
     persist(
       (set) => ({
         sidebarState: 'expanded',
-        searchQuery: '',
         activeView: 'library',
         viewMode: 'list',
         toasts: [],
@@ -125,7 +122,6 @@ export const useUIStore = create<UIStore>()(
             sidebarState: state.sidebarState === 'expanded' ? 'collapsed' : 'expanded',
           })),
         setSidebarState: (sidebarState) => set({ sidebarState }),
-        setSearchQuery: (searchQuery) => set({ searchQuery }),
         setActiveView: (activeView) => set({ activeView }),
         setViewMode: (viewMode) => set({ viewMode }),
 
