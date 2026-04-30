@@ -9,10 +9,10 @@ import { ExportProgress } from '../../components/features/ExportProgress';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { libraryService } from '../../services/libraryService';
-import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import { useSidebarData } from '../../hooks/useSidebarData';
+import { useSkillActions } from '../../hooks/useSkillActions';
 import { normalizeSkillDate } from '../../utils/formatters';
 import {
   SkillListLayout,
@@ -225,28 +225,7 @@ export function Library(): React.ReactElement {
     setDeploySkills([]);
   }, [resetDeploy]);
 
-  const handleCopyPath = useCallback(async (skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      try {
-        await navigator.clipboard.writeText(skill.path);
-        showToast('success', `Copied path: ${skill.path}`);
-      } catch {
-        showToast('error', 'Failed to copy path');
-      }
-    }
-  }, [skills, showToast]);
-
-  const handleReveal = useCallback(async (skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      try {
-        await configService.revealPath(skill.path);
-      } catch {
-        showToast('error', 'Failed to reveal in Finder');
-      }
-    }
-  }, [skills, showToast]);
+  const { onCopyPath, onReveal } = useSkillActions({ scope: 'library', skills });
 
   const handleCloseDetail = useCallback(() => {
     selectSkill(null);
@@ -279,9 +258,9 @@ export function Library(): React.ReactElement {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
-    onCopyPath: handleCopyPath,
-    onReveal: handleReveal,
-  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath, handleReveal]);
+    onCopyPath,
+    onReveal,
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, onCopyPath, onReveal]);
 
   const hasSkills = skills.length > 0;
 

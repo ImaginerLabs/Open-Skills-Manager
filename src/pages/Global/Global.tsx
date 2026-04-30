@@ -7,10 +7,10 @@ import { ExportDialog, type ExportableSkill } from '../../components/features/Ex
 import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillFilter } from '../../hooks/useSkillFilter';
+import { useSkillActions } from '../../hooks/useSkillActions';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { globalService } from '../../services/globalService';
-import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatDate } from '../../utils/formatters';
 import { toLibrarySkillFormat } from '../../utils/skillConverters';
@@ -183,28 +183,7 @@ export function Global(): React.ReactElement {
     selectSkill(null);
   }, [selectSkill]);
 
-  const handleCopyPath = useCallback(async (skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      try {
-        await navigator.clipboard.writeText(skill.path);
-        showToast('success', `Copied path: ${skill.path}`);
-      } catch {
-        showToast('error', 'Failed to copy path');
-      }
-    }
-  }, [skills, showToast]);
-
-  const handleReveal = useCallback(async (skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      try {
-        await configService.revealPath(skill.path);
-      } catch {
-        showToast('error', 'Failed to reveal in Finder');
-      }
-    }
-  }, [skills, showToast]);
+  const { onCopyPath, onReveal } = useSkillActions({ scope: 'global', skills });
 
   const hasSkills = skills.length > 0;
 
@@ -283,9 +262,9 @@ export function Global(): React.ReactElement {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
-    onCopyPath: handleCopyPath,
-    onReveal: handleReveal,
-  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath, handleReveal]);
+    onCopyPath,
+    onReveal,
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, onCopyPath, onReveal]);
 
   // Render refresh button with tooltip
   const renderRefreshButton = () => {

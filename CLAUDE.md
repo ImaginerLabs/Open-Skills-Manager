@@ -98,6 +98,8 @@ pnpm format:check     # Prettier 检查
 | `libraryStore` | Library 技能和分类管理 | categories, groups |
 | `projectStore` | 项目监控管理 | projects |
 | `globalStore` | 全局技能管理 | 无 |
+| `selectionStore` | 统一选择状态 (Library/Global/Project 互斥) | 无 |
+| `ideStore` | IDE 配置和切换 | 无 |
 | `uiStore` | UI 状态 (toast, modal, theme) | 无 |
 | `settingsStore` | 应用设置 | 全部 |
 
@@ -108,6 +110,17 @@ pnpm format:check     # Prettier 检查
 - `GlobalSkill` - 全局安装的技能
 - `Deployment` - 部署记录
 - `Group` / `Category` - 分类组织结构
+
+### 核心 Hooks
+
+| Hook | 用途 |
+|------|------|
+| `useSelection` | 统一选择逻辑，连接 selectionStore |
+| `useSkillFilter` | 统一技能过滤和排序 |
+| `useCategoryDragDrop` | Category 拖拽逻辑 |
+| `useSidebarDragDrop` | Sidebar 拖拽逻辑 |
+| `useBatchDeploy` | 批量部署逻辑 |
+| `useSearch` | 统一搜索逻辑 |
 
 ## 设计系统
 

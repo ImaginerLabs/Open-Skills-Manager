@@ -7,6 +7,7 @@ import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { useSidebarData } from '../../../hooks/useSidebarData';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillFilter } from '../../../hooks/useSkillFilter';
+import { useSkillActions } from '../../../hooks/useSkillActions';
 import { BatchDeployTargetDialog, type DeployTarget } from '../DeploymentTracking';
 import { ExportDialog, type ExportableSkill } from '../ExportDialog';
 import { useUIStore } from '../../../stores/uiStore';
@@ -147,17 +148,7 @@ export function ProjectSkillsView(): React.ReactElement {
     }
   }, [deploySkill, showToast, refreshLibrary]);
 
-  const handleCopyPath = useCallback(async (skillId: string) => {
-    const skill = skills.find((s) => s.id === skillId);
-    if (skill) {
-      try {
-        await navigator.clipboard.writeText(skill.path);
-        showToast('success', `Copied path: ${skill.path}`);
-      } catch {
-        showToast('error', 'Failed to copy path');
-      }
-    }
-  }, [skills, showToast]);
+  const { onCopyPath } = useSkillActions({ scope: 'project', skills });
 
   const handleRefresh = useCallback(() => {
     if (projectId) {
@@ -197,8 +188,8 @@ export function ProjectSkillsView(): React.ReactElement {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
-    onCopyPath: handleCopyPath,
-  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath]);
+    onCopyPath,
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, onCopyPath]);
 
   if (!project) {
     return (
