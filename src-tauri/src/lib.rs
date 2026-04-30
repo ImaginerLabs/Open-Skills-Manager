@@ -5,6 +5,8 @@ mod services;
 mod storage;
 mod utils;
 
+use tauri::Manager;
+
 use commands::{
     library, global, project, deploy, search, config, ide, sync, migration, icloud, locale, theme, update, security,
     error, performance,
@@ -27,6 +29,18 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                // Set DEV indicator in window title for debug builds
+                if let Some(window) = app.get_webview_window("main") {
+                    if let Ok(title) = window.title() {
+                        let _ = window.set_title(&format!("{} [DEV]", title));
+                    }
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Library commands
             library::library_list,

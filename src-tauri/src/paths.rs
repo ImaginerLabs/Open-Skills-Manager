@@ -1,7 +1,22 @@
 use std::path::PathBuf;
 
+// ============================================================================
+// App Names - Isolated for Dev/Release builds
+// ============================================================================
+
+/// App name with dev suffix for debug builds (isolated data directory)
+#[cfg(debug_assertions)]
+pub const APP_NAME: &str = "OpenSkillsManager_Dev";
+#[cfg(debug_assertions)]
+pub const APP_IDENTIFIER: &str = "com.alex.openskillsmanager.dev";
+
+/// App name for release builds (production data directory)
+#[cfg(not(debug_assertions))]
 pub const APP_NAME: &str = "OpenSkillsManager";
+#[cfg(not(debug_assertions))]
 pub const APP_IDENTIFIER: &str = "com.alex.openskillsmanager";
+
+// Legacy names for migration from old versions
 pub const LEGACY_APP_NAME: &str = "claude-code-skills-manager";
 pub const LEGACY_IDENTIFIER: &str = "com.alex.claude-code-skills-manager";
 
