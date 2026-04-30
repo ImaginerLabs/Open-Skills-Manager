@@ -155,14 +155,10 @@ impl SkillService {
 
     /// Delete a skill directory
     pub fn delete_skill(path: &Path) -> Result<(), String> {
-        if path.exists() {
-            if is_symlink(path) {
-                fs::remove_file(path).map_err(|e| e.to_string())
-            } else {
-                fs::remove_dir_all(path).map_err(|e| e.to_string())
-            }
+        if is_symlink(path) {
+            fs::remove_file(path).map_err(|e| e.to_string())
         } else {
-            Err("Skill path does not exist".to_string())
+            fs::remove_dir_all(path).map_err(|e| e.to_string())
         }
     }
 }
@@ -170,6 +166,7 @@ impl SkillService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     fn create_test_skill(dir: &Path, name: &str) -> PathBuf {

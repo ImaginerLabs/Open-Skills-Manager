@@ -44,27 +44,9 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
 
 /// Copy a directory recursively with string error messages.
 ///
-/// Simplified version for use in contexts where io::Result is not desired.
+/// Delegates to `copy_dir_all` and converts the error type.
 pub fn copy_dir_all_str(src: &Path, dst: &Path) -> Result<(), String> {
-    fs::create_dir_all(dst)
-        .map_err(|e| format!("Failed to create dir: {}", e))?;
-
-    for entry in fs::read_dir(src)
-        .map_err(|e| format!("Failed to read dir: {}", e))?
-    {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-
-        if src_path.is_dir() {
-            copy_dir_all_str(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)
-                .map_err(|e| format!("Failed to copy file: {}", e))?;
-        }
-    }
-
-    Ok(())
+    copy_dir_all(src, dst).map_err(|e| e.to_string())
 }
 
 /// Count files in a directory recursively and calculate total size.
@@ -72,32 +54,14 @@ pub fn copy_dir_all_str(src: &Path, dst: &Path) -> Result<(), String> {
 /// Returns (total_size in bytes, file_count).
 /// Note: Uses u32 for file_count to match existing LibrarySkill interface.
 pub fn count_files(dir: &Path) -> (u64, u32) {
-    let mut total_size = 0u64;
-    let mut file_count = 0u32;
-
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Ok(metadata) = fs::metadata(&path) {
-                    total_size += metadata.len();
-                    file_count += 1;
-                }
-            } else if path.is_dir() {
-                let (sub_size, sub_count) = count_files(&path);
-                total_size += sub_size;
-                file_count += sub_count;
-            }
-        }
-    }
-
-    (total_size, file_count)
+    let (size, count) = count_files_usize(dir);
+    (size, count as u32)
 }
 
 /// Count files in a directory recursively (usize version).
 ///
 /// Returns (total_size in bytes, file_count as usize).
-/// Used by search_index.rs.
+/// This is the primary implementation; count_files wraps it for u32 compatibility.
 pub fn count_files_usize(dir: &Path) -> (u64, usize) {
     let mut total_size = 0u64;
     let mut file_count = 0usize;

@@ -31,28 +31,23 @@ export function useLibraryFilters(
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const filteredSkills = useMemo(() => {
-    // Defensive check: ensure skills is an array
     if (!Array.isArray(skills)) {
       return [];
     }
     let result = [...skills];
 
-    // Filter by search query using unified search logic
     if (searchQuery && isValidQuery(searchQuery)) {
       result = filterByQuery(result, searchQuery);
     }
 
-    // Filter by group, but skip filtering for "All" group
     if (selectedGroupId && selectedGroupId !== ALL_GROUP_ID) {
       result = result.filter((skill) => skill.groupId === selectedGroupId);
     }
 
-    // Filter by category if selected
     if (selectedCategoryId) {
       result = result.filter((skill) => skill.categoryId === selectedCategoryId);
     }
 
-    // Sort using unified sort logic
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
@@ -60,7 +55,6 @@ export function useLibraryFilters(
           comparison = a.name.localeCompare(b.name);
           break;
         case 'date':
-          // Library skills use importedAt
           comparison =
             new Date(a.importedAt).getTime() - new Date(b.importedAt).getTime();
           break;
