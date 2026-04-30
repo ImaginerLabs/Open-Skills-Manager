@@ -9,6 +9,11 @@ vi.mock('@/services/ipcService', () => ({
   invokeIPC: vi.fn(),
 }));
 
+// Mock ideStore
+vi.mock('@/stores/ideStore', () => ({
+  useIDEStore: vi.fn(() => ({ activeIdeId: 'claude-code' })),
+}));
+
 describe('useBatchDeploy', () => {
   const mockSkills: LibrarySkill[] = [
     {
@@ -88,7 +93,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     expect(result.current.status).toBe('deploying');
@@ -101,7 +106,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     await waitFor(() => {
@@ -119,7 +124,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'project', 'project-123');
+      result.current.startDeploy(mockSkills, { targetScope: 'project', projectId: 'project-123' });
     });
 
     await waitFor(() => {
@@ -138,7 +143,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     await waitFor(() => {
@@ -159,7 +164,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     await waitFor(() => {
@@ -179,7 +184,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     // Cancel immediately
@@ -203,7 +208,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     await waitFor(() => {
@@ -226,7 +231,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'global');
+      result.current.startDeploy(mockSkills, { targetScope: 'global' });
     });
 
     // Wait for first skill
@@ -244,7 +249,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy([], 'global');
+      result.current.startDeploy([], { targetScope: 'global' });
     });
 
     expect(result.current.status).toBe('completed');
@@ -255,7 +260,7 @@ describe('useBatchDeploy', () => {
     const { result } = renderHook(() => useBatchDeploy());
 
     act(() => {
-      result.current.startDeploy(mockSkills, 'project');
+      result.current.startDeploy(mockSkills, { targetScope: 'project' });
     });
 
     // Should not call any IPC

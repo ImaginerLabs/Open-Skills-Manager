@@ -1,11 +1,19 @@
 import { useState, useCallback, useRef } from 'react';
 import { invokeIPC } from '@/services/ipcService';
 import type { LibrarySkill, Deployment } from '@/stores/libraryStore';
+import { useIDEStore } from '@/stores/ideStore';
 
 export interface BatchDeployResult {
   success: Deployment[];
   failed: Array<{ skillId: string; skillName: string; error: string }>;
   cancelled: Array<{ skillId: string; skillName: string }>;
+}
+
+export interface BatchDeployOptions {
+  targetScope: 'global' | 'project';
+  targetIdeId?: string;  // Target IDE, defaults to current IDE
+  projectId?: string;    // Required for project scope
+  sourceScope?: 'library' | 'global' | 'project';  // Source scope, defaults to 'library'
 }
 
 export interface UseBatchDeployResult {
@@ -14,13 +22,14 @@ export interface UseBatchDeployResult {
   total: number;
   currentSkillName: string;
   result: BatchDeployResult | null;
-  startDeploy: (skills: LibrarySkill[], targetScope: 'global' | 'project', projectId?: string) => void;
+  startDeploy: (skills: LibrarySkill[], options: BatchDeployOptions) => void;
   cancel: () => void;
   reset: () => void;
   retryFailed: () => void;
 }
 
 export function useBatchDeploy(): UseBatchDeployResult {
+  const { activeIdeId } = useIDEStore();
   const [status, setStatus] = useState<'idle' | 'deploying' | 'completed' | 'cancelled'>('idle');
   const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(0);
@@ -29,18 +38,60 @@ export function useBatchDeploy(): UseBatchDeployResult {
 
   const cancelledRef = useRef(false);
   const pendingSkillsRef = useRef<LibrarySkill[]>([]);
-  const targetScopeRef = useRef<'global' | 'project'>('global');
-  const projectIdRef = useRef<string | undefined>(undefined);
+  const optionsRef = useRef<BatchDeployOptions>({ targetScope: 'global' });
 
   const deploySkill = useCallback(async (skill: LibrarySkill): Promise<boolean> => {
-    const channel = targetScopeRef.current === 'global' ? 'deploy_to_global' : 'deploy_to_project';
-    const args = targetScopeRef.current === 'global'
-      ? { skillId: skill.id }
-      : { skillId: skill.id, projectId: projectIdRef.current };
+    const { targetScope, targetIdeId, projectId, sourceScope } = optionsRef.current;
+    const effectiveIdeId = targetIdeId ?? activeIdeId;
+    const isCrossIDE = targetIdeId !== undefined && targetIdeId !== activeIdeId;
+    const effectiveSourceScope = sourceScope ?? 'library';
+
+    let channel: string;
+    let args: Record<string, unknown>;
+
+    // Handle deployment based on source scope
+    if (effectiveSourceScope === 'global') {
+      // Deploy from global to project
+      if (targetScope === 'project' && projectId) {
+        channel = 'deploy_from_global';
+        args = { skillId: skill.folderName, projectId };
+      } else {
+        console.error('Global source only supports project target');
+        return false;
+      }
+    } else if (effectiveSourceScope === 'project') {
+      // Deploy from project - not supported yet
+      console.error('Deploy from project is not supported');
+      return false;
+    } else {
+      // Deploy from library
+      if (targetScope === 'global') {
+        if (isCrossIDE) {
+          channel = 'deploy_to_global_for_ide';
+          args = { skillId: skill.id, targetIdeId: effectiveIdeId };
+        } else {
+          channel = 'deploy_to_global';
+          args = { skillId: skill.id };
+        }
+      } else {
+        // Project scope
+        if (!projectId) {
+          console.error('Project ID is required for project scope deployment');
+          return false;
+        }
+        if (isCrossIDE) {
+          channel = 'deploy_to_project_for_ide';
+          args = { skillId: skill.id, projectId, targetIdeId: effectiveIdeId };
+        } else {
+          channel = 'deploy_to_project';
+          args = { skillId: skill.id, projectId };
+        }
+      }
+    }
 
     const response = await invokeIPC<void>(channel, args);
     return response.success;
-  }, []);
+  }, [activeIdeId]);
 
   const processQueue = useCallback(async () => {
     const initialResult: BatchDeployResult = {
@@ -78,9 +129,9 @@ export function useBatchDeploy(): UseBatchDeployResult {
           const deployment: Deployment = {
             id: crypto.randomUUID(),
             skillId: skill.id,
-            targetScope: targetScopeRef.current,
+            targetScope: optionsRef.current.targetScope,
             targetPath: '',
-            projectName: targetScopeRef.current === 'project' ? '' : undefined,
+            projectName: optionsRef.current.targetScope === 'project' ? '' : undefined,
             deployedAt: new Date(),
           };
           initialResult.success.push(deployment);
@@ -106,17 +157,16 @@ export function useBatchDeploy(): UseBatchDeployResult {
 
   const startDeploy = useCallback((
     skills: LibrarySkill[],
-    targetScope: 'global' | 'project',
-    projectId?: string
+    options: BatchDeployOptions
   ): void => {
-    if (targetScope === 'project' && !projectId) {
+    if (options.targetScope === 'project' && !options.projectId) {
+      console.error('Project ID is required for project scope deployment');
       return;
     }
 
     cancelledRef.current = false;
     pendingSkillsRef.current = skills;
-    targetScopeRef.current = targetScope;
-    projectIdRef.current = projectId;
+    optionsRef.current = options;
 
     setStatus('deploying');
     setProgress(0);
@@ -141,6 +191,7 @@ export function useBatchDeploy(): UseBatchDeployResult {
   const reset = useCallback((): void => {
     cancelledRef.current = false;
     pendingSkillsRef.current = [];
+    optionsRef.current = { targetScope: 'global' };
     setStatus('idle');
     setProgress(0);
     setTotal(0);
@@ -158,7 +209,7 @@ export function useBatchDeploy(): UseBatchDeployResult {
     );
 
     if (failedSkills.length > 0) {
-      startDeploy(failedSkills, targetScopeRef.current, projectIdRef.current);
+      startDeploy(failedSkills, optionsRef.current);
     }
   }, [result, startDeploy]);
 
