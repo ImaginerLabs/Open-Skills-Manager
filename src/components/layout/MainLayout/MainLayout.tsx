@@ -112,9 +112,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   // Clear selections when navigating to Settings page
   useEffect(() => {
     if (location.pathname === '/settings') {
+      // 直接调用 store 方法，避免依赖 selection 对象
       selection.handleClearSelection();
     }
-  }, [location.pathname, selection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const navSections: NavSection[] = [
     {
