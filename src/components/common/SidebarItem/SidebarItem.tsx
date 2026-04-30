@@ -2,6 +2,54 @@ import { memo, type ReactNode, type DragEvent, type MouseEvent } from 'react';
 import { InlineEditInput } from '@/components/features/CategoryManager/InlineEditInput';
 import styles from './SidebarItem.module.scss';
 
+// ============================================================================
+// 新的 Props 类型 (组合式)
+// ============================================================================
+
+/**
+ * SidebarItem 展示数据
+ */
+export interface SidebarItemData {
+  name: string;
+  icon?: ReactNode;
+  count?: number;
+  missingIcon?: ReactNode;
+}
+
+/**
+ * SidebarItem 交互状态
+ */
+export interface SidebarItemState {
+  isSelected?: boolean;
+  isDisabled?: boolean;
+  isMissing?: boolean;
+  isDragOver?: boolean;
+  isForbidden?: boolean;
+  isExpanded?: boolean;
+  isEditing?: boolean;
+  editingValue?: string;
+  indentLevel?: 0 | 1 | 2;
+}
+
+/**
+ * SidebarItem 事件处理
+ */
+export interface SidebarItemHandlers {
+  onClick?: () => void;
+  onContextMenu?: (e: MouseEvent) => void;
+  onDragOver?: (e: DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: DragEvent) => void;
+  onEditSubmit?: () => void;
+  onEditCancel?: () => void;
+  onEditClick?: (e: MouseEvent) => void;
+}
+
+// ============================================================================
+// 旧的 Props 类型 (向后兼容，将在未来版本移除)
+// ============================================================================
+
+/** @deprecated 使用 SidebarItemData, SidebarItemState, SidebarItemHandlers 组合代替 */
 export interface SidebarItemProps {
   name: string;
   icon?: ReactNode;
@@ -38,7 +86,12 @@ export interface SidebarItemProps {
   className?: string | undefined;
 }
 
+// ============================================================================
+// 组件实现
+// ============================================================================
+
 export const SidebarItem = memo(function SidebarItem({
+  // 旧 props (向后兼容)
   name,
   icon,
   count,
@@ -79,10 +132,7 @@ export const SidebarItem = memo(function SidebarItem({
     .filter(Boolean)
     .join(' ');
 
-  const expandIconClasses = [
-    styles.expandIcon,
-    isExpanded && styles.expanded,
-  ]
+  const expandIconClasses = [styles.expandIcon, isExpanded && styles.expanded]
     .filter(Boolean)
     .join(' ');
 

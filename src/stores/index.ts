@@ -1,3 +1,4 @@
+export { useSelectionStore, type SelectionSource } from './selectionStore';
 export { useLibraryStore, type LibraryStore, type LibrarySkill, type Category, type Group, type Deployment } from './libraryStore';
 export { useGlobalStore, type GlobalStore, type GlobalSkill } from './globalStore';
 export { useProjectStore, type ProjectStore, type Project, type ProjectSkill } from './projectStore';

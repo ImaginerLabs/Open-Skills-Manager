@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Globe,
@@ -26,6 +26,7 @@ import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { useBatchDeploy } from '../../../hooks/useBatchDeploy';
 import { useSidebarData } from '../../../hooks/useSidebarData';
+import { useSelection } from '../../../hooks/useSelection';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
 import { configService } from '../../../services/configService';
@@ -49,17 +50,17 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['library', 'scopes'])
   );
-  const navigate = useNavigate();
   const location = useLocation();
 
-  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore(
+  // Use unified selection hook
+  const selection = useSelection();
+
+  const { groups, updateSkill, selectedGroupId, selectedCategoryId, skills } = useLibraryStore(
     useShallow((state) => ({
       groups: state.groups,
       updateSkill: state.updateSkill,
       selectedGroupId: state.selectedGroupId,
       selectedCategoryId: state.selectedCategoryId,
-      selectGroup: state.selectGroup,
-      selectCategory: state.selectCategory,
       skills: state.skills,
     }))
   );
@@ -101,30 +102,19 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     retryFailed: retryBatchDeployFailed,
   } = useBatchDeploy();
 
-  // Set default selection to "All" group on initial mount if on library page
+  // Initialize default selection and load data on mount
   useEffect(() => {
-    // Only run once on initial mount
-    if (location.pathname.startsWith('/library') && selectedGroupId === undefined) {
-      console.log('[useEffect:mount] Setting default All group');
-      selectGroup(ALL_GROUP_ID);
-    }
+    selection.ensureDefaultSelection();
+    refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run on mount
+  }, []);
 
   // Clear selections when navigating to Settings page
   useEffect(() => {
     if (location.pathname === '/settings') {
-      // Clear both library and project selections
-      selectGroup(undefined);
-      useProjectStore.getState().selectProject(null);
+      selection.handleClearSelection();
     }
-  }, [location.pathname, selectGroup]);
-
-  // Initial load of sidebar data on mount
-  useEffect(() => {
-    refreshAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [location.pathname, selection]);
 
   const navSections: NavSection[] = [
     {
@@ -155,28 +145,14 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     });
   }, []);
 
+  // Use selection hook for group/category selection
   const handleSelectGroup = useCallback((groupId: string) => {
-    console.log('[handleSelectGroup] Selecting group:', groupId);
-    selectGroup(groupId);
-    // Clear project selection when selecting a group (mutual exclusivity)
-    useProjectStore.getState().selectProject(null);
-    // Navigate to library if not already there
-    if (!location.pathname.startsWith('/library')) {
-      navigate('/library');
-    }
-  }, [selectGroup, location.pathname, navigate]);
+    selection.handleSelectLibrary(groupId);
+  }, [selection]);
 
   const handleSelectCategory = useCallback((groupId: string, categoryId: string) => {
-    console.log('[handleSelectCategory] Selecting category:', groupId, categoryId);
-    selectGroup(groupId);
-    selectCategory(categoryId);
-    // Clear project selection when selecting a category (mutual exclusivity)
-    useProjectStore.getState().selectProject(null);
-    // Navigate to library if not already there
-    if (!location.pathname.startsWith('/library')) {
-      navigate('/library');
-    }
-  }, [selectGroup, selectCategory, location.pathname, navigate]);
+    selection.handleSelectLibrary(groupId, categoryId);
+  }, [selection]);
 
   const handleCreateGroup = useCallback(
     (name: string, icon?: string, notes?: string) => {
@@ -196,11 +172,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     (groupId: string) => {
       categoryManager.deleteGroup(groupId).then((success) => {
         if (success && selectedGroupId === groupId) {
-          selectGroup(undefined);
+          selection.handleSelectLibrary(undefined);
         }
       });
     },
-    [categoryManager, selectedGroupId, selectGroup]
+    [categoryManager, selectedGroupId, selection]
   );
 
   const handleCreateCategory = useCallback(
@@ -221,11 +197,11 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     (groupId: string, categoryId: string) => {
       categoryManager.deleteCategory(groupId, categoryId).then((success) => {
         if (success && selectedCategoryId === categoryId) {
-          selectCategory(undefined);
+          selection.handleSelectLibrary(selectedGroupId, undefined);
         }
       });
     },
-    [categoryManager, selectedCategoryId, selectCategory]
+    [categoryManager, selectedCategoryId, selectedGroupId, selection]
   );
 
   const handleOrganizeSkill = useCallback(
@@ -621,7 +597,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                         <div className={styles.scopeItem}>
                           <GlobalSkillsItem
                             count={globalSkills.length}
-                            isSelected={location.pathname === '/global'}
                             onDeploy={handleDeployAllGlobalSkills}
                           />
                         </div>

@@ -1,19 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
 import { AddProjectDialog } from '@/components/features/ProjectDialog';
 import { useProjectStore, type Project } from '@/stores/projectStore';
-import { useLibraryStore, type LibrarySkill } from '@/stores/libraryStore';
+import type { LibrarySkill } from '@/stores/libraryStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useSelection } from '@/hooks/useSelection';
 import { projectService } from '@/services/projectService';
 
 export interface ProjectListContainerProps {
   onDeployProject?: (project: Project, skills: LibrarySkill[]) => void;
 }
 
-export function ProjectListContainer({ onDeployProject }: ProjectListContainerProps): React.ReactElement {
-  const navigate = useNavigate();
+/**
+ * Project List 容器组件
+ *
+ * 重构：使用 useSelection hook 处理选择逻辑
+ * 移除直接操作其他 store 的代码
+ */
+export function ProjectListContainer({
+  onDeployProject,
+}: ProjectListContainerProps): React.ReactElement {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const selection = useSelection();
+
   const {
     projects,
     selectedProject,
@@ -21,12 +30,12 @@ export function ProjectListContainer({ onDeployProject }: ProjectListContainerPr
     setProjects,
     addProject,
     removeProject,
-    selectProject,
     setLoading,
     setError,
   } = useProjectStore();
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
 
+  // 加载项目列表
   useEffect(() => {
     const loadProjects = async () => {
       setLoading(true);
@@ -46,37 +55,34 @@ export function ProjectListContainer({ onDeployProject }: ProjectListContainerPr
     loadProjects();
   }, [setProjects, setLoading, setError]);
 
+  // 使用 useSelection 处理选择逻辑
   const handleSelectProject = useCallback(
     (projectId: string) => {
-      const project = projects.find((p) => p.id === projectId);
-      if (project) {
-        console.log('[handleSelectProject] Selecting project:', projectId);
-        selectProject(project);
-        // Clear library selection when selecting a project (mutual exclusivity)
-        useLibraryStore.getState().selectGroup(undefined);
-        navigate(`/projects/${projectId}`);
-      }
+      selection.handleSelectProject(projectId);
     },
-    [projects, selectProject, navigate]
+    [selection]
   );
 
-  const handleAddProject = useCallback(async (path: string) => {
-    setLoading(true);
-    try {
-      const result = await projectService.add(path);
+  const handleAddProject = useCallback(
+    async (path: string) => {
+      setLoading(true);
+      try {
+        const result = await projectService.add(path);
 
-      if (result.success) {
-        addProject(result.data);
-        showToast('success', `Project "${result.data.name}" added`);
-      } else {
-        showToast('error', result.error.message);
+        if (result.success) {
+          addProject(result.data);
+          showToast('success', `Project "${result.data.name}" added`);
+        } else {
+          showToast('error', result.error.message);
+        }
+      } catch (e) {
+        showToast('error', e instanceof Error ? e.message : 'Failed to add project');
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      showToast('error', e instanceof Error ? e.message : 'Failed to add project');
-    } finally {
-      setLoading(false);
-    }
-  }, [addProject, setLoading, showToast]);
+    },
+    [addProject, setLoading, showToast]
+  );
 
   const handleOpenAddDialog = useCallback(() => {
     setShowAddDialog(true);
