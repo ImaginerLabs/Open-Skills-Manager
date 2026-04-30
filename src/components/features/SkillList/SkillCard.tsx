@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { DotsThree, Trash, Export, Rocket, ArrowDown, Copy, FolderOpen, Link, Folder, SquaresFour, Globe } from '@phosphor-icons/react';
+import { DotsThree, Trash, Export, Rocket, Copy, FolderOpen, Link, Folder, SquaresFour, Globe } from '@phosphor-icons/react';
 import type { Skill, SkillScope, SkillCardActions, ViewMode, ScopeBadgeConfig } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
 import { formatSize, formatDate } from '@/utils/formatters';
@@ -121,12 +121,6 @@ export function SkillCard<T extends Skill>({
       label: 'Export',
       icon: Export,
       onClick: () => actions.onExport!(skill),
-    }] : []),
-    ...(!isLibrary && actions?.onPull ? [{
-      id: 'pull',
-      label: 'Pull to Library',
-      icon: ArrowDown,
-      onClick: () => actions.onPull!(skill.id),
     }] : []),
     ...(!isLibrary && actions?.onExport ? [{
       id: 'export',
