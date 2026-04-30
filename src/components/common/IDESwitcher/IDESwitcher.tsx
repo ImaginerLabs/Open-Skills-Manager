@@ -1,238 +1,33 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Plus } from '@phosphor-icons/react';
-import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
-import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
-import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
-import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
-import { useShallow } from 'zustand/react/shallow';
-import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
-import { ideService, configService, libraryService } from '@/services';
-import { ALL_GROUP_ID } from '@/components/features/CategoryManager';
+import { useIDEStore, useUIStore } from '@/stores';
+import { useIDEConfig } from '@/hooks/useIDEConfig';
+import { useIDESwitcher } from '@/hooks/useIDESwitcher';
+import { useIDEIcon } from '@/hooks/useIDEIcon';
 import { AddIDEDialog } from '@/components/features/IDEDialog';
-import { getIconByName, isIDEIcon } from '@/components/ui/IconPicker';
 import styles from './IDESwitcher.module.scss';
 
-// Default IDE configs
-const DEFAULT_IDE_CONFIGS = [
-  {
-    id: 'claude-code',
-    name: 'Claude Code',
-    globalScopePath: '~/.claude/skills',
-    projectScopeName: '.claude',
-    projects: [],
-    isEnabled: true,
-    icon: 'claude-code',
-  },
-  {
-    id: 'opencode',
-    name: 'OpenCode',
-    globalScopePath: '~/.config/opencode/skills',
-    projectScopeName: '.opencode',
-    projects: [],
-    isEnabled: true,
-    icon: 'opencode',
-  },
-  {
-    id: 'cursor',
-    name: 'Cursor',
-    globalScopePath: '~/.cursor/skills',
-    projectScopeName: '.cursor',
-    projects: [],
-    isEnabled: true,
-    icon: 'cursor',
-  },
-  {
-    id: 'gemini',
-    name: 'Gemini CLI',
-    globalScopePath: '~/.gemini/skills',
-    projectScopeName: '.gemini',
-    projects: [],
-    isEnabled: true,
-    icon: 'gemini',
-  },
-];
-
 export function IDESwitcher(): React.ReactElement | null {
-  const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading, addIDE: addIDEToStore } = useIDEStore(
-    useShallow((state) => ({
-      ideConfigs: state.ideConfigs,
-      activeIdeId: state.activeIdeId,
-      setActiveIDE: state.setActiveIDE,
-      setIDEConfigs: state.setIDEConfigs,
-      setLoading: state.setLoading,
-      addIDE: state.addIDE,
-    }))
-  );
-  const { setSkills: setLibrarySkills, setGroups } = useLibraryStore(
-    useShallow((state) => ({ setSkills: state.setSkills, setGroups: state.setGroups }))
-  );
-  const { setSkills: setGlobalSkills } = useGlobalStore();
-  const { setProjects } = useProjectStore();
+  const { ideConfigs, activeIdeId } = useIDEConfig();
+  const { handleIDESwitch } = useIDESwitcher();
+  const { getIcon } = useIDEIcon();
+  const { addIDE: addIDEToStore } = useIDEStore();
   const { showToast } = useUIStore();
-  const navigate = useNavigate();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const configsToShow = useMemo(() =>
-    ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS,
-    [ideConfigs]
-  );
-
-  // Track if we've already initialized to prevent repeated setActiveIDE calls
-  const hasInitialized = useRef(false);
-
-  // Load IDE configs on mount
-  useEffect(() => {
-    const loadConfigs = async () => {
-      setLoading(true);
-      try {
-        const config = await configService.get();
-        if (config.ideConfigs && config.ideConfigs.length > 0) {
-          // Merge backend configs with defaults — isEnabled always from defaults
-          const mergedConfigs = DEFAULT_IDE_CONFIGS.map((defaultIde) => {
-            const existingConfig = config.ideConfigs.find((ide) => ide.id === defaultIde.id);
-            if (existingConfig) {
-              // Merge: defaultIde provides fallback for missing fields (like icon)
-              return { ...defaultIde, ...existingConfig, isEnabled: defaultIde.isEnabled };
-            }
-            return defaultIde;
-          });
-          setIDEConfigs(mergedConfigs);
-          // Only set active IDE on first initialization
-          if (!hasInitialized.current) {
-            setActiveIDE(config.activeIdeId);
-            hasInitialized.current = true;
-          }
-        } else {
-          setIDEConfigs(DEFAULT_IDE_CONFIGS);
-          // Only set active IDE on first initialization
-          if (!hasInitialized.current) {
-            setActiveIDE('claude-code');
-            hasInitialized.current = true;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load IDE configs:', error);
-        setIDEConfigs(DEFAULT_IDE_CONFIGS);
-        // Only set active IDE on first initialization
-        if (!hasInitialized.current) {
-          setActiveIDE('claude-code');
-          hasInitialized.current = true;
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadConfigs();
-  }, [setIDEConfigs, setActiveIDE, setLoading]);
-
-  // Refresh all app data after IDE switch
-  const refreshAllData = useCallback(async (ideId: string) => {
-    try {
-      // Parallelize all independent API calls for faster IDE switching
-      const [libraryResult, groupsResult, globalResult, projectsResult] = await Promise.all([
-        libraryService.list(),
-        libraryService.groups.list(),
-        ideService.getGlobalSkills(ideId),
-        ideService.getProjects(ideId),
-      ]);
-
-      if (libraryResult.success && libraryResult.data) {
-        setLibrarySkills(libraryResult.data);
-      }
-
-      if (groupsResult.success && groupsResult.data) {
-        setGroups(groupsResult.data);
-      }
-
-      if (globalResult.success && globalResult.data) {
-        setGlobalSkills(globalResult.data);
-      }
-
-      if (projectsResult.success && projectsResult.data) {
-        setProjects(projectsResult.data);
-      }
-
-      const ideName = configsToShow.find((ide) => ide.id === ideId)?.name || ideId;
-      showToast('success', `Switched to ${ideName}`);
-    } catch (error) {
-      console.error('Failed to refresh data:', error);
-      showToast('error', 'Failed to refresh data after IDE switch');
-    }
-  }, [setLibrarySkills, setGroups, setGlobalSkills, setProjects, showToast, configsToShow]);
-
-  const handleIDESwitch = useCallback(async (ideId: string) => {
-    // Check if this IDE is disabled (coming soon)
-    const ideConfig = configsToShow.find((ide) => ide.id === ideId);
-    if (ideConfig && !ideConfig.isEnabled) {
-      showToast('info', `${ideConfig.name} support is coming soon!`);
-      return;
-    }
-
-    if (ideId === activeIdeId) return;
-
-    setLoading(true);
-    try {
-      const result = await ideService.setActive(ideId);
-      if (result.success) {
-        setActiveIDE(ideId);
-        // Navigate to library and reset sidebar to "All" — avoid showing stale
-        // project/group selections from the previous IDE
-        navigate('/library');
-        useProjectStore.getState().selectProject(null);
-        useLibraryStore.getState().selectGroup(ALL_GROUP_ID);
-        // Refresh all data after switching
-        await refreshAllData(ideId);
-      }
-    } catch (error) {
-      console.error('Failed to switch IDE:', error);
-      showToast('error', 'Failed to switch IDE');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeIdeId, setActiveIDE, setLoading, refreshAllData, showToast, configsToShow]);
-
-  const getIcon = (iconName: string) => {
-    const size = 14;
-    // Built-in IDE icons (lobehub icons with custom colors)
-    switch (iconName) {
-      case 'claude-code':
-      case 'claude':
-        return <ClaudeCodeAvatar size={size} />;
-      case 'opencode':
-        return <OpenCodeAvatar size={size} />;
-      case 'cursor':
-        return <CursorAvatar size={size} />;
-      case 'gemini':
-        return <GeminiAvatar size={size} />;
-    }
-    // Try to get icon from IconPicker (IDE avatars or Phosphor icons)
-    const icon = getIconByName(iconName, size);
-    if (!icon) return null;
-    // IDE avatars have their own colors, Phosphor icons need white wrapper
-    if (isIDEIcon(iconName)) {
-      return icon;
-    }
-    return <span className={styles.customIcon}>{icon}</span>;
-  };
-
-  const handleAddIDE = useCallback((newIDE: typeof ideConfigs[0]) => {
+  const handleAddIDE = (newIDE: typeof ideConfigs[0]) => {
     addIDEToStore(newIDE);
     showToast('success', `Added ${newIDE.name}`);
-  }, [addIDEToStore, showToast]);
+  };
 
-  // Show all IDEs (including disabled ones for "coming soon" display)
-  const allIDEs = configsToShow;
-
-  if (allIDEs.length === 0) {
+  if (ideConfigs.length === 0) {
     return null;
   }
 
   return (
     <>
       <div className={styles.switcher}>
-        {allIDEs.map((ide) => (
+        {ideConfigs.map((ide) => (
           <button
             key={ide.id}
             className={`${styles.tab} ${activeIdeId === ide.id ? styles.active : ''} ${!ide.isEnabled ? styles.disabled : ''}`}

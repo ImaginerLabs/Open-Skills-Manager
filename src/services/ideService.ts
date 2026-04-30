@@ -1,6 +1,6 @@
 import { invokeIPC } from './ipcService';
 import type { Project } from '@/stores';
-import type { IDEConfig, AppConfig } from './storageService';
+import type { IDEConfig, AppConfig } from '@/types/ide';
 
 export const ideService = {
   /**

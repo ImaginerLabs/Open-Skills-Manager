@@ -4,40 +4,11 @@
  */
 
 import { invokeIPC, type IpcResult } from './ipcService';
-import type { Group, Project } from '@/stores';
+import type { Group } from '@/stores';
+import type { IDEConfig, Settings, AppConfig } from '@/types/ide';
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface Settings {
-  theme: string;
-  language: string;
-  autoUpdateCheck: boolean;
-  autoRefreshInterval: number;
-  defaultImportCategory?: string;
-}
-
-export interface IDEConfig {
-  id: string;
-  name: string;
-  globalScopePath: string;
-  projectScopeName: string;
-  projects: Project[];
-  isEnabled: boolean;
-  icon?: string;
-}
-
-export interface AppConfig {
-  version: string;
-  createdAt: string;
-  updatedAt: string;
-  updatedBy: string;
-  settings: Settings;
-  syncEnabled: boolean;
-  ideConfigs: IDEConfig[];
-  activeIdeId: string;
-}
+// Re-export for convenience
+export type { IDEConfig, Settings, AppConfig } from '@/types/ide';
 
 export interface SkillEntry {
   id: string;

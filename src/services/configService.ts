@@ -6,10 +6,9 @@
 import {
   storageService,
   configServiceCompat,
-  type Settings,
-  type IDEConfig,
   type SkillOrgEntry,
 } from './storageService';
+import type { Settings, IDEConfig } from '@/types/ide';
 import { invokeIPC } from './ipcService';
 
 // Re-export types

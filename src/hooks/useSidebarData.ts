@@ -5,17 +5,19 @@ import { useProjectStore } from '../stores/projectStore';
 import { libraryService } from '../services/libraryService';
 import { globalService } from '../services/globalService';
 import { projectService } from '../services/projectService';
+import { ideService } from '../services/ideService';
 
 export interface UseSidebarDataResult {
-  refreshAll: () => Promise<void>;
+  refreshAll: (ideId?: string) => Promise<void>;
   refreshLibrary: () => Promise<void>;
-  refreshGlobal: () => Promise<void>;
-  refreshProjects: () => Promise<void>;
+  refreshGlobal: (ideId?: string) => Promise<void>;
+  refreshProjects: (ideId?: string) => Promise<void>;
 }
 
 /**
  * Hook for managing sidebar data refresh.
  * Provides methods to refresh all or specific data sources.
+ * Supports optional ideId parameter for IDE-specific refresh.
  */
 export function useSidebarData(): UseSidebarDataResult {
   const setLibrarySkills = useLibraryStore((state) => state.setSkills);
@@ -41,9 +43,11 @@ export function useSidebarData(): UseSidebarDataResult {
     }
   }, [setLibrarySkills, setGroups]);
 
-  const refreshGlobal = useCallback(async () => {
+  const refreshGlobal = useCallback(async (ideId?: string) => {
     try {
-      const result = await globalService.list();
+      const result = ideId
+        ? await ideService.getGlobalSkills(ideId)
+        : await globalService.list();
       if (result.success) {
         setGlobalSkills(result.data);
       }
@@ -52,9 +56,11 @@ export function useSidebarData(): UseSidebarDataResult {
     }
   }, [setGlobalSkills]);
 
-  const refreshProjects = useCallback(async () => {
+  const refreshProjects = useCallback(async (ideId?: string) => {
     try {
-      const result = await projectService.list();
+      const result = ideId
+        ? await ideService.getProjects(ideId)
+        : await projectService.list();
       if (result.success) {
         setProjects(result.data);
       }
@@ -63,11 +69,11 @@ export function useSidebarData(): UseSidebarDataResult {
     }
   }, [setProjects]);
 
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (ideId?: string) => {
     await Promise.all([
       refreshLibrary(),
-      refreshGlobal(),
-      refreshProjects(),
+      refreshGlobal(ideId),
+      refreshProjects(ideId),
     ]);
   }, [refreshLibrary, refreshGlobal, refreshProjects]);
 

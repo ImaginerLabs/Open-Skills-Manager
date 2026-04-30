@@ -1,16 +1,9 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Project } from './projectStore';
+import type { IDEConfig } from '@/types/ide';
 
-export interface IDEConfig {
-  id: string;
-  name: string;
-  globalScopePath: string;
-  projectScopeName: string;
-  projects: Project[];
-  isEnabled: boolean;
-  icon?: string;
-}
+// Re-export for convenience
+export type { IDEConfig } from '@/types/ide';
 
 interface IDEState {
   ideConfigs: IDEConfig[];
