@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Globe, Rocket } from '@phosphor-icons/react';
 import { NavLink } from 'react-router-dom';
 import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
+import { useProjectStore } from '@/stores/projectStore';
+import { useLibraryStore } from '@/stores/libraryStore';
 import styles from './GlobalSkillsItem.module.scss';
 
 export interface GlobalSkillsItemProps {
@@ -17,6 +19,18 @@ export function GlobalSkillsItem({
 }: GlobalSkillsItemProps): React.ReactElement {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const selectProject = useProjectStore((state) => state.selectProject);
+  const selectGroup = useLibraryStore((state) => state.selectGroup);
+
+  // Clear project and library selection when this item becomes active (navigating to /global)
+  useEffect(() => {
+    if (isSelected) {
+      const currentProject = useProjectStore.getState().selectedProject;
+      const currentGroup = useLibraryStore.getState().selectedGroupId;
+      if (currentProject !== null) selectProject(null);
+      if (currentGroup !== undefined) selectGroup(undefined);
+    }
+  }, [isSelected, selectProject, selectGroup]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

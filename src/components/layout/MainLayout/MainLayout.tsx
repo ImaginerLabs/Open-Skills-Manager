@@ -24,6 +24,7 @@ import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
 import { useSearchKeyboard } from '../../../hooks/useSearchKeyboard';
 import { useBatchDeploy } from '../../../hooks/useBatchDeploy';
+import { useSidebarData } from '../../../hooks/useSidebarData';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
 import { configService } from '../../../services/configService';
@@ -50,14 +51,15 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills, setSkills } = useLibraryStore();
-  const { skills: globalSkills, setSkills: setGlobalSkills } = useGlobalStore();
+  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore();
+  const { skills: globalSkills } = useGlobalStore();
   const { projects } = useProjectStore();
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
   const { openSearch } = useSearchKeyboard();
+  const { refreshAll, refreshLibrary, refreshGlobal } = useSidebarData();
 
   // Batch deploy state
   const [showBatchTargetDialog, setShowBatchTargetDialog] = useState(false);
@@ -91,6 +93,21 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount
+
+  // Clear selections when navigating to Settings page
+  useEffect(() => {
+    if (location.pathname === '/settings') {
+      // Clear both library and project selections
+      selectGroup(undefined);
+      useProjectStore.getState().selectProject(null);
+    }
+  }, [location.pathname, selectGroup]);
+
+  // Initial load of sidebar data on mount
+  useEffect(() => {
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const navSections: NavSection[] = [
     {
@@ -194,26 +211,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     [categoryManager, selectedCategoryId, selectCategory]
   );
 
-  // Load groups and global skills once on mount (empty deps ensures this only runs once)
-  useEffect(() => {
-    categoryManager.loadGroups();
-
-    // Pre-load global skills for sidebar count
-    globalService.list().then((result) => {
-      if (result.success) {
-        setGlobalSkills(result.data);
-      }
-    });
-
-    // Pre-load library skills for sidebar count
-    libraryService.list().then((result) => {
-      if (result.success) {
-        setSkills(result.data);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleOrganizeSkill = useCallback(
     async (skillId: string, groupId: string | null, categoryId?: string) => {
       try {
@@ -229,7 +226,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             ? `${group?.name} / ${category.name}`
             : group?.name ?? 'Uncategorized';
           showToast('success', `Skill moved to ${locationName}`);
-          await categoryManager.loadGroups();
+          // Refresh sidebar to update counts
+          refreshLibrary();
         } else {
           showToast('error', result.error.message);
         }
@@ -237,7 +235,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         showToast('error', e instanceof Error ? e.message : 'Failed to organize skill');
       }
     },
-    [updateSkill, groups, showToast, categoryManager]
+    [updateSkill, groups, showToast, refreshLibrary]
   );
 
   // Drag-drop handlers for organizing skills
@@ -389,10 +387,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             const deleteResult = await libraryService.delete(result.id);
             if (deleteResult.success) {
               showToast('success', `Deleted ${result.name}`);
-              const listResult = await libraryService.list();
-              if (listResult.success) {
-                setSkills(listResult.data);
-              }
+              refreshLibrary();
             } else {
               showToast('error', deleteResult.error.message);
             }
@@ -400,10 +395,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
             const deleteResult = await globalService.delete(result.id);
             if (deleteResult.success) {
               showToast('success', `Deleted ${result.name}`);
-              const listResult = await globalService.list();
-              if (listResult.success) {
-                setGlobalSkills(listResult.data);
-              }
+              refreshGlobal();
             } else {
               showToast('error', deleteResult.error.message);
             }
@@ -411,7 +403,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         },
       });
     },
-    [showToast, showConfirmDialog, closeConfirmDialog, setSkills, setGlobalSkills]
+    [showToast, showConfirmDialog, closeConfirmDialog, refreshLibrary, refreshGlobal]
   );
 
   // Batch deploy handlers
@@ -468,12 +460,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
               showToast('error', `Failed to add "${skill.name}" to Library: ${result.error.message}`);
             }
           }
-          // Refresh Library skills and groups (to update sidebar counts)
-          const listResult = await libraryService.list();
-          if (listResult.success) {
-            setSkills(listResult.data);
-          }
-          await categoryManager.loadGroups();
+          // Refresh sidebar counts
+          refreshLibrary();
           resetBatchDeploy();
         } else {
           // Copy within library - update skill metadata
@@ -489,11 +477,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
           }
           if (updates.length > 0) {
             showToast('success', `Moved ${updates.length} skills`);
-            await categoryManager.loadGroups();
-            const listResult = await libraryService.list();
-            if (listResult.success) {
-              setSkills(listResult.data);
-            }
+            // Refresh sidebar counts
+            refreshLibrary();
           }
           resetBatchDeploy();
         }
@@ -520,7 +505,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         startBatchDeploy(batchDeploySkills, options);
       }
     },
-    [batchDeploySkills, batchDeploySourceInfo, startBatchDeploy, showToast, categoryManager, setSkills, resetBatchDeploy]
+    [batchDeploySkills, batchDeploySourceInfo, startBatchDeploy, showToast, refreshLibrary, resetBatchDeploy]
   );
 
   const handleBatchDeployDialogClose = useCallback(() => {
@@ -530,21 +515,9 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   // Refresh sidebar counts when batch deploy completes
   useEffect(() => {
     if (batchDeployStatus === 'completed' && batchDeployResult) {
-      // Refresh Library skills and groups
-      libraryService.list().then((result) => {
-        if (result.success) {
-          setSkills(result.data);
-        }
-      });
-      categoryManager.loadGroups();
-      // Refresh Global skills count
-      globalService.list().then((result) => {
-        if (result.success) {
-          setGlobalSkills(result.data);
-        }
-      });
+      refreshAll();
     }
-  }, [batchDeployStatus, batchDeployResult, setSkills, setGlobalSkills, categoryManager]);
+  }, [batchDeployStatus, batchDeployResult, refreshAll]);
 
   // Handle deploying all global skills
   const handleDeployAllGlobalSkills = useCallback(() => {

@@ -4,6 +4,7 @@ import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
 import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
+import { useSidebarData } from '../../hooks/useSidebarData';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
 // Stores imported for getState() access during factory reset
@@ -27,6 +28,7 @@ function formatBytes(bytes: number): string {
 export function Settings(): React.ReactElement {
   const { theme, setTheme, setLanguage } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
+  const { refreshAll } = useSidebarData();
   const [appVersion, setAppVersion] = useState<string>('');
   const [appName, setAppName] = useState<string>('');
 
@@ -96,18 +98,24 @@ export function Settings(): React.ReactElement {
           setTheme('system');
           setLanguage('auto');
 
-          // Clear library store (skills and groups)
+          // Clear library store (skills and groups) and selection
           useLibraryStore.getState().setSkills([]);
           useLibraryStore.getState().setGroups([]);
+          useLibraryStore.getState().selectGroup(undefined);
+          useLibraryStore.getState().selectCategory(undefined);
 
           // Clear global store
           useGlobalStore.getState().setSkills([]);
 
-          // Clear project store
+          // Clear project store and selection
           useProjectStore.getState().setProjects([]);
+          useProjectStore.getState().selectProject(null);
 
           // Reset IDE store to defaults
           useIDEStore.getState().reset();
+
+          // Refresh sidebar to show empty state
+          refreshAll();
 
           showToast('success', 'All data has been reset to factory defaults');
         } catch (e) {
@@ -115,7 +123,7 @@ export function Settings(): React.ReactElement {
         }
       },
     });
-  }, [setTheme, setLanguage, showToast, showConfirmDialog]);
+  }, [setTheme, setLanguage, showToast, showConfirmDialog, refreshAll]);
 
   return (
     <div className={styles.page}>

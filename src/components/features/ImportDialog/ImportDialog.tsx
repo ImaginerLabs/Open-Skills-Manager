@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button/Button';
 import { useLibraryStore, type LibrarySkill } from '@/stores/libraryStore';
 import { libraryService } from '@/services/libraryService';
 import { useTauriDragDrop } from '@/hooks/useTauriDragDrop';
+import { useSidebarData } from '@/hooks/useSidebarData';
 import { DuplicateHandlerDialog } from './DuplicateHandlerDialog';
 import { DropZone } from './DropZone';
 import { ImportOptions } from './ImportOptions';
@@ -56,6 +57,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
   const addSkill = useLibraryStore((state) => state?.addSkill);
   const removeSkill = useLibraryStore((state) => state?.removeSkill);
   const skills = useLibraryStore((state) => state?.skills);
+  const { refreshLibrary } = useSidebarData();
   const existingSkills = useMemo(
     () => (Array.isArray(skills) ? skills.filter((s): s is LibrarySkill => s != null && s.folderName != null) : []),
     [skills]
@@ -122,6 +124,8 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
         if (result.success) {
           addSkill(result.data);
           setItems((prev) => prev.filter((i) => i.id !== item.id));
+          // Refresh sidebar to update counts
+          refreshLibrary();
         } else {
           setItems((prev) =>
             prev.map((i) =>
@@ -143,7 +147,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
         );
       }
     },
-    [duplicateInfo, existingSkills, removeSkill, addSkill]
+    [duplicateInfo, existingSkills, removeSkill, addSkill, refreshLibrary]
   );
 
   const handleImport = useCallback(async () => {

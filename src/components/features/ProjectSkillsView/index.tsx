@@ -4,6 +4,7 @@ import { ArrowClockwise, FolderOpen } from '@phosphor-icons/react';
 import { useProjectStore, type ProjectSkill } from '../../../stores/projectStore';
 import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
+import { useSidebarData } from '../../../hooks/useSidebarData';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
 import { BatchDeployTargetDialog, type DeployTarget } from '../DeploymentTracking';
@@ -17,6 +18,7 @@ import styles from './ProjectSkillsView.module.scss';
 export function ProjectSkillsView(): React.ReactElement {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects, selectedProject, projectSkills, selectProject } = useProjectStore();
+  const { refreshProjects, refreshLibrary } = useSidebarData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
@@ -107,9 +109,11 @@ export function ProjectSkillsView(): React.ReactElement {
     async (skillId: string) => {
       if (projectId) {
         await deleteSkill(projectId, skillId);
+        // Refresh sidebar to update counts
+        refreshProjects();
       }
     },
-    [projectId, deleteSkill]
+    [projectId, deleteSkill, refreshProjects]
   );
 
   const handleDeploySkill = useCallback(
@@ -134,11 +138,13 @@ export function ProjectSkillsView(): React.ReactElement {
       });
       if (result.success) {
         showToast('success', `Skill "${deploySkill.name}" added to Library`);
+        // Refresh sidebar to update Library counts
+        refreshLibrary();
       } else {
         showToast('error', `Failed to add to Library: ${result.error.message}`);
       }
     }
-  }, [deploySkill, showToast]);
+  }, [deploySkill, showToast, refreshLibrary]);
 
   const handleCopyPath = useCallback(async (skillId: string) => {
     const skill = skills.find((s) => s.id === skillId);

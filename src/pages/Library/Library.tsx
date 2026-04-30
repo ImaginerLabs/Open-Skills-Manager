@@ -12,7 +12,7 @@ import { libraryService } from '../../services/libraryService';
 import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
-import { useCategoryManager } from '../../hooks/useCategoryManager';
+import { useSidebarData } from '../../hooks/useSidebarData';
 import {
   SkillListLayout,
   SkillListHeader,
@@ -44,6 +44,8 @@ export function Library(): React.ReactElement {
     closeConfirmDialog,
   } = useUIStore();
 
+  const { refreshLibrary } = useSidebarData();
+
   const {
     showImportDialog,
     showExportDialog,
@@ -58,7 +60,11 @@ export function Library(): React.ReactElement {
   const { handleExportStart } = useLibraryExport();
   const { handleImportStart, handleImportCancel } = useLibraryImport(
     (show) => setImportProgress(show),
-    () => setImportDialog(false)
+    () => {
+      setImportDialog(false);
+      // Refresh sidebar after import completes
+      refreshLibrary();
+    }
   );
 
   const {
@@ -72,8 +78,6 @@ export function Library(): React.ReactElement {
     reset: resetDeploy,
     retryFailed: retryDeployFailed,
   } = useBatchDeploy();
-
-  const { loadGroups } = useCategoryManager();
 
   const onExportStart = useCallback(
     async (format: Parameters<typeof handleExportStart>[0], skillsToExport: ExportableSkill[]) => {
@@ -155,6 +159,8 @@ export function Library(): React.ReactElement {
                 setSkillMdContent('');
               }
               showToast('success', 'Skill deleted from library');
+              // Refresh sidebar to update counts
+              refreshLibrary();
             } else {
               setError(result.error.message);
               showToast('error', `Failed to delete: ${result.error.message}`);
@@ -169,7 +175,7 @@ export function Library(): React.ReactElement {
         },
       });
     },
-    [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
+    [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog, refreshLibrary]
   );
 
   const handleExportSkill = useCallback((skill: LibrarySkill) => {
@@ -196,12 +202,8 @@ export function Library(): React.ReactElement {
           showToast('error', `Failed to move "${skill.name}": ${result.error.message}`);
         }
       }
-      // Refresh skills list and groups (to update skillCount in sidebar)
-      const listResult = await libraryService.list();
-      if (listResult.success) {
-        setSkills(listResult.data);
-      }
-      await loadGroups();
+      // Refresh sidebar to update counts
+      refreshLibrary();
     } else if (target.type === 'global') {
       startDeploy(deploySkills, {
         targetScope: 'global',
@@ -215,7 +217,7 @@ export function Library(): React.ReactElement {
         sourceScope: 'library',
       });
     }
-  }, [deploySkills, startDeploy, showToast, setSkills, loadGroups]);
+  }, [deploySkills, startDeploy, showToast, refreshLibrary]);
 
   const handleDeployDialogClose = useCallback(() => {
     resetDeploy();

@@ -8,6 +8,7 @@ import { SkillListLayout, SkillListHeader, SkillList } from '../../components/fe
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
+import { useSidebarData } from '../../hooks/useSidebarData';
 import { globalService } from '../../services/globalService';
 import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
@@ -33,6 +34,7 @@ export function Global(): React.ReactElement {
 
   const { projects } = useProjectStore();
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
+  const { refreshGlobal, refreshLibrary } = useSidebarData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -149,6 +151,8 @@ export function Global(): React.ReactElement {
                 selectSkill(null);
               }
               showToast('success', 'Global skill deleted');
+              // Refresh sidebar to update counts
+              refreshGlobal();
             } else {
               setError(result.error.message);
               showToast('error', `Failed to delete: ${result.error.message}`);
@@ -163,7 +167,7 @@ export function Global(): React.ReactElement {
         },
       });
     },
-    [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
+    [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog, refreshGlobal]
   );
 
   const handleClosePreview = useCallback(() => {
@@ -250,6 +254,8 @@ export function Global(): React.ReactElement {
       });
       if (result.success) {
         showToast('success', `Skill "${deploySkill.name}" added to Library`);
+        // Refresh sidebar to update Library counts
+        refreshLibrary();
       } else {
         showToast('error', `Failed to add to Library: ${result.error.message}`);
       }
