@@ -11,6 +11,7 @@ export interface ProjectListProps {
   onSelectProject: (projectId: string) => void;
   onAddProject: () => void;
   onRemoveProject: (projectId: string) => void;
+  onDeployProject?: (project: Project) => void;
   isLoading?: boolean;
 }
 
@@ -20,6 +21,7 @@ export function ProjectList({
   onSelectProject,
   onAddProject,
   onRemoveProject,
+  onDeployProject,
   isLoading = false,
 }: ProjectListProps): React.ReactElement {
   const handleSelectProject = useCallback(
@@ -34,6 +36,13 @@ export function ProjectList({
       onRemoveProject(projectId);
     },
     [onRemoveProject]
+  );
+
+  const handleDeployProject = useCallback(
+    (project: Project) => {
+      onDeployProject?.(project);
+    },
+    [onDeployProject]
   );
 
   return (
@@ -59,6 +68,7 @@ export function ProjectList({
                   isSelected={selectedProjectId === project.id}
                   onSelect={handleSelectProject}
                   onRemove={handleRemoveProject}
+                  onDeploy={handleDeployProject}
                 />
               ))}
             </div>

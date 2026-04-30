@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FolderOpen, Warning, Trash } from '@phosphor-icons/react';
+import { FolderOpen, Warning, Trash, Rocket } from '@phosphor-icons/react';
 import type { Project } from '@/stores/projectStore';
 import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
 import { SidebarItem } from '@/components/common/SidebarItem';
@@ -10,6 +10,7 @@ export interface ProjectItemProps {
   isSelected: boolean;
   onSelect: (projectId: string) => void;
   onRemove: (projectId: string) => void;
+  onDeploy?: (project: Project) => void;
 }
 
 export function ProjectItem({
@@ -17,6 +18,7 @@ export function ProjectItem({
   isSelected,
   onSelect,
   onRemove,
+  onDeploy,
 }: ProjectItemProps): React.ReactElement {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -36,16 +38,27 @@ export function ProjectItem({
     setShowMenu(false);
   }, [onRemove, project.id]);
 
+  const handleDeploy = useCallback(() => {
+    onDeploy?.(project);
+    setShowMenu(false);
+  }, [onDeploy, project]);
+
   const handleCloseMenu = useCallback(() => {
     setShowMenu(false);
   }, []);
 
   const menuItems: ContextMenuItem[] = [
+    ...(onDeploy && project.exists && project.skillCount > 0 ? [{
+      id: 'deploy',
+      label: 'Deploy all to...',
+      icon: Rocket,
+      onClick: handleDeploy,
+    }] : []),
     {
       id: 'remove',
       label: 'Remove',
       icon: Trash,
-      variant: 'danger',
+      variant: 'danger' as const,
       onClick: handleRemove,
     },
   ];

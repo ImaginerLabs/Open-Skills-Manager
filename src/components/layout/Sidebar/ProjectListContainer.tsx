@@ -2,12 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProjectList } from './ProjectList';
 import { AddProjectDialog } from '@/components/features/ProjectDialog';
-import { useProjectStore } from '@/stores/projectStore';
-import { useLibraryStore } from '@/stores/libraryStore';
+import { useProjectStore, type Project } from '@/stores/projectStore';
+import { useLibraryStore, type LibrarySkill } from '@/stores/libraryStore';
 import { useUIStore } from '@/stores/uiStore';
 import { projectService } from '@/services/projectService';
 
-export function ProjectListContainer(): React.ReactElement {
+export interface ProjectListContainerProps {
+  onDeployProject?: (project: Project, skills: LibrarySkill[]) => void;
+}
+
+export function ProjectListContainer({ onDeployProject }: ProjectListContainerProps): React.ReactElement {
   const navigate = useNavigate();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const {
@@ -111,6 +115,45 @@ export function ProjectListContainer(): React.ReactElement {
     [projects, removeProject, setLoading, showToast, showConfirmDialog, closeConfirmDialog]
   );
 
+  const handleDeployProject = useCallback(
+    async (project: Project) => {
+      if (!project.exists || project.skillCount === 0) {
+        showToast('info', 'No skills in this project to deploy');
+        return;
+      }
+      // Load project skills
+      try {
+        const result = await projectService.skills(project.id);
+        if (result.success && result.data.length > 0) {
+          // Convert project skills to library skill format
+          const skillsToDeploy: LibrarySkill[] = result.data.map((skill) => ({
+            id: skill.id,
+            name: skill.name,
+            description: skill.description || '',
+            path: skill.path,
+            size: skill.size,
+            fileCount: skill.fileCount,
+            skillMdLines: 0,
+            skillMdChars: 0,
+            folderName: skill.id,
+            version: '1.0.0',
+            skillMdPath: '',
+            hasResources: skill.fileCount > 1,
+            isSymlink: false,
+            importedAt: new Date(),
+            deployments: [],
+          }));
+          onDeployProject?.(project, skillsToDeploy);
+        } else {
+          showToast('info', 'No skills in this project to deploy');
+        }
+      } catch {
+        showToast('error', 'Failed to load project skills');
+      }
+    },
+    [onDeployProject, showToast]
+  );
+
   return (
     <>
       <ProjectList
@@ -119,6 +162,7 @@ export function ProjectListContainer(): React.ReactElement {
         onSelectProject={handleSelectProject}
         onAddProject={handleOpenAddDialog}
         onRemoveProject={handleRemoveProject}
+        onDeployProject={handleDeployProject}
         isLoading={isLoading}
       />
 
