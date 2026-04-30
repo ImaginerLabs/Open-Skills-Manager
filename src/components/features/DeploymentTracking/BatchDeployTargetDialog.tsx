@@ -49,23 +49,38 @@ export function BatchDeployTargetDialog({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedType('global');
-      setSelectedIdeId(activeIdeId);
-      setSelectedProjectId(undefined);
-      setSelectedGroupId(undefined);
-      setSelectedCategoryId(undefined);
-      setExpandedGroups(new Set());
-    }
-  }, [isOpen, activeIdeId]);
-
   // Get enabled IDEs
   const enabledIDEs = useMemo(
     () => ideConfigs.filter((ide) => ide.isEnabled),
     [ideConfigs]
   );
+
+  // Get available IDEs for Global target (exclude current IDE if source is global)
+  const availableIDEsForGlobal = useMemo(() => {
+    if (sourceInfo?.sourceType === 'global') {
+      // Exclude current IDE's global since source is already from there
+      return enabledIDEs.filter((ide) => ide.id !== activeIdeId);
+    }
+    return enabledIDEs;
+  }, [sourceInfo?.sourceType, enabledIDEs, activeIdeId]);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      // Default to library for global source (since global target may be empty)
+      const defaultType = sourceInfo?.sourceType === 'global' ? 'library' : 'global';
+      setSelectedType(defaultType);
+      // For global source, select first available IDE (not current)
+      const defaultIdeId = sourceInfo?.sourceType === 'global'
+        ? (availableIDEsForGlobal[0]?.id ?? activeIdeId)
+        : activeIdeId;
+      setSelectedIdeId(defaultIdeId);
+      setSelectedProjectId(undefined);
+      setSelectedGroupId(undefined);
+      setSelectedCategoryId(undefined);
+      setExpandedGroups(new Set());
+    }
+  }, [isOpen, activeIdeId, sourceInfo?.sourceType, availableIDEsForGlobal]);
 
   // Get projects for selected IDE
   const ideProjects = useMemo(() => {
@@ -104,26 +119,20 @@ export function BatchDeployTargetDialog({
     onDeploy(target);
   }, [selectedType, selectedIdeId, selectedProjectId, selectedGroupId, selectedCategoryId, onDeploy]);
 
+  // Determine which target types are available based on source
+  const availableTargetTypes: DeployTargetType[] = useMemo(() => {
+    // From any source, can deploy to library, global, or project
+    return ['library', 'global', 'project'];
+  }, []);
+
   // Check if can deploy
   const canDeploy = useMemo(() => {
     if (skills.length === 0) return false;
     if (selectedType === 'project' && !selectedProjectId) return false;
+    // For Global target from global source, need at least one available IDE
+    if (selectedType === 'global' && sourceInfo?.sourceType === 'global' && availableIDEsForGlobal.length === 0) return false;
     return true;
-  }, [skills.length, selectedType, selectedProjectId]);
-
-  // Determine which target types are available based on source
-  const availableTargetTypes: DeployTargetType[] = useMemo(() => {
-    if (sourceInfo?.sourceType === 'global') {
-      // From global, can only deploy to project
-      return ['project'];
-    }
-    if (sourceInfo?.sourceType === 'project') {
-      // From project, can deploy to library or global (future: currently not supported)
-      return ['library', 'global', 'project'];
-    }
-    // From library, can deploy anywhere
-    return ['library', 'global', 'project'];
-  }, [sourceInfo?.sourceType]);
+  }, [skills.length, selectedType, selectedProjectId, sourceInfo?.sourceType, availableIDEsForGlobal.length]);
 
   // Auto-select first available type if current selection is not available
   useEffect(() => {
@@ -133,34 +142,49 @@ export function BatchDeployTargetDialog({
   }, [isOpen, availableTargetTypes, selectedType]);
 
   // Render IDE selector
-  const renderIDESelector = () => (
-    <div className={styles.section}>
-      <h3 className={styles.sectionTitle}>Target IDE</h3>
-      <div className={styles.ideList}>
-        {enabledIDEs.map((ide) => (
-          <button
-            key={ide.id}
-            type="button"
-            className={[
-              styles.targetCard,
-              selectedIdeId === ide.id && styles.selected,
-            ].filter(Boolean).join(' ')}
-            onClick={() => setSelectedIdeId(ide.id)}
-          >
-            <Globe size={20} weight="duotone" />
-            <div className={styles.targetInfo}>
-              <span className={styles.targetName}>
-                {ide.name}
-                {ide.id === activeIdeId && <span className={styles.currentBadge}>Current</span>}
-              </span>
-              <span className={styles.targetPath}>{ide.globalScopePath}</span>
+  const renderIDESelector = (forGlobalScope = false) => {
+    // Use filtered list for Global scope, full list for Project scope
+    const ideList = forGlobalScope ? availableIDEsForGlobal : enabledIDEs;
+    const emptyMessage = forGlobalScope && sourceInfo?.sourceType === 'global'
+      ? 'No other IDEs available (current IDE excluded)'
+      : 'No IDEs configured';
+
+    return (
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>Target IDE</h3>
+        <div className={styles.ideList}>
+          {ideList.length === 0 ? (
+            <div className={styles.empty}>
+              <Globe size={24} weight="thin" />
+              <span>{emptyMessage}</span>
             </div>
-            {selectedIdeId === ide.id && <Check size={18} weight="bold" className={styles.checkIcon} />}
-          </button>
-        ))}
+          ) : (
+            ideList.map((ide) => (
+              <button
+                key={ide.id}
+                type="button"
+                className={[
+                  styles.targetCard,
+                  selectedIdeId === ide.id && styles.selected,
+                ].filter(Boolean).join(' ')}
+                onClick={() => setSelectedIdeId(ide.id)}
+              >
+                <Globe size={20} weight="duotone" />
+                <div className={styles.targetInfo}>
+                  <span className={styles.targetName}>
+                    {ide.name}
+                    {ide.id === activeIdeId && <span className={styles.currentBadge}>Current</span>}
+                  </span>
+                  <span className={styles.targetPath}>{ide.globalScopePath}</span>
+                </div>
+                {selectedIdeId === ide.id && <Check size={18} weight="bold" className={styles.checkIcon} />}
+              </button>
+            ))
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Render project list
   const renderProjectList = () => (
@@ -372,7 +396,7 @@ export function BatchDeployTargetDialog({
 
         {/* Target selection based on type */}
         {selectedType === 'library' && renderLibraryTree()}
-        {selectedType === 'global' && renderIDESelector()}
+        {selectedType === 'global' && renderIDESelector(true)}
         {selectedType === 'project' && (
           <>
             {renderIDESelector()}
