@@ -150,6 +150,8 @@ pub fn run() {
             storage_commands::storage_ide_set_active,
             storage_commands::storage_ide_list,
             storage_commands::storage_ide_update,
+            storage_commands::storage_ide_add,
+            storage_commands::storage_ide_remove,
             storage_commands::storage_library_get,
             storage_commands::storage_groups_get,
             storage_commands::storage_groups_set,
