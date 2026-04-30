@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  MIN_SEARCH_LENGTH,
   isValidQuery,
   normalizeText,
   matchesQuery,
@@ -130,7 +129,7 @@ describe('search utilities', () => {
     it('filters items by query', () => {
       const result = filterByQuery(items, 'react');
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('React Hooks');
+      expect(result[0]?.name).toBe('React Hooks');
     });
 
     it('returns all items for empty query', () => {
@@ -144,7 +143,7 @@ describe('search utilities', () => {
     it('matches in description', () => {
       const result = filterByQuery(items, 'tutorial');
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('TypeScript Guide');
+      expect(result[0]?.name).toBe('TypeScript Guide');
     });
   });
 

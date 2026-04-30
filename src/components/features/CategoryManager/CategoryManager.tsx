@@ -181,6 +181,7 @@ export function CategoryManager({
           icon: PencilSimple,
           onClick: () => {
             const { type, groupId, categoryId } = contextMenu.data;
+            if (type === 'all') return; // "all" cannot be renamed
             const group = safeGroups.find((g) => g.id === groupId);
             const currentValue =
               type === 'group'
@@ -244,6 +245,7 @@ export function CategoryManager({
                 isSelected={isSelected}
                 isEditing={isEditing}
                 isDragOver={isDragOver}
+                isForbidden={isDragOver}
                 editingValue={editing?.value || ''}
                 onGroupClick={() => handleGroupClick(group.id)}
                 onContextMenu={(e) => open(e, { type: 'group', groupId: group.id })}
