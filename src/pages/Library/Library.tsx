@@ -12,6 +12,7 @@ import { libraryService } from '../../services/libraryService';
 import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
+import { useCategoryManager } from '../../hooks/useCategoryManager';
 import {
   SkillListLayout,
   SkillListHeader,
@@ -71,6 +72,8 @@ export function Library(): React.ReactElement {
     reset: resetDeploy,
     retryFailed: retryDeployFailed,
   } = useBatchDeploy();
+
+  const { loadGroups } = useCategoryManager();
 
   const onExportStart = useCallback(
     async (format: Parameters<typeof handleExportStart>[0], skillsToExport: ExportableSkill[]) => {
@@ -193,11 +196,12 @@ export function Library(): React.ReactElement {
           showToast('error', `Failed to move "${skill.name}": ${result.error.message}`);
         }
       }
-      // Refresh skills list
+      // Refresh skills list and groups (to update skillCount in sidebar)
       const listResult = await libraryService.list();
       if (listResult.success) {
         setSkills(listResult.data);
       }
+      await loadGroups();
     } else if (target.type === 'global') {
       startDeploy(deploySkills, {
         targetScope: 'global',
@@ -211,7 +215,7 @@ export function Library(): React.ReactElement {
         sourceScope: 'library',
       });
     }
-  }, [deploySkills, startDeploy, showToast, setSkills]);
+  }, [deploySkills, startDeploy, showToast, setSkills, loadGroups]);
 
   const handleDeployDialogClose = useCallback(() => {
     resetDeploy();
