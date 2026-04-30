@@ -1,6 +1,13 @@
+/**
+ * @deprecated Use `useSkillFilter` from '@/hooks/useSkillFilter' instead.
+ * This hook is kept for backward compatibility but will be removed in a future version.
+ */
 import { useState, useCallback, useMemo } from 'react';
 import type { Skill, SortOption, SortDirection, UseSkillSortResult } from '../types';
 
+/**
+ * @deprecated Use `useSkillFilter` from '@/hooks/useSkillFilter' instead.
+ */
 export function useSkillSort<T extends Skill>(
   skills: T[],
   initialSortBy: SortOption = 'name',
@@ -23,8 +30,20 @@ export function useSkillSort<T extends Skill>(
           comparison = a.name.localeCompare(b.name);
           break;
         case 'date': {
-          const dateA = 'importedAt' in a ? a.importedAt : 'installedAt' in a ? a.installedAt : new Date();
-          const dateB = 'importedAt' in b ? b.importedAt : 'installedAt' in b ? b.installedAt : new Date();
+          const dateA = 'importedAt' in a && a.importedAt
+            ? a.importedAt
+            : 'installedAt' in a && a.installedAt
+              ? a.installedAt
+              : 'updatedAt' in a && a.updatedAt
+                ? a.updatedAt
+                : new Date().toISOString();
+          const dateB = 'importedAt' in b && b.importedAt
+            ? b.importedAt
+            : 'installedAt' in b && b.installedAt
+              ? b.installedAt
+              : 'updatedAt' in b && b.updatedAt
+                ? b.updatedAt
+                : new Date().toISOString();
           comparison = new Date(dateA).getTime() - new Date(dateB).getTime();
           break;
         }

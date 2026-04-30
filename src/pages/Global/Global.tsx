@@ -6,14 +6,13 @@ import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '.
 import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
-import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
+import { useSkillFilter } from '../../hooks/useSkillFilter';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { globalService } from '../../services/globalService';
 import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatDate } from '../../utils/formatters';
-import { filterByQuery, isValidQuery } from '../../utils/search';
 import { toLibrarySkillFormat } from '../../utils/skillConverters';
 import styles from './Global.module.scss';
 
@@ -36,7 +35,6 @@ export function Global(): React.ReactElement {
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
   const { refreshGlobal, refreshLibrary } = useSidebarData();
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
@@ -61,7 +59,15 @@ export function Global(): React.ReactElement {
     retryFailed: retryDeployFailed,
   } = useBatchDeploy();
 
-  const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
+  const {
+    filteredSkills,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
+    sortDirection,
+    toggleSortDirection,
+  } = useSkillFilter(skills, { initialSortBy: 'date', initialSortDirection: 'desc' });
 
   useEffect(() => {
     const loadSkills = async () => {
@@ -199,12 +205,6 @@ export function Global(): React.ReactElement {
       }
     }
   }, [skills, showToast]);
-
-  // Filter skills by search query using unified search logic
-  const filteredSkills = useMemo(() => {
-    if (!searchQuery || !isValidQuery(searchQuery)) return sortedSkills;
-    return filterByQuery(sortedSkills, searchQuery);
-  }, [sortedSkills, searchQuery]);
 
   const hasSkills = skills.length > 0;
 

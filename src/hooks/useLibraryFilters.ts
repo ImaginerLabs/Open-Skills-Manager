@@ -2,9 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { LibrarySkill } from '../stores/libraryStore';
 import { ALL_GROUP_ID } from '../components/features/CategoryManager/CategoryManager';
 import { filterByQuery, isValidQuery } from '../utils/search';
-
-type SortOption = 'name' | 'date' | 'size';
-type SortDirection = 'asc' | 'desc';
+import type { SortOption, SortDirection } from '../components/features/SkillList/types';
 
 interface UseLibraryFiltersResult {
   searchQuery: string;
@@ -17,6 +15,12 @@ interface UseLibraryFiltersResult {
   filteredSkills: LibrarySkill[];
 }
 
+/**
+ * Library-specific filter hook
+ *
+ * Extends basic search/sort with group and category filtering.
+ * Uses unified filterByQuery for search.
+ */
 export function useLibraryFilters(
   skills: LibrarySkill[],
   selectedGroupId: string | null | undefined,
@@ -48,6 +52,7 @@ export function useLibraryFilters(
       result = result.filter((skill) => skill.categoryId === selectedCategoryId);
     }
 
+    // Sort using unified sort logic
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
@@ -55,6 +60,7 @@ export function useLibraryFilters(
           comparison = a.name.localeCompare(b.name);
           break;
         case 'date':
+          // Library skills use importedAt
           comparison =
             new Date(a.importedAt).getTime() - new Date(b.importedAt).getTime();
           break;
@@ -84,4 +90,4 @@ export function useLibraryFilters(
   }), [searchQuery, sortBy, sortDirection, toggleSortDirection, filteredSkills]);
 }
 
-export type { SortOption, SortDirection, UseLibraryFiltersResult };
+export type { UseLibraryFiltersResult };

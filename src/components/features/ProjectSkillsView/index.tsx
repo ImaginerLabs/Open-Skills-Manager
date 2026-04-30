@@ -6,13 +6,12 @@ import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { useSidebarData } from '../../../hooks/useSidebarData';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
-import { useSkillSort } from '../SkillList/hooks/useSkillSort';
+import { useSkillFilter } from '../../../hooks/useSkillFilter';
 import { BatchDeployTargetDialog, type DeployTarget } from '../DeploymentTracking';
 import { ExportDialog, type ExportableSkill } from '../ExportDialog';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
 import { toLibrarySkillFormat } from '../../../utils/skillConverters';
-import { filterByQuery, isValidQuery } from '../../../utils/search';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './ProjectSkillsView.module.scss';
 
@@ -21,7 +20,6 @@ export function ProjectSkillsView(): React.ReactElement {
   const { projects, selectedProject, selectProject } = useProjectStore();
   const { refreshProjects, refreshLibrary } = useSidebarData();
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,8 +44,16 @@ export function ProjectSkillsView(): React.ReactElement {
     return projects.find((p) => p.id === projectId) ?? selectedProject;
   }, [projectId, projects, selectedProject]);
 
-  // Sort skills
-  const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
+  // Filter and sort skills
+  const {
+    filteredSkills,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
+    sortDirection,
+    toggleSortDirection,
+  } = useSkillFilter(skills);
 
   // Load skills if not loaded
   useEffect(() => {
@@ -158,12 +164,6 @@ export function ProjectSkillsView(): React.ReactElement {
       refresh(projectId);
     }
   }, [projectId, refresh]);
-
-  // Filter skills by search query using unified search logic
-  const filteredSkills = useMemo(() => {
-    if (!searchQuery || !isValidQuery(searchQuery)) return sortedSkills;
-    return filterByQuery(sortedSkills, searchQuery);
-  }, [sortedSkills, searchQuery]);
 
   const hasSkills = skills.length > 0;
 
