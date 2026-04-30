@@ -355,7 +355,7 @@ export function BatchDeployTargetDialog({
       <div className={styles.content}>
         <p className={styles.subtitle}>
           {sourceInfo?.sourceType === 'library' && sourceInfo?.groupId && 'Select where to copy these skills'}
-          {sourceInfo?.sourceType === 'global' && 'Deploy from Global Skills to a Project'}
+          {sourceInfo?.sourceType === 'global' && 'Select deployment target for Global Skills'}
           {sourceInfo?.sourceType === 'project' && `Deploy from ${sourceInfo?.projectName ?? 'Project'}`}
           {!sourceInfo && 'Select deployment target'}
         </p>

@@ -6,10 +6,11 @@ import { useProjectRefresh } from '../../../hooks/useProjectRefresh';
 import { useProjectSkills } from '../../../hooks/useProjectSkills';
 import { SkillListLayout, SkillListHeader, SkillList } from '../SkillList';
 import { useSkillSort } from '../SkillList/hooks/useSkillSort';
-import { PullToLibraryDialog } from '../GlobalSkillsView/PullToLibraryDialog';
+import { BatchDeployTargetDialog, type DeployTarget } from '../DeploymentTracking';
 import { ExportDialog, type ExportableSkill } from '../ExportDialog';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
+import { toLibrarySkillFormat } from '../../../utils/skillConverters';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './ProjectSkillsView.module.scss';
 
@@ -22,8 +23,8 @@ export function ProjectSkillsView(): React.ReactElement {
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
-  const [showPullDialog, setShowPullDialog] = useState(false);
-  const [pullSkill, setPullSkill] = useState<ProjectSkill | null>(null);
+  const [showDeployTargetDialog, setShowDeployTargetDialog] = useState(false);
+  const [deploySkill, setDeploySkill] = useState<ProjectSkill | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
@@ -111,21 +112,33 @@ export function ProjectSkillsView(): React.ReactElement {
     [projectId, deleteSkill]
   );
 
-  const handlePullSkill = useCallback(
-    (skillId: string) => {
-      const skill = skills.find((s) => s.id === skillId);
-      if (skill) {
-        setPullSkill(skill);
-        setShowPullDialog(true);
-      }
+  const handleDeploySkill = useCallback(
+    (skill: ProjectSkill) => {
+      setDeploySkill(skill);
+      setShowDeployTargetDialog(true);
     },
-    [skills]
+    []
   );
 
-  const handlePullComplete = useCallback(() => {
-    setShowPullDialog(false);
-    setPullSkill(null);
-  }, []);
+  const handleDeployTarget = useCallback(async (target: DeployTarget) => {
+    setShowDeployTargetDialog(false);
+    if (!deploySkill) return;
+
+    if (target.type === 'library') {
+      // Deploy to Library (pull to library)
+      const { libraryService } = await import('../../../services/libraryService');
+      const result = await libraryService.import({
+        path: deploySkill.path,
+        groupId: target.groupId,
+        categoryId: target.categoryId,
+      });
+      if (result.success) {
+        showToast('success', `Skill "${deploySkill.name}" added to Library`);
+      } else {
+        showToast('error', `Failed to add to Library: ${result.error.message}`);
+      }
+    }
+  }, [deploySkill, showToast]);
 
   const handleCopyPath = useCallback(async (skillId: string) => {
     const skill = skills.find((s) => s.id === skillId);
@@ -188,7 +201,7 @@ export function ProjectSkillsView(): React.ReactElement {
   const cardActions = {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
-    onPull: handlePullSkill,
+    onDeploy: handleDeploySkill,
     onCopyPath: handleCopyPath,
   };
 
@@ -287,15 +300,18 @@ export function ProjectSkillsView(): React.ReactElement {
         onClose={handleCloseModal}
         skillMdContent={skillMdContent}
         onDelete={handleDeleteSkill}
-        onPull={handlePullSkill}
+        onDeploy={(skillId) => {
+          const skill = skills.find((s) => s.id === skillId);
+          if (skill) handleDeploySkill(skill);
+        }}
       />
 
-      <PullToLibraryDialog
-        isOpen={showPullDialog}
-        skill={pullSkill}
-        onClose={handlePullComplete}
-        onComplete={handlePullComplete}
-        projectId={projectId}
+      <BatchDeployTargetDialog
+        isOpen={showDeployTargetDialog}
+        skills={deploySkill ? [toLibrarySkillFormat(deploySkill)] : []}
+        sourceInfo={{ sourceType: 'project', projectName: project.name }}
+        onClose={() => setShowDeployTargetDialog(false)}
+        onDeploy={handleDeployTarget}
       />
 
       <ExportDialog

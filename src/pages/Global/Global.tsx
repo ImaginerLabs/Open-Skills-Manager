@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { useProjectStore } from '../../stores/projectStore';
-import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
-import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
+import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
@@ -14,6 +13,7 @@ import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
 import { formatDate } from '../../utils/formatters';
 import { filterByQuery, isValidQuery } from '../../utils/search';
+import { toLibrarySkillFormat } from '../../utils/skillConverters';
 import styles from './Global.module.scss';
 
 export function Global(): React.ReactElement {
@@ -35,8 +35,6 @@ export function Global(): React.ReactElement {
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showPullDialog, setShowPullDialog] = useState(false);
-  const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showRefreshTooltip, setShowRefreshTooltip] = useState(false);
@@ -168,22 +166,12 @@ export function Global(): React.ReactElement {
     [skills, selectedSkill, removeSkill, selectSkill, setLoading, setError, showToast, showConfirmDialog, closeConfirmDialog]
   );
 
-  const handlePullToLibrary = useCallback((skill: GlobalSkill) => {
-    setPullSkill(skill);
-    setShowPullDialog(true);
-  }, []);
-
   const handleClosePreview = useCallback(() => {
     setPreviewModalOpen(false);
     setPreviewSkill(null);
     setSkillMdContent('');
     selectSkill(null);
   }, [selectSkill]);
-
-  const handlePullComplete = useCallback(() => {
-    setShowPullDialog(false);
-    setPullSkill(null);
-  }, []);
 
   const handleCopyPath = useCallback(async (skillId: string) => {
     const skill = skills.find((s) => s.id === skillId);
@@ -252,27 +240,25 @@ export function Global(): React.ReactElement {
     setShowDeployTargetDialog(false);
     if (!deploySkill) return;
 
-    if (target.type === 'project' && target.projectId) {
+    if (target.type === 'library') {
+      // Deploy to Library (pull to library)
+      const { libraryService } = await import('../../services/libraryService');
+      const result = await libraryService.import({
+        path: deploySkill.path,
+        groupId: target.groupId,
+        categoryId: target.categoryId,
+      });
+      if (result.success) {
+        showToast('success', `Skill "${deploySkill.name}" added to Library`);
+      } else {
+        showToast('error', `Failed to add to Library: ${result.error.message}`);
+      }
+    } else if (target.type === 'project' && target.projectId) {
+      // Deploy to Project
       const project = projects.find((p) => p.id === target.projectId);
       if (project) {
         startDeploy(
-          [{
-            id: deploySkill.id,
-            name: deploySkill.name,
-            description: deploySkill.description || '',
-            path: deploySkill.path,
-            size: deploySkill.size,
-            fileCount: deploySkill.fileCount,
-            skillMdLines: 0,
-            skillMdChars: 0,
-            folderName: deploySkill.id,
-            version: '1.0.0',
-            skillMdPath: '',
-            hasResources: deploySkill.fileCount > 1,
-            isSymlink: false,
-            importedAt: new Date(),
-            deployments: [],
-          }],
+          [toLibrarySkillFormat(deploySkill)],
           {
             targetScope: 'project',
             projectId: project.path,
@@ -281,7 +267,7 @@ export function Global(): React.ReactElement {
         );
       }
     }
-  }, [deploySkill, projects, startDeploy]);
+  }, [deploySkill, projects, startDeploy, showToast]);
 
   const handleDeployDialogClose = useCallback(() => {
     resetDeploy();
@@ -291,10 +277,6 @@ export function Global(): React.ReactElement {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
-    onPull: (skillId: string) => {
-      const skill = skills.find((s) => s.id === skillId);
-      if (skill) handlePullToLibrary(skill);
-    },
     onCopyPath: handleCopyPath,
     onReveal: handleReveal,
   };
@@ -371,13 +353,6 @@ export function Global(): React.ReactElement {
         skillMdContent={skillMdContent}
       />
 
-      <PullToLibraryDialog
-        isOpen={showPullDialog}
-        skill={pullSkill}
-        onClose={handlePullComplete}
-        onComplete={handlePullComplete}
-      />
-
       <ExportDialog
         isOpen={showExportDialog}
         skills={exportSkills}
@@ -387,23 +362,7 @@ export function Global(): React.ReactElement {
 
       <BatchDeployTargetDialog
         isOpen={showDeployTargetDialog}
-        skills={deploySkill ? [{
-          id: deploySkill.id,
-          name: deploySkill.name,
-          description: deploySkill.description || '',
-          path: deploySkill.path,
-          size: deploySkill.size,
-          fileCount: deploySkill.fileCount,
-          skillMdLines: 0,
-          skillMdChars: 0,
-          folderName: deploySkill.id,
-          version: '1.0.0',
-          skillMdPath: '',
-          hasResources: deploySkill.fileCount > 1,
-          isSymlink: false,
-          importedAt: new Date(),
-          deployments: [],
-        }] : []}
+        skills={deploySkill ? [toLibrarySkillFormat(deploySkill)] : []}
         sourceInfo={{ sourceType: 'global' }}
         onClose={() => setShowDeployTargetDialog(false)}
         onDeploy={handleDeployTarget}

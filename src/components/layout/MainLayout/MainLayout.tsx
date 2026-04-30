@@ -15,12 +15,11 @@ import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { SearchOverlay } from '../../features/SearchOverlay';
 import { DeployDialog } from '../../features/DeployDialog';
 import { ExportDialog, type ExportableSkill } from '../../features/ExportDialog';
-import { PullToLibraryDialog } from '../../features/GlobalSkillsView/PullToLibraryDialog';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../features/DeploymentTracking';
 import type { SearchResult } from '../../../stores/uiStore';
 import { useLibraryStore, type LibrarySkill, type Deployment } from '../../../stores/libraryStore';
 import { useProjectStore, type Project } from '../../../stores/projectStore';
-import { useGlobalStore, type GlobalSkill } from '../../../stores/globalStore';
+import { useGlobalStore } from '../../../stores/globalStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { useIcloudSync } from '../../../hooks/useIcloudSync';
@@ -29,6 +28,7 @@ import { useBatchDeploy } from '../../../hooks/useBatchDeploy';
 import { libraryService } from '../../../services/libraryService';
 import { globalService } from '../../../services/globalService';
 import { configService } from '../../../services/configService';
+import { toLibrarySkillFormat } from '../../../utils/skillConverters';
 import styles from './MainLayout.module.scss';
 import { Input } from '../../ui';
 
@@ -65,12 +65,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [pullSkill, setPullSkill] = useState<GlobalSkill | null>(null);
-  const [pullSkillProjectId, setPullSkillProjectId] = useState<string | undefined>(undefined);
-  const [showPullDialog, setShowPullDialog] = useState(false);
-
-  // Deploy from search state (for global/project scope)
-  const [_deployFromSearchResult, setDeployFromSearchResult] = useState<SearchResult | null>(null);
 
   // Batch deploy state
   const [showBatchTargetDialog, setShowBatchTargetDialog] = useState(false);
@@ -308,26 +302,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         }
       } else {
         // For global/project scope, use BatchDeployTargetDialog
-        setDeployFromSearchResult(result);
-        // Create a minimal LibrarySkill-like object for the dialog
-        const fakeSkill: LibrarySkill = {
-          id: result.id,
-          name: result.name,
-          description: result.description || '',
-          path: result.path,
-          size: result.size,
-          fileCount: result.fileCount,
-          skillMdLines: 0,
-          skillMdChars: 0,
-          folderName: result.name,
-          version: '1.0.0',
-          skillMdPath: '',
-          hasResources: result.fileCount > 1,
-          isSymlink: false,
-          importedAt: new Date(),
-          deployments: [],
-        };
-        setBatchDeploySkills([fakeSkill]);
+        setBatchDeploySkills([toLibrarySkillFormat(result)]);
         const projectName = result.projectId
           ? projects.find((p) => p.id === result.projectId)?.name
           : undefined;
@@ -392,48 +367,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const handleExportClose = useCallback(() => {
     setShowExportDialog(false);
     setExportSkills([]);
-  }, []);
-
-  const handleSearchPull = useCallback(
-    async (result: SearchResult) => {
-      if (result.scope === 'global') {
-        const realId = result.id.startsWith('global-')
-          ? result.id.slice('global-'.length)
-          : result.id;
-        const res = await globalService.get(realId);
-        if (res.success && res.data) {
-          setPullSkill(res.data);
-          setPullSkillProjectId(undefined);
-          setShowPullDialog(true);
-        } else {
-          showToast('error', 'Failed to load skill data');
-        }
-      } else if (result.scope === 'project' && result.projectId) {
-        const realId = result.id.startsWith(`pskill-${result.projectId}-`)
-          ? result.id.slice(`pskill-${result.projectId}-`.length)
-          : result.id;
-        try {
-          const { projectService } = await import('../../../services/projectService');
-          const res = await projectService.getSkill(result.projectId, realId);
-          if (res.success && res.data) {
-            setPullSkill(res.data as unknown as GlobalSkill);
-            setPullSkillProjectId(result.projectId);
-            setShowPullDialog(true);
-          } else {
-            showToast('error', 'Failed to load skill data');
-          }
-        } catch {
-          showToast('error', 'Failed to load skill data');
-        }
-      }
-    },
-    [showToast]
-  );
-
-  const handlePullComplete = useCallback(() => {
-    setShowPullDialog(false);
-    setPullSkill(null);
-    setPullSkillProjectId(undefined);
   }, []);
 
   const handleSearchCopyPath = useCallback(
@@ -537,26 +470,43 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       setShowBatchTargetDialog(false);
 
       if (target.type === 'library') {
-        // Copy within library - update skill metadata
-        const updates: Array<{ skillId: string; groupId?: string; categoryId?: string }> = [];
-        for (const skill of batchDeploySkills) {
-          const result = await libraryService.organize(skill.id, target.groupId, target.categoryId);
-          if (result.success) {
-            const update: { skillId: string; groupId?: string; categoryId?: string } = { skillId: skill.id };
-            if (target.groupId) update.groupId = target.groupId;
-            if (target.categoryId) update.categoryId = target.categoryId;
-            updates.push(update);
+        // If source is global or project, import to library
+        if (batchDeploySourceInfo.sourceType === 'global' || batchDeploySourceInfo.sourceType === 'project') {
+          for (const skill of batchDeploySkills) {
+            const result = await libraryService.import({
+              path: skill.path,
+              groupId: target.groupId,
+              categoryId: target.categoryId,
+            });
+            if (result.success) {
+              showToast('success', `Skill "${skill.name}" added to Library`);
+            } else {
+              showToast('error', `Failed to add "${skill.name}" to Library: ${result.error.message}`);
+            }
           }
-        }
-        if (updates.length > 0) {
-          showToast('success', `Moved ${updates.length} skills`);
-          await categoryManager.loadGroups();
-          const listResult = await libraryService.list();
-          if (listResult.success) {
-            setSkills(listResult.data);
+          resetBatchDeploy();
+        } else {
+          // Copy within library - update skill metadata
+          const updates: Array<{ skillId: string; groupId?: string; categoryId?: string }> = [];
+          for (const skill of batchDeploySkills) {
+            const result = await libraryService.organize(skill.id, target.groupId, target.categoryId);
+            if (result.success) {
+              const update: { skillId: string; groupId?: string; categoryId?: string } = { skillId: skill.id };
+              if (target.groupId) update.groupId = target.groupId;
+              if (target.categoryId) update.categoryId = target.categoryId;
+              updates.push(update);
+            }
           }
+          if (updates.length > 0) {
+            showToast('success', `Moved ${updates.length} skills`);
+            await categoryManager.loadGroups();
+            const listResult = await libraryService.list();
+            if (listResult.success) {
+              setSkills(listResult.data);
+            }
+          }
+          resetBatchDeploy();
         }
-        resetBatchDeploy();
       } else {
         // Deploy to global or project
         const options: { targetScope: 'global' | 'project'; targetIdeId?: string; projectId?: string; sourceScope?: 'library' | 'global' | 'project' } = {
@@ -570,8 +520,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         }
         startBatchDeploy(batchDeploySkills, options);
       }
-      // Clear deploy from search result state
-      setDeployFromSearchResult(null);
     },
     [batchDeploySkills, batchDeploySourceInfo, startBatchDeploy, showToast, categoryManager, setSkills, resetBatchDeploy]
   );
@@ -587,23 +535,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       return;
     }
     // Convert global skills to library skill format for the dialog
-    const skillsToDeploy: LibrarySkill[] = globalSkills.map((skill) => ({
-      id: skill.id,
-      name: skill.name,
-      description: skill.description || '',
-      path: skill.path,
-      size: skill.size,
-      fileCount: skill.fileCount,
-      skillMdLines: 0,
-      skillMdChars: 0,
-      folderName: skill.id,
-      version: '1.0.0',
-      skillMdPath: '',
-      hasResources: skill.fileCount > 1,
-      isSymlink: false,
-      importedAt: new Date(),
-      deployments: [],
-    }));
+    const skillsToDeploy = globalSkills.map((skill) => toLibrarySkillFormat(skill));
     setBatchDeploySkills(skillsToDeploy);
     setBatchDeploySourceInfo({ sourceType: 'global' });
     setShowBatchTargetDialog(true);
@@ -736,7 +668,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       <SearchOverlay
         onDeploy={handleSearchDeploy}
         onExport={handleSearchExport}
-        onPull={handleSearchPull}
         onCopyPath={handleSearchCopyPath}
         onReveal={handleSearchReveal}
         onDelete={handleSearchDelete}
@@ -754,14 +685,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         skills={exportSkills}
         onClose={handleExportClose}
         onExportStart={handleExportStart}
-      />
-
-      <PullToLibraryDialog
-        isOpen={showPullDialog}
-        skill={pullSkill}
-        onClose={handlePullComplete}
-        onComplete={handlePullComplete}
-        projectId={pullSkillProjectId}
       />
 
       <BatchDeployTargetDialog
