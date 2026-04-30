@@ -17,7 +17,6 @@ import styles from './SearchOverlay.module.scss';
 export interface SearchOverlayProps {
   onDeploy?: (result: SearchResult) => void;
   onExport?: (result: SearchResult) => void;
-  onPull?: (result: SearchResult) => void;
   onCopyPath?: (result: SearchResult) => void;
   onReveal?: (result: SearchResult) => void;
   onDelete?: (result: SearchResult) => void;
@@ -27,7 +26,6 @@ export interface SearchOverlayProps {
 export function SearchOverlay({
   onDeploy,
   onExport,
-  onPull,
   onCopyPath,
   onReveal,
   onDelete,
@@ -247,7 +245,6 @@ export function SearchOverlay({
                   onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
-                  onPull={onPull}
                   onCopyPath={onCopyPath}
                   onReveal={onReveal}
                   onDelete={onDelete}
@@ -266,7 +263,6 @@ export function SearchOverlay({
                   onClick={handleClickSkill}
                   onDeploy={onDeploy}
                   onExport={onExport}
-                  onPull={onPull}
                   onCopyPath={onCopyPath}
                   onReveal={onReveal}
                   onDelete={onDelete}

@@ -12,7 +12,6 @@ export interface SearchResultCardProps {
   onClick?: ((result: SearchResult) => void) | undefined;
   onDeploy?: ((result: SearchResult) => void) | undefined;
   onExport?: ((result: SearchResult) => void) | undefined;
-  onPull?: ((result: SearchResult) => void) | undefined;
   onCopyPath?: ((result: SearchResult) => void) | undefined;
   onReveal?: ((result: SearchResult) => void) | undefined;
   onDelete?: ((result: SearchResult) => void) | undefined;
@@ -70,7 +69,6 @@ export function SearchResultCard({
   onClick,
   onDeploy,
   onExport,
-  onPull,
   onCopyPath,
   onReveal,
   onDelete,
@@ -82,7 +80,6 @@ export function SearchResultCard({
   const actions: SkillCardActions<Skill> = {};
   if (onDeploy) actions.onDeploy = () => onDeploy(result);
   if (onExport) actions.onExport = () => onExport(result);
-  if (onPull) actions.onPull = () => onPull(result);
   if (onCopyPath) actions.onCopyPath = () => onCopyPath(result);
   if (onReveal) actions.onReveal = () => onReveal(result);
   if (onDelete) actions.onDelete = () => onDelete(result);
