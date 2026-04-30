@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -13,6 +13,7 @@ import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import { useSidebarData } from '../../hooks/useSidebarData';
+import { normalizeSkillDate } from '../../utils/formatters';
 import {
   SkillListLayout,
   SkillListHeader,
@@ -274,13 +275,13 @@ export function Library(): React.ReactElement {
     setImportProgress(false);
   }, [setImportProgress]);
 
-  const cardActions = {
+  const cardActions = useMemo(() => ({
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
     onCopyPath: handleCopyPath,
     onReveal: handleReveal,
-  };
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath, handleReveal]);
 
   const hasSkills = skills.length > 0;
 
@@ -336,15 +337,7 @@ export function Library(): React.ReactElement {
                 description: selectedSkill.description,
                 size: selectedSkill.size,
                 fileCount: selectedSkill.fileCount,
-                date: selectedSkill.updatedAt
-                  ? typeof selectedSkill.updatedAt === 'string'
-                    ? selectedSkill.updatedAt
-                    : selectedSkill.updatedAt.toLocaleDateString()
-                  : selectedSkill.importedAt
-                    ? typeof selectedSkill.importedAt === 'string'
-                      ? selectedSkill.importedAt
-                      : selectedSkill.importedAt.toLocaleDateString()
-                    : undefined,
+                date: normalizeSkillDate(selectedSkill.updatedAt, selectedSkill.importedAt),
               } satisfies SkillPreviewData)
             : null
         }

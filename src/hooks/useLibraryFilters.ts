@@ -72,7 +72,7 @@ export function useLibraryFilters(
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   }, []);
 
-  return {
+  return useMemo(() => ({
     searchQuery,
     setSearchQuery,
     sortBy,
@@ -81,7 +81,7 @@ export function useLibraryFilters(
     setSortDirection,
     toggleSortDirection,
     filteredSkills,
-  };
+  }), [searchQuery, sortBy, sortDirection, toggleSortDirection, filteredSkills]);
 }
 
 export type { SortOption, SortDirection, UseLibraryFiltersResult };

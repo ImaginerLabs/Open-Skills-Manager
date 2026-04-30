@@ -1,13 +1,22 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { X, FolderOpen, FileText, Clock, Rocket, Export } from '@phosphor-icons/react';
 import type { LibrarySkill } from '../../../stores/libraryStore';
 import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillDetail.module.scss';
+
+// Lazy load syntax highlighter - ~500KB saved from initial bundle
+const SyntaxHighlighter = lazy(() =>
+  import('react-syntax-highlighter').then((m) => ({ default: m.Prism }))
+);
+
+// Preload oneDark style when module loads
+let oneDarkStyle: typeof import('react-syntax-highlighter/dist/esm/styles/prism').oneDark | null = null;
+import('react-syntax-highlighter/dist/esm/styles/prism').then((m) => {
+  oneDarkStyle = m.oneDark;
+});
 
 export interface SkillDetailProps {
   skill: LibrarySkill | null;
@@ -141,14 +150,16 @@ export function SkillDetail({
                       );
                     }
                     return (
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        className={styles.codeBlock}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
+                      <Suspense fallback={<div className={styles.codeBlock}>{children}</div>}>
+                        <SyntaxHighlighter
+                          style={oneDarkStyle || {}}
+                          language={match[1]}
+                          PreTag="div"
+                          className={styles.codeBlock}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      </Suspense>
                     );
                   },
                 }}

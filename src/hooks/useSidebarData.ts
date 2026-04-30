@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useLibraryStore } from '../stores/libraryStore';
 import { useGlobalStore } from '../stores/globalStore';
 import { useProjectStore } from '../stores/projectStore';
@@ -71,10 +71,10 @@ export function useSidebarData(): UseSidebarDataResult {
     ]);
   }, [refreshLibrary, refreshGlobal, refreshProjects]);
 
-  return {
+  return useMemo(() => ({
     refreshAll,
     refreshLibrary,
     refreshGlobal,
     refreshProjects,
-  };
+  }), [refreshAll, refreshLibrary, refreshGlobal, refreshProjects]);
 }

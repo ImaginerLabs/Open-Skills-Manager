@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { ALL_GROUP_ID } from '../components/features/CategoryManager/CategoryManager';
 
 interface DragState {
@@ -66,10 +66,10 @@ export function useCategoryDragDrop(
     [onOrganizeSkill]
   );
 
-  return {
+  return useMemo(() => ({
     dragOverState,
     handleDragOver,
     handleDragLeave,
     handleDrop,
-  };
+  }), [dragOverState, handleDragOver, handleDragLeave, handleDrop]);
 }

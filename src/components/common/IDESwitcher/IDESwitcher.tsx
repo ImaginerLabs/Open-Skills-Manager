@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from '@phosphor-icons/react';
 import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
 import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
 import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
+import { useShallow } from 'zustand/react/shallow';
 import { useIDEStore, useLibraryStore, useGlobalStore, useProjectStore, useUIStore } from '@/stores';
 import { ideService, configService, libraryService } from '@/services';
 import { ALL_GROUP_ID } from '@/components/features/CategoryManager';
@@ -53,16 +54,29 @@ const DEFAULT_IDE_CONFIGS = [
 ];
 
 export function IDESwitcher(): React.ReactElement | null {
-  const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading, addIDE: addIDEToStore } = useIDEStore();
-  const { setSkills: setLibrarySkills, setGroups } = useLibraryStore();
+  const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading, addIDE: addIDEToStore } = useIDEStore(
+    useShallow((state) => ({
+      ideConfigs: state.ideConfigs,
+      activeIdeId: state.activeIdeId,
+      setActiveIDE: state.setActiveIDE,
+      setIDEConfigs: state.setIDEConfigs,
+      setLoading: state.setLoading,
+      addIDE: state.addIDE,
+    }))
+  );
+  const { setSkills: setLibrarySkills, setGroups } = useLibraryStore(
+    useShallow((state) => ({ setSkills: state.setSkills, setGroups: state.setGroups }))
+  );
   const { setSkills: setGlobalSkills } = useGlobalStore();
   const { setProjects } = useProjectStore();
   const { showToast } = useUIStore();
   const navigate = useNavigate();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Use configs from store, or defaults if empty - defined early for use in callbacks
-  const configsToShow = ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS;
+  const configsToShow = useMemo(() =>
+    ideConfigs.length > 0 ? ideConfigs : DEFAULT_IDE_CONFIGS,
+    [ideConfigs]
+  );
 
   // Track if we've already initialized to prevent repeated setActiveIDE calls
   const hasInitialized = useRef(false);
@@ -116,26 +130,26 @@ export function IDESwitcher(): React.ReactElement | null {
   // Refresh all app data after IDE switch
   const refreshAllData = useCallback(async (ideId: string) => {
     try {
-      // 1. Refresh library skills (shared across IDEs)
-      const libraryResult = await libraryService.list();
+      // Parallelize all independent API calls for faster IDE switching
+      const [libraryResult, groupsResult, globalResult, projectsResult] = await Promise.all([
+        libraryService.list(),
+        libraryService.groups.list(),
+        ideService.getGlobalSkills(ideId),
+        ideService.getProjects(ideId),
+      ]);
+
       if (libraryResult.success && libraryResult.data) {
         setLibrarySkills(libraryResult.data);
       }
 
-      // 2. Refresh groups (shared across IDEs)
-      const groupsResult = await libraryService.groups.list();
       if (groupsResult.success && groupsResult.data) {
         setGroups(groupsResult.data);
       }
 
-      // 3. Refresh global skills for the new IDE
-      const globalResult = await ideService.getGlobalSkills(ideId);
       if (globalResult.success && globalResult.data) {
         setGlobalSkills(globalResult.data);
       }
 
-      // 4. Refresh projects for the new IDE
-      const projectsResult = await ideService.getProjects(ideId);
       if (projectsResult.success && projectsResult.data) {
         setProjects(projectsResult.data);
       }
@@ -146,7 +160,7 @@ export function IDESwitcher(): React.ReactElement | null {
       console.error('Failed to refresh data:', error);
       showToast('error', 'Failed to refresh data after IDE switch');
     }
-  }, [setLibrarySkills, setGroups, setGlobalSkills, setProjects, showToast]);
+  }, [setLibrarySkills, setGroups, setGlobalSkills, setProjects, showToast, configsToShow]);
 
   const handleIDESwitch = useCallback(async (ideId: string) => {
     // Check if this IDE is disabled (coming soon)

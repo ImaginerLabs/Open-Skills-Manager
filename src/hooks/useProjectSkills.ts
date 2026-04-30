@@ -16,7 +16,7 @@ export interface UseProjectSkillsResult {
   pullSkill: (projectId: string, skillId: string, options?: PullOptions) => Promise<IpcResult<LibrarySkill>>;
 }
 
-export function useProjectSkills(): UseProjectSkillsResult {
+export function useProjectSkills(projectId?: string): UseProjectSkillsResult {
   const { projectSkills, isLoading, error, setProjectSkills, setLoading, setError } = useProjectStore();
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
 
@@ -119,7 +119,7 @@ export function useProjectSkills(): UseProjectSkillsResult {
 
   return useMemo(
     () => ({
-      skills: [],
+      skills: projectId ? (projectSkills.get(projectId) ?? []) : [],
       isLoading,
       error,
       loadSkills,
@@ -127,6 +127,6 @@ export function useProjectSkills(): UseProjectSkillsResult {
       deleteSkill,
       pullSkill,
     }),
-    [isLoading, error, loadSkills, getSkill, deleteSkill, pullSkill]
+    [projectId, projectSkills, isLoading, error, loadSkills, getSkill, deleteSkill, pullSkill]
   );
 }

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { CaretRight, Plus, FolderSimple, FolderOpen } from '@phosphor-icons/react';
 import type { Group, Category } from '../../../stores/libraryStore';
 import { SidebarItem } from '../../common/SidebarItem';
@@ -22,7 +23,7 @@ interface GroupItemProps {
   onEditClick: (e: React.MouseEvent) => void;
 }
 
-export function GroupItem({
+export const GroupItem = memo(function GroupItem({
   group,
   isExpanded,
   isSelected,
@@ -68,7 +69,7 @@ export function GroupItem({
       className={styles.categoryItem}
     />
   );
-}
+});
 
 interface CategoryItemProps {
   category: Category;
@@ -86,7 +87,7 @@ interface CategoryItemProps {
   onEditClick: (e: React.MouseEvent) => void;
 }
 
-export function CategoryItem({
+export const CategoryItem = memo(function CategoryItem({
   category,
   isSelected,
   isEditing,
@@ -125,7 +126,7 @@ export function CategoryItem({
       className={styles.groupItem}
     />
   );
-}
+});
 
 interface AddCategoryButtonProps {
   onClick: () => void;

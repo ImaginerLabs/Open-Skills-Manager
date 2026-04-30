@@ -12,12 +12,13 @@ import { ExportDialog, type ExportableSkill } from '../ExportDialog';
 import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
 import { toLibrarySkillFormat } from '../../../utils/skillConverters';
+import { filterByQuery, isValidQuery } from '../../../utils/search';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
 import styles from './ProjectSkillsView.module.scss';
 
 export function ProjectSkillsView(): React.ReactElement {
   const { projectId } = useParams<{ projectId: string }>();
-  const { projects, selectedProject, projectSkills, selectProject } = useProjectStore();
+  const { projects, selectedProject, selectProject } = useProjectStore();
   const { refreshProjects, refreshLibrary } = useSidebarData();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +37,7 @@ export function ProjectSkillsView(): React.ReactElement {
     { autoRefresh: true }
   );
 
-  const { loadSkills, getSkill, deleteSkill } = useProjectSkills();
+  const { skills, loadSkills, getSkill, deleteSkill } = useProjectSkills(projectId);
   const { showToast } = useUIStore();
 
   // Get project info
@@ -44,12 +45,6 @@ export function ProjectSkillsView(): React.ReactElement {
     if (!projectId) return null;
     return projects.find((p) => p.id === projectId) ?? selectedProject;
   }, [projectId, projects, selectedProject]);
-
-  // Get skills for this project
-  const skills = useMemo(() => {
-    if (!projectId) return [];
-    return projectSkills.get(projectId) ?? [];
-  }, [projectId, projectSkills]);
 
   // Sort skills
   const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
@@ -164,16 +159,10 @@ export function ProjectSkillsView(): React.ReactElement {
     }
   }, [projectId, refresh]);
 
-  // Filter skills by search query
+  // Filter skills by search query using unified search logic
   const filteredSkills = useMemo(() => {
-    if (!searchQuery) return sortedSkills;
-    const lowerQuery = searchQuery.toLowerCase();
-    return sortedSkills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(lowerQuery) ||
-        skill.description.toLowerCase().includes(lowerQuery) ||
-        skill.folderName.toLowerCase().includes(lowerQuery)
-    );
+    if (!searchQuery || !isValidQuery(searchQuery)) return sortedSkills;
+    return filterByQuery(sortedSkills, searchQuery);
   }, [sortedSkills, searchQuery]);
 
   const hasSkills = skills.length > 0;
@@ -204,12 +193,12 @@ export function ProjectSkillsView(): React.ReactElement {
     setExportSkills([]);
   }, []);
 
-  const cardActions = {
+  const cardActions = useMemo(() => ({
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
     onCopyPath: handleCopyPath,
-  };
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath]);
 
   if (!project) {
     return (

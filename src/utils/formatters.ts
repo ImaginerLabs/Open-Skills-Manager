@@ -28,6 +28,22 @@ export function formatDate(date: string | Date | undefined | null): string {
 }
 
 /**
+ * Normalize date field to string format for SkillPreviewData
+ */
+export function normalizeSkillDate(
+  updatedAt: string | Date | undefined,
+  importedAt: string | Date | undefined
+): string | undefined {
+  if (updatedAt) {
+    return typeof updatedAt === 'string' ? updatedAt : updatedAt.toLocaleDateString();
+  }
+  if (importedAt) {
+    return typeof importedAt === 'string' ? importedAt : importedAt.toLocaleDateString();
+  }
+  return undefined;
+}
+
+/**
  * Version stability classification
  */
 export type VersionStability = 'stable' | 'beta' | 'alpha' | 'dev' | 'unknown';

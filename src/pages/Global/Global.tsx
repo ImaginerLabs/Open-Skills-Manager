@@ -279,13 +279,13 @@ export function Global(): React.ReactElement {
     resetDeploy();
   }, [resetDeploy]);
 
-  const cardActions = {
+  const cardActions = useMemo(() => ({
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
     onDeploy: handleDeploySkill,
     onCopyPath: handleCopyPath,
     onReveal: handleReveal,
-  };
+  }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, handleCopyPath, handleReveal]);
 
   // Render refresh button with tooltip
   const renderRefreshButton = () => {

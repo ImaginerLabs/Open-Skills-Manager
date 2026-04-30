@@ -7,6 +7,7 @@ import {
   MagnifyingGlass,
   CaretRight,
 } from '@phosphor-icons/react';
+import { useShallow } from 'zustand/react/shallow';
 import { CategoryManager, ALL_GROUP_ID } from '../../features/CategoryManager';
 import { ProjectListContainer } from '../Sidebar/ProjectListContainer';
 import { GlobalSkillsItem } from '../Sidebar/GlobalSkillsItem';
@@ -51,10 +52,26 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore();
+  const { groups, updateSkill, selectedGroupId, selectedCategoryId, selectGroup, selectCategory, skills } = useLibraryStore(
+    useShallow((state) => ({
+      groups: state.groups,
+      updateSkill: state.updateSkill,
+      selectedGroupId: state.selectedGroupId,
+      selectedCategoryId: state.selectedCategoryId,
+      selectGroup: state.selectGroup,
+      selectCategory: state.selectCategory,
+      skills: state.skills,
+    }))
+  );
   const { skills: globalSkills } = useGlobalStore();
   const { projects } = useProjectStore();
-  const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
+  const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore(
+    useShallow((state) => ({
+      showToast: state.showToast,
+      showConfirmDialog: state.showConfirmDialog,
+      closeConfirmDialog: state.closeConfirmDialog,
+    }))
+  );
   const [isDragOver, setIsDragOver] = useState(false);
   const categoryManager = useCategoryManager();
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();

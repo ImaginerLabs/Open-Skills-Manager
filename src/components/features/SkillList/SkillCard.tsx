@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { DotsThree, Trash, Export, Rocket, Copy, FolderOpen, Link, Folder, SquaresFour, Globe } from '@phosphor-icons/react';
 import type { Skill, SkillScope, SkillCardActions, ViewMode, ScopeBadgeConfig } from './types';
 import type { LibrarySkill } from '@/stores/libraryStore';
@@ -83,7 +83,7 @@ function getScopeBadge(scope: SkillScope): React.ReactNode {
   );
 }
 
-export function SkillCard<T extends Skill>({
+export const SkillCard = memo(function SkillCard<T extends Skill>({
   skill,
   isSelected,
   scope,
@@ -349,4 +349,4 @@ export function SkillCard<T extends Skill>({
       />
     </>
   );
-}
+}) as <T extends Skill>(props: SkillCardProps<T>) => React.ReactElement;

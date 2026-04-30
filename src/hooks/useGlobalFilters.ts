@@ -52,7 +52,7 @@ export function useGlobalFilters(skills: GlobalSkill[]) {
     return result;
   }, [skills, searchQuery, sortBy, sortDirection]);
 
-  return {
+  return useMemo(() => ({
     searchQuery,
     setSearchQuery,
     sortBy,
@@ -60,5 +60,5 @@ export function useGlobalFilters(skills: GlobalSkill[]) {
     sortDirection,
     toggleSortDirection,
     filteredSkills,
-  };
+  }), [searchQuery, sortBy, sortDirection, toggleSortDirection, filteredSkills]);
 }

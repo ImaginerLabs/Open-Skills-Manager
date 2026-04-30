@@ -1,4 +1,4 @@
-import type { ReactNode, DragEvent, MouseEvent } from 'react';
+import { memo, type ReactNode, type DragEvent, type MouseEvent } from 'react';
 import { InlineEditInput } from '@/components/features/CategoryManager/InlineEditInput';
 import styles from './SidebarItem.module.scss';
 
@@ -38,7 +38,7 @@ export interface SidebarItemProps {
   className?: string | undefined;
 }
 
-export function SidebarItem({
+export const SidebarItem = memo(function SidebarItem({
   name,
   icon,
   count,
@@ -141,4 +141,4 @@ export function SidebarItem({
       )}
     </div>
   );
-}
+});
