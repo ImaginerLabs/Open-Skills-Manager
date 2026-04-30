@@ -183,7 +183,22 @@ export function Library(): React.ReactElement {
     setShowDeployTargetDialog(false);
     if (deploySkills.length === 0) return;
 
-    if (target.type === 'global') {
+    if (target.type === 'library') {
+      // Copy within library - update skill metadata (organize)
+      for (const skill of deploySkills) {
+        const result = await libraryService.organize(skill.id, target.groupId, target.categoryId);
+        if (result.success) {
+          showToast('success', `Skill "${skill.name}" moved to new location`);
+        } else {
+          showToast('error', `Failed to move "${skill.name}": ${result.error.message}`);
+        }
+      }
+      // Refresh skills list
+      const listResult = await libraryService.list();
+      if (listResult.success) {
+        setSkills(listResult.data);
+      }
+    } else if (target.type === 'global') {
       startDeploy(deploySkills, {
         targetScope: 'global',
         ...(target.ideId ? { targetIdeId: target.ideId } : {}),
@@ -196,7 +211,7 @@ export function Library(): React.ReactElement {
         sourceScope: 'library',
       });
     }
-  }, [deploySkills, startDeploy]);
+  }, [deploySkills, startDeploy, showToast, setSkills]);
 
   const handleDeployDialogClose = useCallback(() => {
     resetDeploy();
