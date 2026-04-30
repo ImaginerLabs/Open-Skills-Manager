@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { X, Trash, ArrowDown, FolderOpen } from '@phosphor-icons/react';
+import { X, Trash, Rocket, FolderOpen } from '@phosphor-icons/react';
 import { Modal } from '../../ui/Modal/Modal';
 import { formatSize, formatDate } from '../../../utils/formatters';
 import styles from './SkillPreviewModal.module.scss';
@@ -20,7 +20,7 @@ export interface SkillPreviewModalProps {
   skill: SkillPreviewData | null;
   skillMdContent: string;
   onDelete?: (skillId: string) => void;
-  onPull?: (skillId: string) => void;
+  onDeploy?: (skillId: string) => void;
 }
 
 export function SkillPreviewModal({
@@ -29,7 +29,7 @@ export function SkillPreviewModal({
   skill,
   skillMdContent,
   onDelete,
-  onPull,
+  onDeploy,
 }: SkillPreviewModalProps) {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -111,7 +111,7 @@ export function SkillPreviewModal({
         </div>
       </div>
 
-      {(onDelete || onPull) && skill.id && (
+      {(onDelete || onDeploy) && skill.id && (
         <div className={styles.footer}>
           {onDelete && (
             <button
@@ -126,17 +126,17 @@ export function SkillPreviewModal({
               <span>Delete</span>
             </button>
           )}
-          {onPull && (
+          {onDeploy && (
             <button
               type="button"
-              className={styles.pullButton}
+              className={styles.deployButton}
               onClick={() => {
-                onPull(skill.id!);
+                onDeploy(skill.id!);
                 handleClose();
               }}
             >
-              <ArrowDown size={16} />
-              <span>Pull to Library</span>
+              <Rocket size={16} />
+              <span>Deploy to...</span>
             </button>
           )}
         </div>

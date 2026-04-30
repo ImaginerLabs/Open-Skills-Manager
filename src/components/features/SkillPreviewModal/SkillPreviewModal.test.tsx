@@ -112,18 +112,18 @@ describe('SkillPreviewModal', () => {
     expect(screen.queryByText('Delete')).not.toBeInTheDocument();
   });
 
-  it('shows pull button when onPull is provided and skill has id', () => {
-    const handlePull = vi.fn();
+  it('shows deploy button when onDeploy is provided and skill has id', () => {
+    const handleDeploy = vi.fn();
     render(
       <SkillPreviewModal
         isOpen={true}
         onClose={vi.fn()}
         skill={mockSkill}
         skillMdContent={mockContent}
-        onPull={handlePull}
+        onDeploy={handleDeploy}
       />
     );
 
-    expect(screen.getByText('Pull to Library')).toBeInTheDocument();
+    expect(screen.getByText('Deploy to...')).toBeInTheDocument();
   });
 });
