@@ -34,8 +34,18 @@ export function useSelection() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 统一选择状态
-  const selectionStore = useSelectionStore();
+  // 统一选择状态 - 使用选择器避免不必要的重新渲染
+  const source = useSelectionStore((state) => state.source);
+  const libraryGroupId = useSelectionStore((state) => state.libraryGroupId);
+  const libraryCategoryId = useSelectionStore((state) => state.libraryCategoryId);
+  const projectId = useSelectionStore((state) => state.projectId);
+  const selectLibrary = useSelectionStore((state) => state.selectLibrary);
+  const selectGlobal = useSelectionStore((state) => state.selectGlobal);
+  const selectProjectFromStore = useSelectionStore((state) => state.selectProject);
+  const clearSelection = useSelectionStore((state) => state.clearSelection);
+  const isLibrarySelected = useSelectionStore((state) => state.isLibrarySelected);
+  const isGlobalSelected = useSelectionStore((state) => state.isGlobalSelected);
+  const isProjectSelected = useSelectionStore((state) => state.isProjectSelected);
 
   // 现有 store（向后兼容）
   const selectGroup = useLibraryStore((state) => state.selectGroup);
@@ -52,7 +62,7 @@ export function useSelection() {
       console.log('[useSelection] handleSelectLibrary:', groupId, categoryId);
 
       // 更新统一选择状态
-      selectionStore.selectLibrary(groupId, categoryId);
+      selectLibrary(groupId, categoryId);
 
       // 同步到现有 libraryStore（向后兼容）
       selectGroup(groupId);
@@ -65,7 +75,7 @@ export function useSelection() {
         navigate('/library');
       }
     },
-    [selectionStore, selectGroup, selectCategory, location.pathname, navigate]
+    [selectLibrary, selectGroup, selectCategory, location.pathname, navigate]
   );
 
   /**
@@ -77,7 +87,7 @@ export function useSelection() {
       console.log('[useSelection] handleSelectGlobal');
 
       // 更新统一选择状态
-      selectionStore.selectGlobal();
+      selectGlobal();
 
       // 同步清除现有 store 选择（向后兼容）
       selectGroup(undefined);
@@ -86,7 +96,7 @@ export function useSelection() {
       // 导航到 Global 页面
       navigate('/global');
     },
-    [selectionStore, selectGroup, selectProject, navigate]
+    [selectGlobal, selectGroup, selectProject, navigate]
   );
 
   /**
@@ -99,7 +109,7 @@ export function useSelection() {
 
       if (!projectId) {
         // 清除选择
-        selectionStore.clearSelection();
+        clearSelection();
         selectProject(null);
         return;
       }
@@ -112,7 +122,7 @@ export function useSelection() {
       }
 
       // 更新统一选择状态
-      selectionStore.selectProject(projectId);
+      selectProjectFromStore(projectId);
 
       // 同步到现有 projectStore（向后兼容）
       selectProject(project);
@@ -123,7 +133,7 @@ export function useSelection() {
       // 导航到 Project 页面
       navigate(`/projects/${projectId}`);
     },
-    [selectionStore, selectProject, selectGroup, projects, navigate]
+    [clearSelection, selectProjectFromStore, selectProject, selectGroup, projects, navigate]
   );
 
   /**
@@ -133,14 +143,14 @@ export function useSelection() {
   const ensureDefaultSelection = useCallback(
     () => {
       if (
-        selectionStore.source === 'none' &&
+        source === 'none' &&
         location.pathname.startsWith('/library')
       ) {
         console.log('[useSelection] ensureDefaultSelection: selecting All group');
         handleSelectLibrary(ALL_GROUP_ID);
       }
     },
-    [selectionStore.source, location.pathname, handleSelectLibrary]
+    [source, location.pathname, handleSelectLibrary]
   );
 
   /**
@@ -150,24 +160,24 @@ export function useSelection() {
   const handleClearSelection = useCallback(
     () => {
       console.log('[useSelection] handleClearSelection');
-      selectionStore.clearSelection();
+      clearSelection();
       selectGroup(undefined);
       selectProject(null);
     },
-    [selectionStore, selectGroup, selectProject]
+    [clearSelection, selectGroup, selectProject]
   );
 
   return {
     // 状态
-    source: selectionStore.source,
-    libraryGroupId: selectionStore.libraryGroupId,
-    libraryCategoryId: selectionStore.libraryCategoryId,
-    projectId: selectionStore.projectId,
+    source,
+    libraryGroupId,
+    libraryCategoryId,
+    projectId,
 
     // 派生状态
-    isLibrarySelected: selectionStore.isLibrarySelected,
-    isGlobalSelected: selectionStore.isGlobalSelected,
-    isProjectSelected: selectionStore.isProjectSelected,
+    isLibrarySelected,
+    isGlobalSelected,
+    isProjectSelected,
 
     // 选择方法
     handleSelectLibrary,

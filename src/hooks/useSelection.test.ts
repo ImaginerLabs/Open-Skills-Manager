@@ -40,12 +40,38 @@ describe('useSelection', () => {
     });
   });
 
-  // Note: Full hook tests would require more complex setup
-  // This is a basic test to verify the hook can be imported and used
+  it('useSelectionStore should have correct initial state', () => {
+    const state = useSelectionStore.getState();
+    expect(state.source).toBe('none');
+    expect(state.libraryGroupId).toBeUndefined();
+    expect(state.libraryCategoryId).toBeUndefined();
+    expect(state.projectId).toBeNull();
+  });
 
-  it('should be importable', async () => {
-    const { useSelection } = await import('./useSelection');
-    expect(useSelection).toBeDefined();
-    expect(typeof useSelection).toBe('function');
+  it('useSelectionStore selectLibrary should update state', () => {
+    act(() => {
+      useSelectionStore.getState().selectLibrary('group-1', 'category-1');
+    });
+    const state = useSelectionStore.getState();
+    expect(state.source).toBe('library');
+    expect(state.libraryGroupId).toBe('group-1');
+    expect(state.libraryCategoryId).toBe('category-1');
+  });
+
+  it('useSelectionStore selectGlobal should update state', () => {
+    act(() => {
+      useSelectionStore.getState().selectGlobal();
+    });
+    const state = useSelectionStore.getState();
+    expect(state.source).toBe('global');
+  });
+
+  it('useSelectionStore selectProject should update state', () => {
+    act(() => {
+      useSelectionStore.getState().selectProject('project-1');
+    });
+    const state = useSelectionStore.getState();
+    expect(state.source).toBe('project');
+    expect(state.projectId).toBe('project-1');
   });
 });
