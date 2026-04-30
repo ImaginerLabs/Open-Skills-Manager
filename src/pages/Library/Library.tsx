@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus } from '@phosphor-icons/react';
-import { useLibraryStore, type LibrarySkill, type Deployment } from '../../stores/libraryStore';
+import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { useUIStore } from '../../stores/uiStore';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
-import { DeployDialog } from '../../components/features/DeployDialog';
+import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { libraryService } from '../../services/libraryService';
 import { configService } from '../../services/configService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
+import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import {
   SkillListLayout,
   SkillListHeader,
@@ -32,7 +33,6 @@ export function Library(): React.ReactElement {
     setSkills,
     selectSkill,
     removeSkill,
-    addDeployment,
     setLoading,
     setError,
   } = useLibraryStore();
@@ -46,12 +46,10 @@ export function Library(): React.ReactElement {
   const {
     showImportDialog,
     showExportDialog,
-    showDeployDialog,
     showExportProgress,
     showImportProgress,
     setImportDialog,
     setExportDialog,
-    setDeployDialog,
     setExportProgress,
     setImportProgress,
   } = useLibraryDialogs();
@@ -61,6 +59,18 @@ export function Library(): React.ReactElement {
     (show) => setImportProgress(show),
     () => setImportDialog(false)
   );
+
+  const {
+    status: deployStatus,
+    progress: deployProgress,
+    total: deployTotal,
+    currentSkillName: deployCurrentSkill,
+    result: deployResult,
+    startDeploy,
+    cancel: cancelDeploy,
+    reset: resetDeploy,
+    retryFailed: retryDeployFailed,
+  } = useBatchDeploy();
 
   const onExportStart = useCallback(
     async (format: Parameters<typeof handleExportStart>[0], skillsToExport: ExportableSkill[]) => {
@@ -73,7 +83,8 @@ export function Library(): React.ReactElement {
 
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
-  const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
+  const [showDeployTargetDialog, setShowDeployTargetDialog] = useState(false);
+  const [deploySkills, setDeploySkills] = useState<LibrarySkill[]>([]);
 
   const {
     searchQuery,
@@ -164,18 +175,33 @@ export function Library(): React.ReactElement {
   }, [setExportDialog]);
 
   const handleDeploySkill = useCallback((skill: LibrarySkill) => {
-    setDeploySkill(skill);
-    setDeployDialog(true);
-  }, [setDeployDialog]);
+    setDeploySkills([skill]);
+    setShowDeployTargetDialog(true);
+  }, []);
 
-  const handleDeployConfirm = useCallback((skillId: string, deployment: Deployment) => {
-    addDeployment(skillId, deployment);
-  }, [addDeployment]);
+  const handleDeployTarget = useCallback(async (target: DeployTarget) => {
+    setShowDeployTargetDialog(false);
+    if (deploySkills.length === 0) return;
 
-  const handleDeployClose = useCallback(() => {
-    setDeployDialog(false);
-    setDeploySkill(null);
-  }, [setDeployDialog]);
+    if (target.type === 'global') {
+      startDeploy(deploySkills, {
+        targetScope: 'global',
+        ...(target.ideId ? { targetIdeId: target.ideId } : {}),
+        sourceScope: 'library',
+      });
+    } else if (target.type === 'project' && target.projectId) {
+      startDeploy(deploySkills, {
+        targetScope: 'project',
+        projectId: target.projectId,
+        sourceScope: 'library',
+      });
+    }
+  }, [deploySkills, startDeploy]);
+
+  const handleDeployDialogClose = useCallback(() => {
+    resetDeploy();
+    setDeploySkills([]);
+  }, [resetDeploy]);
 
   const handleCopyPath = useCallback(async (skillId: string) => {
     const skill = skills.find((s) => s.id === skillId);
@@ -328,11 +354,24 @@ export function Library(): React.ReactElement {
 
       <ExportProgress isOpen={showExportProgress} onClose={handleExportProgressClose} />
 
-      <DeployDialog
-        open={showDeployDialog}
-        skill={deploySkill}
-        onClose={handleDeployClose}
-        onDeploy={handleDeployConfirm}
+      <BatchDeployTargetDialog
+        isOpen={showDeployTargetDialog}
+        skills={deploySkills}
+        sourceInfo={{ sourceType: 'library', groupId: selectedGroupId, categoryId: selectedCategoryId }}
+        onClose={() => setShowDeployTargetDialog(false)}
+        onDeploy={handleDeployTarget}
+      />
+
+      <BatchDeployDialog
+        isOpen={deployStatus !== 'idle'}
+        status={deployStatus}
+        progress={deployProgress}
+        total={deployTotal}
+        currentSkillName={deployCurrentSkill}
+        result={deployResult}
+        onClose={handleDeployDialogClose}
+        onCancel={cancelDeploy}
+        onRetryFailed={retryDeployFailed}
       />
     </SkillListLayout>
   );

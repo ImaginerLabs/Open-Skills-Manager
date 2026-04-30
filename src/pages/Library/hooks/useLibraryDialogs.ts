@@ -4,7 +4,6 @@ interface UseLibraryDialogsResult {
   // Dialog visibility states
   showImportDialog: boolean;
   showExportDialog: boolean;
-  showDeployDialog: boolean;
   showCategoryManager: boolean;
   showSkillDetail: boolean;
   showSearchOverlay: boolean;
@@ -14,7 +13,6 @@ interface UseLibraryDialogsResult {
   // Toggle functions
   toggleImportDialog: () => void;
   toggleExportDialog: () => void;
-  toggleDeployDialog: () => void;
   toggleCategoryManager: () => void;
   toggleSkillDetail: () => void;
   toggleSearchOverlay: () => void;
@@ -24,7 +22,6 @@ interface UseLibraryDialogsResult {
   // Explicit set functions
   setImportDialog: (value: boolean) => void;
   setExportDialog: (value: boolean) => void;
-  setDeployDialog: (value: boolean) => void;
   setCategoryManager: (value: boolean) => void;
   setSkillDetail: (value: boolean) => void;
   setSearchOverlay: (value: boolean) => void;
@@ -38,7 +35,6 @@ interface UseLibraryDialogsResult {
 export function useLibraryDialogs(): UseLibraryDialogsResult {
   const [showImportDialog, setImportDialog] = useState(false);
   const [showExportDialog, setExportDialog] = useState(false);
-  const [showDeployDialog, setDeployDialog] = useState(false);
   const [showCategoryManager, setCategoryManager] = useState(false);
   const [showSkillDetail, setSkillDetail] = useState(false);
   const [showSearchOverlay, setSearchOverlay] = useState(false);
@@ -51,10 +47,6 @@ export function useLibraryDialogs(): UseLibraryDialogsResult {
 
   const toggleExportDialog = useCallback(() => {
     setExportDialog((prev) => !prev);
-  }, []);
-
-  const toggleDeployDialog = useCallback(() => {
-    setDeployDialog((prev) => !prev);
   }, []);
 
   const toggleCategoryManager = useCallback(() => {
@@ -80,7 +72,6 @@ export function useLibraryDialogs(): UseLibraryDialogsResult {
   const closeAllDialogs = useCallback(() => {
     setImportDialog(false);
     setExportDialog(false);
-    setDeployDialog(false);
     setCategoryManager(false);
     setSkillDetail(false);
     setSearchOverlay(false);
@@ -92,7 +83,6 @@ export function useLibraryDialogs(): UseLibraryDialogsResult {
     // States
     showImportDialog,
     showExportDialog,
-    showDeployDialog,
     showCategoryManager,
     showSkillDetail,
     showSearchOverlay,
@@ -102,7 +92,6 @@ export function useLibraryDialogs(): UseLibraryDialogsResult {
     // Toggle functions
     toggleImportDialog,
     toggleExportDialog,
-    toggleDeployDialog,
     toggleCategoryManager,
     toggleSkillDetail,
     toggleSearchOverlay,
@@ -112,7 +101,6 @@ export function useLibraryDialogs(): UseLibraryDialogsResult {
     // Set functions
     setImportDialog,
     setExportDialog,
-    setDeployDialog,
     setCategoryManager,
     setSkillDetail,
     setSearchOverlay,

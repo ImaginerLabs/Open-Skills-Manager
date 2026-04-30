@@ -68,6 +68,7 @@ export function BatchDeployTargetDialog({
   useEffect(() => {
     if (isOpen) {
       // Default to library for global source (since global target may be empty)
+      // Default to global for library source (can't deploy to library from library)
       const defaultType = sourceInfo?.sourceType === 'global' ? 'library' : 'global';
       setSelectedType(defaultType);
       // For global source, select first available IDE (not current)
@@ -121,9 +122,13 @@ export function BatchDeployTargetDialog({
 
   // Determine which target types are available based on source
   const availableTargetTypes: DeployTargetType[] = useMemo(() => {
-    // From any source, can deploy to library, global, or project
+    // From library source, can only deploy to global or project (not back to library)
+    if (sourceInfo?.sourceType === 'library') {
+      return ['global', 'project'];
+    }
+    // From global or project source, can deploy to library, global, or project
     return ['library', 'global', 'project'];
-  }, []);
+  }, [sourceInfo?.sourceType]);
 
   // Check if can deploy
   const canDeploy = useMemo(() => {

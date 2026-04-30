@@ -8,7 +8,6 @@ describe('useLibraryDialogs', () => {
 
     expect(result.current.showImportDialog).toBe(false);
     expect(result.current.showExportDialog).toBe(false);
-    expect(result.current.showDeployDialog).toBe(false);
     expect(result.current.showCategoryManager).toBe(false);
     expect(result.current.showSkillDetail).toBe(false);
     expect(result.current.showSearchOverlay).toBe(false);
@@ -40,16 +39,6 @@ describe('useLibraryDialogs', () => {
     });
 
     expect(result.current.showExportDialog).toBe(true);
-  });
-
-  it('should toggle deploy dialog', () => {
-    const { result } = renderHook(() => useLibraryDialogs());
-
-    act(() => {
-      result.current.toggleDeployDialog();
-    });
-
-    expect(result.current.showDeployDialog).toBe(true);
   });
 
   it('should toggle category manager', () => {
@@ -128,16 +117,6 @@ describe('useLibraryDialogs', () => {
     expect(result.current.showExportDialog).toBe(true);
   });
 
-  it('should set deploy dialog explicitly', () => {
-    const { result } = renderHook(() => useLibraryDialogs());
-
-    act(() => {
-      result.current.setDeployDialog(true);
-    });
-
-    expect(result.current.showDeployDialog).toBe(true);
-  });
-
   it('should set category manager explicitly', () => {
     const { result } = renderHook(() => useLibraryDialogs());
 
@@ -209,7 +188,6 @@ describe('useLibraryDialogs', () => {
     act(() => {
       result.current.setImportDialog(true);
       result.current.setExportDialog(true);
-      result.current.setDeployDialog(true);
       result.current.setCategoryManager(true);
       result.current.setSkillDetail(true);
       result.current.setSearchOverlay(true);
@@ -220,7 +198,6 @@ describe('useLibraryDialogs', () => {
     // Verify all are open
     expect(result.current.showImportDialog).toBe(true);
     expect(result.current.showExportDialog).toBe(true);
-    expect(result.current.showDeployDialog).toBe(true);
     expect(result.current.showCategoryManager).toBe(true);
     expect(result.current.showSkillDetail).toBe(true);
     expect(result.current.showSearchOverlay).toBe(true);
@@ -235,7 +212,6 @@ describe('useLibraryDialogs', () => {
     // Verify all are closed
     expect(result.current.showImportDialog).toBe(false);
     expect(result.current.showExportDialog).toBe(false);
-    expect(result.current.showDeployDialog).toBe(false);
     expect(result.current.showCategoryManager).toBe(false);
     expect(result.current.showSkillDetail).toBe(false);
     expect(result.current.showSearchOverlay).toBe(false);

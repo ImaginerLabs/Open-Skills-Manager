@@ -13,11 +13,10 @@ import { GlobalSkillsItem } from '../Sidebar/GlobalSkillsItem';
 import { ICloudStatus } from '../TopBar/ICloudStatus';
 import { IDESwitcher } from '../../common/IDESwitcher/IDESwitcher';
 import { SearchOverlay } from '../../features/SearchOverlay';
-import { DeployDialog } from '../../features/DeployDialog';
 import { ExportDialog, type ExportableSkill } from '../../features/ExportDialog';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../features/DeploymentTracking';
 import type { SearchResult } from '../../../stores/uiStore';
-import { useLibraryStore, type LibrarySkill, type Deployment } from '../../../stores/libraryStore';
+import { useLibraryStore, type LibrarySkill } from '../../../stores/libraryStore';
 import { useProjectStore, type Project } from '../../../stores/projectStore';
 import { useGlobalStore } from '../../../stores/globalStore';
 import { useUIStore } from '../../../stores/uiStore';
@@ -60,12 +59,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
   const { status: syncStatus, lastSyncTime, pendingChanges } = useIcloudSync();
   const { openSearch } = useSearchKeyboard();
 
-  // Dialog state for search actions
-  const [deploySkill, setDeploySkill] = useState<LibrarySkill | null>(null);
-  const [showDeployDialog, setShowDeployDialog] = useState(false);
-  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-
   // Batch deploy state
   const [showBatchTargetDialog, setShowBatchTargetDialog] = useState(false);
   const [batchDeploySkills, setBatchDeploySkills] = useState<LibrarySkill[]>([]);
@@ -75,6 +68,8 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     categoryId?: string | undefined;
     projectName?: string | undefined;
   }>({ sourceType: 'library' });
+  const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const {
     status: batchDeployStatus,
     progress: batchDeployProgress,
@@ -295,8 +290,9 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
       if (result.scope === 'library') {
         const res = await libraryService.get(result.id);
         if (res.success && res.data) {
-          setDeploySkill(res.data);
-          setShowDeployDialog(true);
+          setBatchDeploySkills([res.data]);
+          setBatchDeploySourceInfo({ sourceType: 'library' });
+          setShowBatchTargetDialog(true);
         } else {
           showToast('error', 'Failed to load skill data');
         }
@@ -315,18 +311,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
     },
     [showToast, projects]
   );
-
-  const handleDeployConfirm = useCallback(
-    (_skillId: string, _deployment: Deployment) => {
-      // Deployment is handled inside DeployDialog
-    },
-    []
-  );
-
-  const handleDeployClose = useCallback(() => {
-    setShowDeployDialog(false);
-    setDeploySkill(null);
-  }, []);
 
   const handleSearchExport = useCallback(
     async (result: SearchResult) => {
@@ -671,13 +655,6 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
         onCopyPath={handleSearchCopyPath}
         onReveal={handleSearchReveal}
         onDelete={handleSearchDelete}
-      />
-
-      <DeployDialog
-        open={showDeployDialog}
-        skill={deploySkill}
-        onClose={handleDeployClose}
-        onDeploy={handleDeployConfirm}
       />
 
       <ExportDialog
