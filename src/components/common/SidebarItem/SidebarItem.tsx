@@ -11,6 +11,7 @@ export interface SidebarItemProps {
   isDisabled?: boolean;
   isMissing?: boolean;
   isDragOver?: boolean;
+  isForbidden?: boolean;
 
   expandIcon?: ReactNode;
   isExpanded?: boolean;
@@ -45,6 +46,7 @@ export function SidebarItem({
   isDisabled,
   isMissing,
   isDragOver,
+  isForbidden,
   expandIcon,
   isExpanded,
   indentLevel = 0,
@@ -68,7 +70,8 @@ export function SidebarItem({
     isSelected && styles.selected,
     isDisabled && styles.disabled,
     isMissing && styles.missing,
-    isDragOver && styles.dragOver,
+    isDragOver && !isForbidden && styles.dragOver,
+    isDragOver && isForbidden && styles.dragOverForbidden,
     indentLevel === 1 && styles.indent1,
     indentLevel === 2 && styles.indent2,
     className,

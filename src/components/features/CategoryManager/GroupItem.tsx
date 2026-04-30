@@ -10,6 +10,7 @@ interface GroupItemProps {
   isSelected: boolean;
   isEditing: boolean;
   isDragOver: boolean;
+  isForbidden?: boolean;
   editingValue: string;
   onGroupClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -27,6 +28,7 @@ export function GroupItem({
   isSelected,
   isEditing,
   isDragOver,
+  isForbidden,
   editingValue,
   onGroupClick,
   onContextMenu,
@@ -49,6 +51,7 @@ export function GroupItem({
       count={group.skillCount}
       isSelected={isSelected}
       isDragOver={isDragOver}
+      isForbidden={isForbidden}
       expandIcon={<CaretRight size={12} />}
       isExpanded={isExpanded}
       onClick={onGroupClick}

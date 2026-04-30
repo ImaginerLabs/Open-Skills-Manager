@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { ALL_GROUP_ID } from '../components/features/CategoryManager/CategoryManager';
 
 interface DragState {
   groupId: string;
@@ -26,7 +27,13 @@ export function useCategoryDragDrop(
   const handleDragOver = useCallback(
     (e: React.DragEvent, groupId: string, categoryId?: string) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+
+      // Determine if this is a forbidden drop zone (All group or Group level)
+      const isForbidden = groupId === ALL_GROUP_ID || categoryId === undefined;
+
+      // Set visual feedback via dropEffect
+      e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move';
+
       setDragOverState({ groupId, categoryId, skillId: '', skillName: '' });
     },
     []
@@ -40,6 +47,11 @@ export function useCategoryDragDrop(
     async (e: React.DragEvent, groupId: string, categoryId?: string) => {
       e.preventDefault();
       setDragOverState(null);
+
+      // Reject drops on Group or All levels - only Category can receive drops
+      if (groupId === ALL_GROUP_ID || categoryId === undefined) {
+        return;
+      }
 
       const data = e.dataTransfer.getData('application/json');
       if (!data) return;
