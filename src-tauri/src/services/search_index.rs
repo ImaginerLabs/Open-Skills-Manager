@@ -8,6 +8,7 @@ use crate::commands::library::load_skill_metadata;
 use crate::commands::project::{get_active_ide_project_scope_name, load_projects};
 use crate::paths::get_library_path;
 use crate::parsers::SkillFrontmatter;
+use crate::utils::fs::count_files_usize;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchScope {
@@ -271,7 +272,7 @@ impl SearchIndex {
         };
 
         // Calculate directory size and file count
-        let (size, file_count) = calculate_dir_stats(path);
+        let (size, file_count) = count_files_usize(path);
 
         Some(SearchableDocument {
             id: skill_id.to_string(),
@@ -523,29 +524,6 @@ fn parse_skill_md_content(content: &str) -> (String, String) {
         Ok(parsed) => (parsed.frontmatter.name, parsed.frontmatter.description),
         Err(_) => (String::new(), String::new()),
     }
-}
-
-/// Calculate total size and file count of a directory
-fn calculate_dir_stats(path: &PathBuf) -> (u64, usize) {
-    let mut total_size: u64 = 0;
-    let mut file_count: usize = 0;
-
-    if let Ok(entries) = fs::read_dir(path) {
-        for entry in entries.flatten() {
-            if let Ok(metadata) = entry.metadata() {
-                if metadata.is_file() {
-                    total_size += metadata.len();
-                    file_count += 1;
-                } else if metadata.is_dir() {
-                    let (sub_size, sub_count) = calculate_dir_stats(&entry.path());
-                    total_size += sub_size;
-                    file_count += sub_count;
-                }
-            }
-        }
-    }
-
-    (total_size, file_count)
 }
 
 // ============================================================================

@@ -1,5 +1,6 @@
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats, copy_dir_all, is_symlink_dir, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
+use super::library::{IpcResult, parse_skill_md, count_skill_md_stats, get_library_path, load_skill_metadata, save_skill_metadata, SkillMetadataEntry, generate_id};
 use crate::storage::service::get_storage;
+use crate::utils::fs::{count_files, has_resources, copy_dir_all, is_symlink};
 use std::fs;
 use std::path::PathBuf;
 use crate::paths;
@@ -70,7 +71,7 @@ pub fn global_list() -> IpcResult<Vec<GlobalSkill>> {
                     let metadata = parse_skill_md(&skill_md);
                     let (size, file_count) = count_files(&path);
                     let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
-                    let is_symlink = is_symlink_dir(&path);
+                    let is_symlink = is_symlink(&path);
 
                     // Get folder modification time as installed_at
                     let installed_at = fs::metadata(&path)
@@ -130,7 +131,7 @@ pub fn global_get(id: String) -> IpcResult<GlobalSkill> {
                         let (size, file_count) = count_files(&path);
                         let skill_md_content = fs::read_to_string(&skill_md).ok();
                         let (skill_md_lines, skill_md_chars) = count_skill_md_stats(&skill_md);
-                        let is_symlink = is_symlink_dir(&path);
+                        let is_symlink = is_symlink(&path);
 
                         // Get folder modification time as installed_at
                         let installed_at = fs::metadata(&path)

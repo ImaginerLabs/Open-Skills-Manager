@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use super::types::*;
 use crate::paths;
+use crate::utils::fs::copy_dir_all_str;
 
 // ============================================================================
 // SyncEngine
@@ -158,7 +159,7 @@ impl SyncEngine {
                         .map_err(|e| format!("Failed to remove old iCloud skill: {}", e))?;
                 }
 
-                self.copy_dir_all(&src, &dst)?;
+                copy_dir_all_str(&src, &dst)?;
                 synced_count += 1;
             }
         }
@@ -179,7 +180,7 @@ impl SyncEngine {
                         .map_err(|e| format!("Failed to remove old local skill: {}", e))?;
                 }
 
-                self.copy_dir_all(&src, &dst)?;
+                copy_dir_all_str(&src, &dst)?;
                 synced_count += 1;
             }
         }
@@ -211,28 +212,6 @@ impl SyncEngine {
         }
 
         skills
-    }
-
-    fn copy_dir_all(&self, src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
-        fs::create_dir_all(dst)
-            .map_err(|e| format!("Failed to create dir: {}", e))?;
-
-        for entry in fs::read_dir(src)
-            .map_err(|e| format!("Failed to read dir: {}", e))?
-        {
-            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-            let src_path = entry.path();
-            let dst_path = dst.join(entry.file_name());
-
-            if src_path.is_dir() {
-                self.copy_dir_all(&src_path, &dst_path)?;
-            } else {
-                fs::copy(&src_path, &dst_path)
-                    .map_err(|e| format!("Failed to copy file: {}", e))?;
-            }
-        }
-
-        Ok(())
     }
 
     fn update_sync_state(&self) -> Result<(), String> {

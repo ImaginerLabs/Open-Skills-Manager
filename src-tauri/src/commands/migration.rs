@@ -7,6 +7,7 @@ use super::config::{OpenSkillsManagerConfig, Settings, Project, SyncSettings, ge
 use super::AppError;
 use crate::paths;
 use crate::storage::Group;
+use crate::utils::fs::copy_dir_all_str;
 
 // ============================================================================
 // Migration Status Types
@@ -336,47 +337,7 @@ fn migrate_library(from: &PathBuf, to: &PathBuf) -> Result<(), String> {
             let src_path = entry.path();
             if src_path.is_dir() {
                 let dest_path = to.join(entry.file_name());
-                copy_dir_all(&src_path, &dest_path)?;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
-    fs::create_dir_all(dst)
-        .map_err(|e| format!("Failed to create directory: {}", e))?;
-
-    if let Ok(entries) = fs::read_dir(src) {
-        for entry in entries.flatten() {
-            let src_path = entry.path();
-            let dst_path = dst.join(entry.file_name());
-
-            if src_path.is_symlink() {
-                // Handle symlinks
-                if let Ok(target) = fs::read_link(&src_path) {
-                    #[cfg(unix)]
-                    {
-                        std::os::unix::fs::symlink(&target, &dst_path)
-                            .map_err(|e| format!("Failed to create symlink: {}", e))?;
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        // Fallback: copy the target instead
-                        if target.is_dir() {
-                            copy_dir_all(&target, &dst_path)?;
-                        } else {
-                            fs::copy(&target, &dst_path)
-                                .map_err(|e| format!("Failed to copy file: {}", e))?;
-                        }
-                    }
-                }
-            } else if src_path.is_dir() {
-                copy_dir_all(&src_path, &dst_path)?;
-            } else {
-                fs::copy(&src_path, &dst_path)
-                    .map_err(|e| format!("Failed to copy file: {}", e))?;
+                copy_dir_all_str(&src_path, &dest_path)?;
             }
         }
     }

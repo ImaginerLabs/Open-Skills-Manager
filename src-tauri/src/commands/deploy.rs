@@ -1,6 +1,7 @@
-use super::library::{IpcResult, get_library_path, load_skill_metadata, copy_dir_all};
+use super::library::{IpcResult, get_library_path, load_skill_metadata};
 use super::global::get_global_skills_path;
 use super::config::load_config;
+use crate::utils::fs::copy_dir_all;
 use std::fs;
 use std::path::PathBuf;
 

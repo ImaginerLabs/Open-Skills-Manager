@@ -1,7 +1,8 @@
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats};
+use super::library::{IpcResult, parse_skill_md, count_skill_md_stats};
 use super::AppError;
 use crate::storage::service::get_storage;
 use crate::storage::Project;
+use crate::utils::fs::{count_files, has_resources};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -546,7 +547,8 @@ pub struct PullOptions {
 
 #[tauri::command]
 pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<PullOptions>) -> IpcResult<super::library::LibrarySkill> {
-    use super::library::{LibrarySkill, get_library_path, copy_dir_all, SkillMetadataEntry, load_skill_metadata, save_skill_metadata};
+    use super::library::{LibrarySkill, get_library_path, SkillMetadataEntry, load_skill_metadata, save_skill_metadata};
+    use crate::utils::fs::copy_dir_all;
 
     let projects = load_projects();
 

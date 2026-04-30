@@ -2,10 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-use super::library::{IpcResult, parse_skill_md, count_files, has_resources, count_skill_md_stats, is_symlink_dir};
+use super::library::{IpcResult, parse_skill_md, count_skill_md_stats};
 use super::AppError;
 use crate::paths;
 use crate::storage::service::get_storage;
+use crate::utils::fs::{count_files, has_resources, is_symlink};
 
 // ============================================================================
 // Helper: Get active IDE ID from new storage layer
@@ -136,7 +137,7 @@ fn scan_global_skills(global_path: &PathBuf) -> Vec<GlobalSkill> {
                     if let Some(metadata) = parse_skill_md(&skill_md_path) {
                         let (lines, chars) = count_skill_md_stats(&skill_md_path);
                         let (size, file_count) = count_files(&path);
-                        let is_symlink = is_symlink_dir(&path);
+                        let is_symlink = is_symlink(&path);
 
                         skills.push(GlobalSkill {
                             id: format!("global-{}", uuid::Uuid::new_v4()),

@@ -6,6 +6,7 @@ use super::library::IpcResult;
 use super::AppError;
 use crate::paths;
 use crate::storage::service::get_storage;
+use crate::utils::fs::copy_dir_all;
 
 // ============================================================================
 // Client Identity
@@ -502,25 +503,6 @@ fn list_skills(dir: &PathBuf) -> std::collections::HashMap<String, chrono::DateT
     }
 
     skills
-}
-
-/// Copy directory recursively
-fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> std::io::Result<()> {
-    fs::create_dir_all(dst)?;
-
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-
-        if src_path.is_dir() {
-            copy_dir_all(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
-
-    Ok(())
 }
 
 fn calculate_local_storage_used() -> u64 {

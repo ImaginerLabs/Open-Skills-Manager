@@ -10,6 +10,7 @@ use super::AppError;
 use crate::parsers::SkillFrontmatter;
 use crate::paths;
 use crate::storage::service::get_storage;
+use crate::utils::fs::{copy_dir_all, count_files, has_resources, is_symlink as is_symlink_dir};
 // Re-export Group and Category from storage types for IPC commands
 pub use crate::storage::{Group, Category, SkillEntry};
 
@@ -164,49 +165,6 @@ pub fn count_skill_md_stats(path: &Path) -> (u32, u32) {
     } else {
         (0, 0)
     }
-}
-
-pub fn count_files(dir: &Path) -> (u64, u32) {
-    let mut total_size = 0u64;
-    let mut file_count = 0u32;
-
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Ok(metadata) = fs::metadata(&path) {
-                    total_size += metadata.len();
-                    file_count += 1;
-                }
-            } else if path.is_dir() {
-                let (sub_size, sub_count) = count_files(&path);
-                total_size += sub_size;
-                file_count += sub_count;
-            }
-        }
-    }
-
-    (total_size, file_count)
-}
-
-pub fn has_resources(dir: &Path) -> bool {
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name();
-            let name_str = name.to_string_lossy();
-            if name_str != "SKILL.md" && !name_str.starts_with('.') {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Check if a path is a symlink (does not follow the link)
-pub fn is_symlink_dir(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
 }
 
 pub fn generate_id() -> String {
@@ -1203,40 +1161,6 @@ pub fn library_organize(skill_id: String, group_id: Option<String>, category_id:
     }
 
     IpcResult::success(())
-}
-
-// ============================================================================
-// Helper: Copy directory recursively
-// ============================================================================
-
-pub fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
-    fs::create_dir_all(dst)?;
-
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-
-        // Use symlink_metadata to not follow symlinks
-        let metadata = fs::symlink_metadata(&src_path)?;
-        let file_type = metadata.file_type();
-
-        if file_type.is_symlink() {
-            // Read the symlink target
-            let target = fs::read_link(&src_path)?;
-            // Create the same symlink at destination
-            #[cfg(unix)]
-            std::os::unix::fs::symlink(&target, &dst_path)?;
-            #[cfg(windows)]
-            std::os::windows::fs::symlink_file(&target, &dst_path)?;
-        } else if file_type.is_dir() {
-            copy_dir_all(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
-
-    Ok(())
 }
 
 // ============================================================================
