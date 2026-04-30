@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { PullToLibraryDialog } from '../../components/features/GlobalSkillsView/PullToLibraryDialog';
 import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
+import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
 import { SkillListLayout, SkillListHeader, SkillList } from '../../components/features/SkillList';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
 import { useSkillSort } from '../../components/features/SkillList/hooks/useSkillSort';
+import { useBatchDeploy } from '../../hooks/useBatchDeploy';
 import { globalService } from '../../services/globalService';
 import { configService } from '../../services/configService';
 import { useUIStore } from '../../stores/uiStore';
@@ -28,6 +31,7 @@ export function Global(): React.ReactElement {
     setError,
   } = useGlobalStore();
 
+  const { projects } = useProjectStore();
   const { showToast, showConfirmDialog, closeConfirmDialog } = useUIStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +45,21 @@ export function Global(): React.ReactElement {
   const [previewSkill, setPreviewSkill] = useState<SkillPreviewData | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
   const refreshButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Deploy state
+  const [showDeployTargetDialog, setShowDeployTargetDialog] = useState(false);
+  const [deploySkill, setDeploySkill] = useState<GlobalSkill | null>(null);
+  const {
+    status: deployStatus,
+    progress: deployProgress,
+    total: deployTotal,
+    currentSkillName: deployCurrentSkill,
+    result: deployResult,
+    startDeploy,
+    cancel: cancelDeploy,
+    reset: resetDeploy,
+    retryFailed: retryDeployFailed,
+  } = useBatchDeploy();
 
   const { sortedSkills, sortBy, setSortBy, sortDirection, toggleSortDirection } = useSkillSort(skills);
 
@@ -223,9 +242,55 @@ export function Global(): React.ReactElement {
     setExportSkills([]);
   }, []);
 
+  // Deploy handlers
+  const handleDeploySkill = useCallback((skill: GlobalSkill) => {
+    setDeploySkill(skill);
+    setShowDeployTargetDialog(true);
+  }, []);
+
+  const handleDeployTarget = useCallback(async (target: DeployTarget) => {
+    setShowDeployTargetDialog(false);
+    if (!deploySkill) return;
+
+    if (target.type === 'project' && target.projectId) {
+      const project = projects.find((p) => p.id === target.projectId);
+      if (project) {
+        startDeploy(
+          [{
+            id: deploySkill.id,
+            name: deploySkill.name,
+            description: deploySkill.description || '',
+            path: deploySkill.path,
+            size: deploySkill.size,
+            fileCount: deploySkill.fileCount,
+            skillMdLines: 0,
+            skillMdChars: 0,
+            folderName: deploySkill.id,
+            version: '1.0.0',
+            skillMdPath: '',
+            hasResources: deploySkill.fileCount > 1,
+            isSymlink: false,
+            importedAt: new Date(),
+            deployments: [],
+          }],
+          {
+            targetScope: 'project',
+            projectId: project.path,
+            sourceScope: 'global',
+          }
+        );
+      }
+    }
+  }, [deploySkill, projects, startDeploy]);
+
+  const handleDeployDialogClose = useCallback(() => {
+    resetDeploy();
+  }, [resetDeploy]);
+
   const cardActions = {
     onDelete: handleDeleteSkill,
     onExport: handleExportSkill,
+    onDeploy: handleDeploySkill,
     onPull: (skillId: string) => {
       const skill = skills.find((s) => s.id === skillId);
       if (skill) handlePullToLibrary(skill);
@@ -318,6 +383,42 @@ export function Global(): React.ReactElement {
         skills={exportSkills}
         onClose={handleExportClose}
         onExportStart={handleExportStart}
+      />
+
+      <BatchDeployTargetDialog
+        isOpen={showDeployTargetDialog}
+        skills={deploySkill ? [{
+          id: deploySkill.id,
+          name: deploySkill.name,
+          description: deploySkill.description || '',
+          path: deploySkill.path,
+          size: deploySkill.size,
+          fileCount: deploySkill.fileCount,
+          skillMdLines: 0,
+          skillMdChars: 0,
+          folderName: deploySkill.id,
+          version: '1.0.0',
+          skillMdPath: '',
+          hasResources: deploySkill.fileCount > 1,
+          isSymlink: false,
+          importedAt: new Date(),
+          deployments: [],
+        }] : []}
+        sourceInfo={{ sourceType: 'global' }}
+        onClose={() => setShowDeployTargetDialog(false)}
+        onDeploy={handleDeployTarget}
+      />
+
+      <BatchDeployDialog
+        isOpen={deployStatus !== 'idle'}
+        status={deployStatus}
+        progress={deployProgress}
+        total={deployTotal}
+        currentSkillName={deployCurrentSkill}
+        result={deployResult}
+        onClose={handleDeployDialogClose}
+        onCancel={cancelDeploy}
+        onRetryFailed={retryDeployFailed}
       />
     </SkillListLayout>
   );

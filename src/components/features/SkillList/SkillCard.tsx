@@ -109,7 +109,8 @@ export function SkillCard<T extends Skill>({
 
   const isLibrary = scope === 'library';
   const menuItems: ContextMenuItem[] = [
-    ...(isLibrary && actions?.onDeploy ? [{
+    // Deploy option: available for all scopes
+    ...(actions?.onDeploy ? [{
       id: 'deploy',
       label: 'Deploy to...',
       icon: Rocket,

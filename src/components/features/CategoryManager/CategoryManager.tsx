@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import { Plus, FolderSimple, PencilSimple, Trash } from '@phosphor-icons/react';
+import { Plus, FolderSimple, PencilSimple, Trash, ArrowsOut } from '@phosphor-icons/react';
 import type { Group } from '../../../stores/libraryStore';
 import { useCategoryDragDrop } from '../../../hooks/useCategoryDragDrop';
 import { useContextMenu } from '../../../hooks/useContextMenu';
 
 interface CategoryMenuData {
-  type: 'group' | 'category';
+  type: 'group' | 'category' | 'all';
   groupId: string;
   categoryId?: string | undefined;
 }
@@ -32,6 +32,7 @@ export interface CategoryManagerProps {
   onRenameCategory?: (groupId: string, categoryId: string, newName: string) => void;
   onDeleteCategory?: (groupId: string, categoryId: string) => void;
   onOrganizeSkill?: (skillId: string, groupId: string | null, categoryId?: string) => Promise<void>;
+  onBatchDeploy?: (groupId: string, categoryId?: string) => void;
 }
 
 interface EditingState {
@@ -55,6 +56,7 @@ export function CategoryManager({
   onRenameCategory,
   onDeleteCategory,
   onOrganizeSkill,
+  onBatchDeploy,
 }: CategoryManagerProps): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<EditingState | null>(null);
@@ -130,6 +132,18 @@ export function CategoryManager({
     close();
   }, [contextMenu, onDeleteGroup, onDeleteCategory, close]);
 
+  const handleBatchDeploy = useCallback(() => {
+    if (!contextMenu || !onBatchDeploy) return;
+    const { type, groupId, categoryId } = contextMenu.data;
+    if (type === 'all') {
+      // Deploy all skills - pass ALL_GROUP_ID
+      onBatchDeploy(ALL_GROUP_ID, undefined);
+    } else {
+      onBatchDeploy(groupId, type === 'category' ? categoryId : undefined);
+    }
+    close();
+  }, [contextMenu, onBatchDeploy, close]);
+
   const handleCreateEntity = useCallback(
     (name: string, icon?: string, notes?: string) => {
       if (createDialogType === 'group') {
@@ -155,6 +169,12 @@ export function CategoryManager({
 
   const contextMenuItems: ContextMenuItem[] = contextMenu
     ? [
+        {
+          id: 'batchDeploy',
+          label: 'Deploy All to...',
+          icon: ArrowsOut,
+          onClick: handleBatchDeploy,
+        },
         {
           id: 'rename',
           label: 'Rename',
@@ -206,6 +226,7 @@ export function CategoryManager({
           count={totalSkillsCount}
           isSelected={selectedGroupId === ALL_GROUP_ID && !selectedCategoryId}
           onClick={() => onSelectGroup?.(ALL_GROUP_ID)}
+          onContextMenu={(e) => open(e, { type: 'all', groupId: ALL_GROUP_ID })}
           className={styles.categoryItem}
         />
 
