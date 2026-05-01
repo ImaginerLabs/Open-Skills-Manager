@@ -1,4 +1,4 @@
-import { MagnifyingGlass, TextAa, Calendar, Database, ArrowsDownUp } from '@phosphor-icons/react';
+import { MagnifyingGlass, TextAa, Calendar, Database, ArrowUp, ArrowDown } from '@phosphor-icons/react';
 import { ViewToggle } from '../../ui/ViewToggle';
 import { useUIStore } from '@/stores';
 import type { SkillListHeaderProps } from './types';
@@ -47,7 +47,7 @@ export function SkillListHeader({
           onClick={onToggleSortDirection}
           title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
         >
-          <ArrowsDownUp size={16} />
+          {sortDirection === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
         </button>
         <button
           type="button"
