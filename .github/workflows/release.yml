@@ -37,6 +37,9 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.artifact }})
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -65,13 +68,8 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Build Tauri app (unsigned)
+      - name: Build Tauri app
         run: pnpm tauri build ${{ matrix.args }}
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        # 注意：未配置 Apple 签名证书，构建未签名应用
-        # 用户首次运行需在「系统设置 > 隐私与安全性」中允许
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
