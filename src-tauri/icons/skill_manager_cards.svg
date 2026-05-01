@@ -1,0 +1,40 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A2E"/>
+      <stop offset="50%" style="stop-color:#16213E"/>
+      <stop offset="100%" style="stop-color:#0F3460"/>
+    </linearGradient>
+    <linearGradient id="accent2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E94560"/>
+      <stop offset="100%" style="stop-color:#FF6B6B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect x="64" y="64" width="896" height="896" rx="224" ry="224" fill="url(#bg2)"/>
+
+  <!-- 后面卡片 -->
+  <rect x="280" y="200" width="464" height="624" rx="48" fill="#2D3561" transform="rotate(12 512 512)"/>
+
+  <!-- 中间卡片 -->
+  <rect x="260" y="220" width="464" height="624" rx="48" fill="#3D4578" transform="rotate(6 512 512)"/>
+
+  <!-- 前面主卡片 -->
+  <rect x="240" y="240" width="464" height="624" rx="48" fill="url(#accent2)"/>
+
+  <!-- 卡片内容 -->
+  <g transform="translate(472,400)">
+    <!-- 代码符号 -->
+    <path d="M-80,0 L-160,-80 L-80,-160" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M80,0 L160,-80 L80,-160" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <line x1="-40" y1="80" x2="40" y2="-240" stroke="white" stroke-width="32" stroke-linecap="round"/>
+  </g>
+
+  <!-- 底部 Skill 指示器 -->
+  <rect x="320" y="680" width="304" height="24" rx="12" fill="white" opacity="0.3"/>
+  <rect x="320" y="680" width="200" height="24" rx="12" fill="white"/>
+
+  <rect x="320" y="740" width="240" height="24" rx="12" fill="white" opacity="0.3"/>
+  <rect x="320" y="740" width="160" height="24" rx="12" fill="white"/>
+</svg>
