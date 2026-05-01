@@ -252,6 +252,7 @@ export function Settings(): React.ReactElement {
                   onClick={checkForUpdates}
                   disabled={isChecking}
                 >
+                  <ArrowsClockwise size={16} weight="bold" className={isChecking ? styles.spinning : ''} />
                   {isChecking ? 'Checking...' : 'Check Now'}
                 </button>
               </div>

@@ -49,7 +49,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVGQkI3Nzk4NDJEMDI3NTcKUldSWEo5QkNtSGU3WDFOR3dJdlVCVWoyV2JoeHZuWjZhMEl6NGVYNGsxRmZHRDZ6bDRKYi9MME8K",
       "endpoints": [
-        "https://github.com/alex/Open-Skills-Manager/releases/latest/download/latest.json"
+        "https://github.com/ImaginerLabs/Open-Skills-Manager/releases/latest/download/latest.json"
       ]
     }
   }
