@@ -15,6 +15,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ====================
@@ -44,7 +45,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -79,6 +80,7 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: warn
           retention-days: 7
 
@@ -217,16 +219,57 @@ jobs:
           if [ -d "artifacts/darwin-aarch64" ]; then
             find artifacts/darwin-aarch64 -name "*.dmg" -exec cp {} release-assets/ \;
             find artifacts/darwin-aarch64 -name "*.app.tar.gz" -exec cp {} release-assets/Open-Skills-Manager-aarch64.app.tar.gz \;
+            find artifacts/darwin-aarch64 -name "*.sig" -exec cp {} release-assets/Open-Skills-Manager-aarch64.app.tar.gz.sig \;
           fi
 
           if [ -d "artifacts/darwin-x86_64" ]; then
             find artifacts/darwin-x86_64 -name "*.dmg" -exec cp {} release-assets/ \;
             find artifacts/darwin-x86_64 -name "*.app.tar.gz" -exec cp {} release-assets/Open-Skills-Manager-x86_64.app.tar.gz \;
+            find artifacts/darwin-x86_64 -name "*.sig" -exec cp {} release-assets/Open-Skills-Manager-x86_64.app.tar.gz.sig \;
           fi
 
           # 列出所有文件
           echo "Release assets:"
           ls -la release-assets/
+
+      - name: Generate latest.json
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          REPO="${{ github.repository }}"
+
+          # Read signatures
+          AARCH64_SIG=""
+          X64_SIG=""
+
+          if [ -f "release-assets/Open-Skills-Manager-aarch64.app.tar.gz.sig" ]; then
+            AARCH64_SIG=$(cat release-assets/Open-Skills-Manager-aarch64.app.tar.gz.sig)
+          fi
+
+          if [ -f "release-assets/Open-Skills-Manager-x86_64.app.tar.gz.sig" ]; then
+            X64_SIG=$(cat release-assets/Open-Skills-Manager-x86_64.app.tar.gz.sig)
+          fi
+
+          # Generate latest.json
+          cat > release-assets/latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "See release notes at https://github.com/${REPO}/releases/tag/v${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${AARCH64_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Open-Skills-Manager-aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${X64_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Open-Skills-Manager-x86_64.app.tar.gz"
+              }
+            }
+          }
+          EOF
+
+          echo "Generated latest.json:"
+          cat release-assets/latest.json
 
       - name: Generate release notes
         run: |

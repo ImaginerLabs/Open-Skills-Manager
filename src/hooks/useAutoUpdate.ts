@@ -1,0 +1,163 @@
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { getName, getVersion } from '@tauri-apps/api/app';
+import {
+  checkForUpdate,
+  downloadAndInstallUpdate,
+  type UpdateInfo,
+} from '../services/updateService';
+import { useSettingsStore } from '../stores/settingsStore';
+import { useUIStore } from '../stores/uiStore';
+
+export interface UseAutoUpdateResult {
+  appName: string;
+  currentVersion: string;
+  updateInfo: UpdateInfo | null;
+  isChecking: boolean;
+  isDownloading: boolean;
+  downloadProgress: number;
+  error: string | null;
+  checkForUpdates: () => Promise<void>;
+  downloadAndInstall: () => Promise<void>;
+}
+
+// Check interval for automatic updates (24 hours)
+const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+
+export function useAutoUpdate(): UseAutoUpdateResult {
+  const [appName, setAppName] = useState<string>('');
+  const [currentVersion, setCurrentVersion] = useState<string>('');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const { autoUpdateCheck } = useSettingsStore();
+  const { showToast, showConfirmDialog } = useUIStore();
+  const autoCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasCheckedOnStartup = useRef(false);
+
+  // Get app info on mount
+  useEffect(() => {
+    getVersion().then(setCurrentVersion).catch(() => setCurrentVersion('Unknown'));
+    getName().then(setAppName).catch(() => setAppName('Open Skills Manager'));
+  }, []);
+
+  // Check for updates
+  const checkForUpdates = useCallback(async () => {
+    setIsChecking(true);
+    setError(null);
+
+    try {
+      const info = await checkForUpdate();
+      setUpdateInfo(info);
+
+      if (info) {
+        showToast('info', `发现新版本 ${info.latestVersion}`);
+      } else {
+        showToast('success', '当前已是最新版本');
+      }
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : '检查更新失败';
+      setError(errorMessage);
+      showToast('error', errorMessage);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [showToast]);
+
+  // Download and install update
+  const downloadAndInstall = useCallback(async () => {
+    if (!updateInfo) {
+      showToast('error', '没有可用的更新');
+      return;
+    }
+
+    showConfirmDialog({
+      title: '安装更新',
+      message: `即将安装版本 ${updateInfo.latestVersion}。应用将自动重启以完成更新。`,
+      confirmText: '安装并重启',
+      cancelText: '取消',
+      onConfirm: async () => {
+        setIsDownloading(true);
+        setDownloadProgress(0);
+        setError(null);
+
+        try {
+          await downloadAndInstallUpdate((progress) => {
+            setDownloadProgress(progress);
+          });
+          // App will restart automatically, no need to update state
+        } catch (e) {
+          const errorMessage = e instanceof Error ? e.message : '下载更新失败';
+          setError(errorMessage);
+          showToast('error', errorMessage);
+          setIsDownloading(false);
+          setDownloadProgress(0);
+        }
+      },
+    });
+  }, [updateInfo, showToast, showConfirmDialog]);
+
+  // Automatic update check on startup and periodically
+  useEffect(() => {
+    if (!autoUpdateCheck) {
+      // Clear any existing interval if auto check is disabled
+      if (autoCheckRef.current) {
+        clearInterval(autoCheckRef.current);
+        autoCheckRef.current = null;
+      }
+      return;
+    }
+
+    // Check on startup (once)
+    if (!hasCheckedOnStartup.current) {
+      hasCheckedOnStartup.current = true;
+      // Delay startup check to avoid blocking initial render
+      setTimeout(() => {
+        checkForUpdate()
+          .then((info) => {
+            if (info) {
+              setUpdateInfo(info);
+              showToast('info', `发现新版本 ${info.latestVersion}，可在设置页面安装`);
+            }
+          })
+          .catch((e) => {
+            console.error('Startup update check failed:', e);
+          });
+      }, 5000); // 5 second delay
+    }
+
+    // Set up periodic check
+    autoCheckRef.current = setInterval(() => {
+      checkForUpdate()
+        .then((info) => {
+          if (info) {
+            setUpdateInfo(info);
+          }
+        })
+        .catch((e) => {
+          console.error('Periodic update check failed:', e);
+        });
+    }, AUTO_CHECK_INTERVAL);
+
+    return () => {
+      if (autoCheckRef.current) {
+        clearInterval(autoCheckRef.current);
+        autoCheckRef.current = null;
+      }
+    };
+  }, [autoUpdateCheck, showToast]);
+
+  return {
+    appName,
+    currentVersion,
+    updateInfo,
+    isChecking,
+    isDownloading,
+    downloadProgress,
+    error,
+    checkForUpdates,
+    downloadAndInstall,
+  };
+}

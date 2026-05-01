@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FolderOpen, Gear, PaintBrush, Warning } from '@phosphor-icons/react';
+import { ArrowsClockwise, FolderOpen, Gear, PaintBrush, Warning } from '@phosphor-icons/react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
 import { configService, storageService } from '../../services/configService';
@@ -7,6 +7,7 @@ import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 // Stores imported for getState() access during factory reset
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useGlobalStore } from '../../stores/globalStore';
@@ -26,7 +27,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function Settings(): React.ReactElement {
-  const { theme, setTheme, setLanguage } = useSettingsStore();
+  const { theme, setTheme, setLanguage, autoUpdateCheck, setAutoUpdateCheck } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const { refreshAll } = useSidebarData();
   const [appVersion, setAppVersion] = useState<string>('');
@@ -41,6 +42,16 @@ export function Settings(): React.ReactElement {
     error,
     forceSync,
   } = useIcloudSync();
+
+  const {
+    currentVersion,
+    updateInfo,
+    isChecking,
+    isDownloading,
+    downloadProgress,
+    checkForUpdates,
+    downloadAndInstall,
+  } = useAutoUpdate();
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
@@ -169,6 +180,84 @@ export function Settings(): React.ReactElement {
           onForceSync={handleForceSync}
           onViewInFinder={handleViewInFinder}
         />
+
+        <section className={styles.section}>
+          <header className={styles.sectionHeader}>
+            <ArrowsClockwise size={18} className={styles.sectionIcon} />
+            <h2 className={styles.sectionTitle}>Updates</h2>
+          </header>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Auto Check for Updates</span>
+              <span className={styles.settingDescription}>Automatically check for updates when the app starts</span>
+            </div>
+            <div className={styles.settingValue}>
+              <select
+                value={autoUpdateCheck ? 'true' : 'false'}
+                onChange={(e) => setAutoUpdateCheck(e.target.value === 'true')}
+                className={styles.select}
+              >
+                <option value="true">Enabled</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Current Version</span>
+              <span className={styles.settingDescription}>{appName}</span>
+            </div>
+            <div className={styles.settingValue}>
+              <span className={styles.settingName}>{currentVersion || appVersion || '...'}</span>
+            </div>
+          </div>
+
+          {updateInfo && (
+            <div className={styles.settingRow}>
+              <div className={styles.settingLabel}>
+                <span className={styles.settingName}>Update Available</span>
+                <span className={styles.settingDescription}>
+                  Version {updateInfo.latestVersion} is available
+                </span>
+              </div>
+              <div className={styles.settingValue}>
+                {isDownloading ? (
+                  <span className={styles.settingName}>{downloadProgress}%</span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.select}
+                    onClick={downloadAndInstall}
+                    disabled={isDownloading}
+                  >
+                    Download & Install
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!updateInfo && (
+            <div className={styles.settingRow}>
+              <div className={styles.settingLabel}>
+                <span className={styles.settingName}>Check for Updates</span>
+                <span className={styles.settingDescription}>Manually check for new versions</span>
+              </div>
+              <div className={styles.settingValue}>
+                <button
+                  type="button"
+                  className={styles.select}
+                  onClick={checkForUpdates}
+                  disabled={isChecking}
+                >
+                  {isChecking ? 'Checking...' : 'Check Now'}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className={styles.section}>
           <header className={styles.sectionHeader}>

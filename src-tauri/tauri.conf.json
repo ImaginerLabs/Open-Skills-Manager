@@ -30,6 +30,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -46,11 +47,10 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVGQkI3Nzk4NDJEMDI3NTcKUldSWEo5QkNtSGU3WDFOR3dJdlVCVWoyV2JoeHZuWjZhMEl6NGVYNGsxRmZHRDZ6bDRKYi9MME8K",
       "endpoints": [
-        "https://github.com/{{github.repository}}/releases/latest/download/latest.json"
-      ],
-      "pubkey": ""
+        "https://github.com/alex/Open-Skills-Manager/releases/latest/download/latest.json"
+      ]
     }
   }
 }
