@@ -1,7 +1,7 @@
 {
   "name": "claude-code-skills-manager",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "cd e2e && npm test",
     "test:e2e:install": "cd e2e && npm install",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "version": "node scripts/version-bump.js",
+    "release": "node scripts/version-bump.js"
   },
   "dependencies": {
     "@lobehub/icons": "^5.6.0",

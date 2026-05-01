@@ -1,0 +1,309 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a GitHub Release'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ====================
+  # 构建任务
+  # ====================
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            artifact: 'darwin-aarch64'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            artifact: 'darwin-x86_64'
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.artifact }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build Tauri app
+        run: pnpm tauri build ${{ matrix.args }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ====================
+  # 创建 Release
+  # ====================
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Create Release
+
+    # 只在 tag push 或手动触发且选择创建 release 时运行
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release)
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史用于生成 changelog
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          CURRENT_VERSION=${{ steps.version.outputs.version }}
+          # 获取当前 tag 之前的最近一个 tag
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^v${CURRENT_VERSION}$" | head -n1 || echo "")
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          PREV_TAG=${{ steps.prev_tag.outputs.prev_tag }}
+
+          # 生成 changelog
+          if [ -n "$PREV_TAG" ]; then
+            echo "Generating changelog from $PREV_TAG to v$VERSION..."
+            CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges | head -50)
+          else
+            echo "Generating changelog for initial release..."
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -50)
+          fi
+
+          # 保存 changelog 到文件
+          echo "$CHANGELOG" > changelog.txt
+
+          # 统计变更
+          if [ -n "$PREV_TAG" ]; then
+            STATS=$(git diff $PREV_TAG..HEAD --stat | tail -1)
+          else
+            STATS=$(git diff --stat HEAD~1..HEAD | tail -1)
+          fi
+          echo "stats=$STATS" >> $GITHUB_OUTPUT
+
+      - name: Categorize changes
+        id: categorize
+        run: |
+          # 解析 commits 并分类
+          FEATURES=""
+          FIXES=""
+          REFACTOR=""
+          DOCS=""
+          OTHER=""
+
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^-\ feat ]]; then
+              FEATURES="$FEATURES$line\n"
+            elif [[ "$line" =~ ^-\ fix ]]; then
+              FIXES="$FIXES$line\n"
+            elif [[ "$line" =~ ^-\ refactor ]]; then
+              REFACTOR="$REFACTOR$line\n"
+            elif [[ "$line" =~ ^-\ docs ]]; then
+              DOCS="$DOCS$line\n"
+            else
+              OTHER="$OTHER$line\n"
+            fi
+          done < changelog.txt
+
+          # 写入分类文件
+          {
+            if [ -n "$FEATURES" ]; then
+              echo "### ✨ 新功能"
+              echo -e "$FEATURES"
+              echo ""
+            fi
+
+            if [ -n "$FIXES" ]; then
+              echo "### 🐛 修复"
+              echo -e "$FIXES"
+              echo ""
+            fi
+
+            if [ -n "$REFACTOR" ]; then
+              echo "### ♻️ 重构"
+              echo -e "$REFACTOR"
+              echo ""
+            fi
+
+            if [ -n "$DOCS" ]; then
+              echo "### 📝 文档"
+              echo -e "$DOCS"
+              echo ""
+            fi
+
+            if [ -n "$OTHER" ]; then
+              echo "### 🔧 其他"
+              echo -e "$OTHER"
+            fi
+          } > changelog-categorized.md
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # 整理 macOS artifacts
+          if [ -d "artifacts/darwin-aarch64" ]; then
+            find artifacts/darwin-aarch64 -name "*.dmg" -exec cp {} release-assets/ \;
+            find artifacts/darwin-aarch64 -name "*.app.tar.gz" -exec cp {} release-assets/Open-Skills-Manager-aarch64.app.tar.gz \;
+          fi
+
+          if [ -d "artifacts/darwin-x86_64" ]; then
+            find artifacts/darwin-x86_64 -name "*.dmg" -exec cp {} release-assets/ \;
+            find artifacts/darwin-x86_64 -name "*.app.tar.gz" -exec cp {} release-assets/Open-Skills-Manager-x86_64.app.tar.gz \;
+          fi
+
+          # 列出所有文件
+          echo "Release assets:"
+          ls -la release-assets/
+
+      - name: Generate release notes
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          PREV_TAG=${{ steps.prev_tag.outputs.prev_tag }}
+          STATS=${{ steps.categorize.outputs.stats }}
+
+          cat > release-notes.md << EOF
+          ## Open Skills Manager $VERSION
+
+          ### 📦 下载
+
+          | 平台 | 架构 | 文件 |
+          |------|------|------|
+          | macOS | Apple Silicon (M1/M2/M3) | \`Open-Skills-Manager_aarch64.dmg\` |
+          | macOS | Intel (x86_64) | \`Open-Skills-Manager_x86_64.dmg\` |
+
+          ### 📝 更新内容
+
+          EOF
+
+          # 追加分类的 changelog
+          cat changelog-categorized.md >> release-notes.md
+
+          cat >> release-notes.md << EOF
+
+          ---
+
+          ### 安装方式
+
+          1. 下载对应架构的 DMG 文件
+          2. 双击打开 DMG
+          3. 将应用拖入 Applications 文件夹
+          4. 首次运行可能需要在「系统设置 > 隐私与安全性」中允许运行
+
+          ### 系统要求
+
+          - macOS 11.0 (Big Sur) 或更高版本
+
+          ---
+
+          EOF
+
+          # 添加完整变更链接
+          if [ -n "$PREV_TAG" ]; then
+            echo "**完整变更**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...v$VERSION" >> release-notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Open Skills Manager ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ====================
+  # 清理旧 artifacts
+  # ====================
+  cleanup:
+    needs: release
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Delete artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            darwin-aarch64
+            darwin-x86_64
+          failOnError: false
