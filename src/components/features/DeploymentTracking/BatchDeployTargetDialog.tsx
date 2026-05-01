@@ -125,7 +125,7 @@ export function BatchDeployTargetDialog({
   const availableTargetTypes: DeployTargetType[] = useMemo(() => {
     // From any source, can deploy to library, global, or project
     return ['library', 'global', 'project'];
-  }, [sourceInfo?.sourceType]);
+  }, []);
 
   // Check if can deploy
   const canDeploy = useMemo(() => {

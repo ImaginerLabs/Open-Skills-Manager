@@ -38,6 +38,11 @@ export function AddProjectDialog({
     }
   }, []);
 
+  const handleClose = useCallback(() => {
+    setSelectedPath(null);
+    onClose();
+  }, [onClose]);
+
   const handleAdd = useCallback(async () => {
     if (!selectedPath) return;
 
@@ -48,12 +53,7 @@ export function AddProjectDialog({
     } finally {
       setIsAdding(false);
     }
-  }, [selectedPath, onAdd]);
-
-  const handleClose = useCallback(() => {
-    setSelectedPath(null);
-    onClose();
-  }, [onClose]);
+  }, [selectedPath, onAdd, handleClose]);
 
   const folderName = selectedPath ? selectedPath.split('/').pop() || selectedPath : null;
 

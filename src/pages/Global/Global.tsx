@@ -252,7 +252,7 @@ export function Global(): React.ReactElement {
         );
       }
     }
-  }, [deploySkill, projects, startDeploy, showToast]);
+  }, [deploySkill, projects, startDeploy, showToast, refreshLibrary]);
 
   const handleDeployDialogClose = useCallback(() => {
     resetDeploy();

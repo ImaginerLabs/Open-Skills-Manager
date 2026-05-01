@@ -31,7 +31,7 @@ export function SkillList<T extends Skill>({
       skill,
       delay: getAnimationDelay(index),
     }));
-  }, [skills, viewMode]); // Add viewMode dependency to re-trigger animation
+  }, [skills]);
 
   if (isLoading) {
     return <SkillListSkeleton count={12} />;

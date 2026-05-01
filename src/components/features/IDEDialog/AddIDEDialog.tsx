@@ -46,6 +46,16 @@ export function AddIDEDialog({
     }
   }, []);
 
+  const handleClose = useCallback(() => {
+    setName('');
+    setGlobalPath('');
+    setProjectScope('');
+    setIcon(undefined);
+    setError(null);
+    setIsAdding(false);
+    onClose();
+  }, [onClose]);
+
   const handleAdd = useCallback(async () => {
     if (!name.trim()) {
       setError('Please enter an IDE name');
@@ -84,17 +94,7 @@ export function AddIDEDialog({
     } finally {
       setIsAdding(false);
     }
-  }, [name, globalPath, projectScope, icon, onAdd]);
-
-  const handleClose = useCallback(() => {
-    setName('');
-    setGlobalPath('');
-    setProjectScope('');
-    setIcon(undefined);
-    setError(null);
-    setIsAdding(false);
-    onClose();
-  }, [onClose]);
+  }, [name, globalPath, projectScope, icon, onAdd, handleClose]);
 
   const iconPreview = useMemo(() => getIconByName(icon, 16), [icon]);
 

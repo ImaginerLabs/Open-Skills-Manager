@@ -47,7 +47,7 @@ export function useIDESwitcher() {
     } finally {
       setLoading(false);
     }
-  }, [ideConfigs, activeIdeId, setActiveIDE, setLoading, refreshAll, showToast]);
+  }, [ideConfigs, activeIdeId, setActiveIDE, setLoading, refreshAll, showToast, navigate]);
 
   return {
     activeIdeId,
