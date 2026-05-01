@@ -47,4 +47,11 @@
 .count {
   font-size: var(--text-xs);
   color: var(--color-text-tertiary);
+  padding: 1px var(--space-1);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+
+  .light & {
+    background: rgba(0, 0, 0, 0.05);
+  }
 }
