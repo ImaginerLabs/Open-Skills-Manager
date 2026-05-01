@@ -20,8 +20,11 @@ export interface UseAutoUpdateResult {
   downloadAndInstall: () => Promise<void>;
 }
 
-// Check interval for automatic updates (24 hours)
-const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+// Check interval for automatic updates (4 hours)
+const AUTO_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
+
+// Minimum time between checks (1 hour) - prevents excessive API calls
+const MIN_CHECK_INTERVAL = 1 * 60 * 60 * 1000;
 
 export function useAutoUpdate(): UseAutoUpdateResult {
   const [appName, setAppName] = useState<string>('');
@@ -35,6 +38,7 @@ export function useAutoUpdate(): UseAutoUpdateResult {
   const { autoUpdateCheck } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const autoCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastCheckTimeRef = useRef<number>(0);
   const hasCheckedOnStartup = useRef(false);
 
   // Get app info on mount
@@ -43,28 +47,47 @@ export function useAutoUpdate(): UseAutoUpdateResult {
     getName().then(setAppName).catch(() => setAppName('Open Skills Manager'));
   }, []);
 
-  // Check for updates
-  const checkForUpdates = useCallback(async () => {
-    setIsChecking(true);
-    setError(null);
-
+  // Core update check logic
+  const doCheck = useCallback(async (showSuccessToast: boolean) => {
     try {
       const info = await checkForUpdate();
       setUpdateInfo(info);
 
       if (info) {
-        showToast('info', `发现新版本 ${info.latestVersion}`);
-      } else {
+        showToast('info', `发现新版本 ${info.latestVersion}，可在设置页面安装`);
+      } else if (showSuccessToast) {
         showToast('success', '当前已是最新版本');
       }
+
+      return info;
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : '检查更新失败';
-      setError(errorMessage);
-      showToast('error', errorMessage);
-    } finally {
-      setIsChecking(false);
+      console.error('Update check failed:', e);
+      if (showSuccessToast) {
+        setError(errorMessage);
+        showToast('error', errorMessage);
+      }
+      return null;
     }
   }, [showToast]);
+
+  // Automatic check with rate limiting
+  const performAutoCheck = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastCheckTimeRef.current < MIN_CHECK_INTERVAL) {
+      return null;
+    }
+    lastCheckTimeRef.current = now;
+    return doCheck(false);
+  }, [doCheck]);
+
+  // Manual check (always shows feedback, bypasses rate limit)
+  const checkForUpdates = useCallback(async () => {
+    setIsChecking(true);
+    setError(null);
+    await doCheck(true);
+    setIsChecking(false);
+  }, [doCheck]);
 
   // Download and install update
   const downloadAndInstall = useCallback(async () => {
@@ -113,32 +136,14 @@ export function useAutoUpdate(): UseAutoUpdateResult {
     // Check on startup (once)
     if (!hasCheckedOnStartup.current) {
       hasCheckedOnStartup.current = true;
-      // Delay startup check to avoid blocking initial render
       setTimeout(() => {
-        checkForUpdate()
-          .then((info) => {
-            if (info) {
-              setUpdateInfo(info);
-              showToast('info', `发现新版本 ${info.latestVersion}，可在设置页面安装`);
-            }
-          })
-          .catch((e) => {
-            console.error('Startup update check failed:', e);
-          });
-      }, 5000); // 5 second delay
+        performAutoCheck();
+      }, 5000);
     }
 
-    // Set up periodic check
+    // Set up periodic check (every 4 hours)
     autoCheckRef.current = setInterval(() => {
-      checkForUpdate()
-        .then((info) => {
-          if (info) {
-            setUpdateInfo(info);
-          }
-        })
-        .catch((e) => {
-          console.error('Periodic update check failed:', e);
-        });
+      performAutoCheck();
     }, AUTO_CHECK_INTERVAL);
 
     return () => {
@@ -147,7 +152,7 @@ export function useAutoUpdate(): UseAutoUpdateResult {
         autoCheckRef.current = null;
       }
     };
-  }, [autoUpdateCheck, showToast]);
+  }, [autoUpdateCheck, performAutoCheck]);
 
   return {
     appName,
