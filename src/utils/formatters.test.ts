@@ -4,9 +4,25 @@ import {
   formatDate,
   normalizeSkillDate,
   formatVersion,
+  formatCount,
 } from '@/utils/formatters';
 
 describe('formatters', () => {
+  describe('formatCount', () => {
+    it('should return count as string for values <= 99', () => {
+      expect(formatCount(0)).toBe('0');
+      expect(formatCount(1)).toBe('1');
+      expect(formatCount(50)).toBe('50');
+      expect(formatCount(99)).toBe('99');
+    });
+
+    it('should return "99+" for values > 99', () => {
+      expect(formatCount(100)).toBe('99+');
+      expect(formatCount(150)).toBe('99+');
+      expect(formatCount(1000)).toBe('99+');
+    });
+  });
+
   describe('formatSize', () => {
     it('should format 0 bytes', () => {
       expect(formatSize(0)).toBe('0 B');

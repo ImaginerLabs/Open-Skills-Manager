@@ -1,4 +1,12 @@
 /**
+ * Format count with max display limit
+ * Returns "99+" for counts > 99
+ */
+export function formatCount(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
+
+/**
  * Format file size to human-readable string
  */
 export function formatSize(bytes: number): string {

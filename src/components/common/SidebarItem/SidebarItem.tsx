@@ -1,4 +1,5 @@
 import { memo, type ReactNode, type DragEvent, type MouseEvent } from 'react';
+import { formatCount } from '@/utils/formatters';
 import { InlineEditInput } from '@/components/features/CategoryManager/InlineEditInput';
 import styles from './SidebarItem.module.scss';
 
@@ -186,7 +187,7 @@ export const SidebarItem = memo(function SidebarItem({
       ) : (
         <>
           <span className={styles.name}>{name}</span>
-          {count !== undefined && <span className={styles.count}>{count}</span>}
+          {count !== undefined && <span className={styles.count}>{formatCount(count)}</span>}
         </>
       )}
     </div>

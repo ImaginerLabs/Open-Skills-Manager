@@ -3,6 +3,7 @@ import { Globe, Rocket } from '@phosphor-icons/react';
 import { NavLink } from 'react-router-dom';
 import { ContextMenu, type ContextMenuItem } from '@/components/common/ContextMenu';
 import { useSelection } from '@/hooks/useSelection';
+import { formatCount } from '@/utils/formatters';
 import styles from './GlobalSkillsItem.module.scss';
 
 export interface GlobalSkillsItemProps {
@@ -70,7 +71,7 @@ export function GlobalSkillsItem({
         <span className={styles.expandIcon} />
         <Globe size={16} />
         <span className={styles.scopeItemName}>Global Skills</span>
-        <span className={styles.count}>{count}</span>
+        <span className={styles.count}>{formatCount(count)}</span>
       </NavLink>
 
       <ContextMenu
