@@ -265,7 +265,7 @@ export function Library(): React.ReactElement {
   const hasSkills = skills.length > 0;
 
   return (
-    <SkillListLayout className={styles.page}>
+    <SkillListLayout className={styles.page} data-testid="library-page">
       <SkillListHeader
         title="Library"
         count={skills.length}
@@ -276,7 +276,7 @@ export function Library(): React.ReactElement {
         sortDirection={sortDirection}
         onToggleSortDirection={toggleSortDirection}
         actions={
-          <button type="button" className={styles.importButton} onClick={() => setImportDialog(true)}>
+          <button type="button" className={styles.importButton} onClick={() => setImportDialog(true)} data-testid="import-button">
             <Plus size={18} />
             <span>Import</span>
           </button>
@@ -284,7 +284,7 @@ export function Library(): React.ReactElement {
       />
 
       {error && (
-        <div className={styles.error}>
+        <div className={styles.error} data-testid="library-error">
           <p>{error}</p>
         </div>
       )}

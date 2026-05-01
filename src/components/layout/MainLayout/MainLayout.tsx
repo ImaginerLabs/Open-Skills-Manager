@@ -555,6 +555,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
                 className={styles.navSectionHeader}
                 onClick={() => toggleSection(section.id)}
                 aria-expanded={section.expanded}
+                data-testid={`nav-${section.id}`}
               >
                 <span className={[styles.expandIcon, section.expanded && styles.expanded].filter(Boolean).join(' ')}>
                   <CaretRight size={12} />
@@ -619,6 +620,7 @@ export function MainLayout({ children }: MainLayoutProps): React.ReactElement {
               className={({ isActive }) =>
                 [styles.navItem, isActive && styles.active].filter(Boolean).join(' ')
               }
+              data-testid="nav-settings"
             >
               <Gear size={18} />
               <span>Settings</span>

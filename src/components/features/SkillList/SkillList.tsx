@@ -39,7 +39,7 @@ export function SkillList<T extends Skill>({
 
   if (isEmpty) {
     return (
-      <div className={styles.empty}>
+      <div className={styles.empty} data-testid="empty-state">
         {emptyIcon ?? <FolderOpen size={48} weight="thin" className={styles.emptyIcon} />}
         {hasSkills ? (
           <>

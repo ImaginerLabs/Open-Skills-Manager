@@ -21,7 +21,7 @@ export function DuplicateHandlerDialog({
   if (!duplicateInfo) return null;
 
   return (
-    <Modal open={true} onClose={onClose} className={styles.duplicateDialog}>
+    <Modal open={true} onClose={onClose} className={styles.duplicateDialog} data-testid="duplicate-handler-dialog">
       <div className={styles.duplicateHeader}>
         <Warning size={24} className={styles.warningIcon} />
         <h3 className={styles.duplicateTitle}>Duplicate Skill Detected</h3>
@@ -40,13 +40,13 @@ export function DuplicateHandlerDialog({
       </div>
 
       <div className={styles.duplicateActions}>
-        <Button variant="ghost" onClick={() => onAction('skip')}>
+        <Button variant="ghost" onClick={() => onAction('skip')} data-testid="duplicate-skip-button">
           Skip
         </Button>
-        <Button variant="secondary" onClick={() => onAction('rename')}>
+        <Button variant="secondary" onClick={() => onAction('rename')} data-testid="duplicate-rename-button">
           Rename
         </Button>
-        <Button variant="danger" onClick={() => onAction('replace')}>
+        <Button variant="danger" onClick={() => onAction('replace')} data-testid="duplicate-replace-button">
           Replace
         </Button>
       </div>

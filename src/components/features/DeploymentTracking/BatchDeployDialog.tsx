@@ -57,6 +57,7 @@ export function BatchDeployDialog({
           type="button"
           className={styles.cancelButton}
           onClick={onCancel}
+          data-testid="deploy-cancel-button"
         >
           Cancel
         </button>
@@ -161,7 +162,7 @@ export function BatchDeployDialog({
 
   return (
     <div className={styles.dialogOverlay}>
-      <div className={styles.dialog} role="dialog" aria-modal="true">
+      <div className={styles.dialog} role="dialog" aria-modal="true" data-testid="deploy-dialog">
         <button
           type="button"
           className={styles.dialogClose}

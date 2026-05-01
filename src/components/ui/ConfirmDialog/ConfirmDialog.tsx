@@ -21,13 +21,13 @@ export function ConfirmDialog(): React.ReactElement | null {
   };
 
   return (
-    <Modal open={open} onClose={handleCancel} title={title} className={styles.dialog}>
+    <Modal open={open} onClose={handleCancel} title={title} className={styles.dialog} data-testid="confirm-dialog">
       <p className={styles.message}>{message}</p>
       <div className={styles.actions}>
-        <Button variant="secondary" onClick={handleCancel}>
+        <Button variant="secondary" onClick={handleCancel} data-testid="confirm-cancel-button">
           {cancelText}
         </Button>
-        <Button variant="danger" onClick={handleConfirm}>
+        <Button variant="danger" onClick={handleConfirm} data-testid="confirm-button">
           {confirmText}
         </Button>
       </div>

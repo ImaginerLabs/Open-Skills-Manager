@@ -23,9 +23,11 @@ export function Modal({ open, onClose, title, children, className, ...props }: M
     }
   };
 
+  const dataTestId = (props as Record<string, unknown>)['data-testid'] ?? 'modal';
+
   return createPortal(
     <div className={styles.overlay} onClick={handleOverlayClick}>
-      <div className={[styles.content, className].filter(Boolean).join(' ')} {...props}>
+      <div className={[styles.content, className].filter(Boolean).join(' ')} {...props} data-testid={dataTestId}>
         {title && (
           <div className={styles.header}>
             <h2 className={styles.title}>{title}</h2>

@@ -329,7 +329,7 @@ export function BatchDeployTargetDialog({
   if (!isOpen) return null;
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={`Deploy ${skills.length} Skills`} className={styles.dialog}>
+    <Modal open={isOpen} onClose={onClose} title={`Deploy ${skills.length} Skills`} className={styles.dialog} data-testid="deploy-target-dialog">
       <div className={styles.content}>
         <p className={styles.subtitle}>
           {sourceInfo?.sourceType === 'library' && sourceInfo?.groupId && 'Select where to copy these skills'}
@@ -351,11 +351,12 @@ export function BatchDeployTargetDialog({
             </button>
           )}
           {availableTargetTypes.includes('global') && (
-            <button
-              type="button"
-              className={[styles.typeTab, selectedType === 'global' && styles.active].filter(Boolean).join(' ')}
-              onClick={() => setSelectedType('global')}
-            >
+	            <button
+	              type="button"
+	              className={[styles.typeTab, selectedType === 'global' && styles.active].filter(Boolean).join(' ')}
+	              onClick={() => setSelectedType('global')}
+	              data-testid="deploy-target-global"
+	            >
               <Globe size={16} />
               <span>Global</span>
             </button>
@@ -387,7 +388,7 @@ export function BatchDeployTargetDialog({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={handleDeploy} disabled={!canDeploy}>
+        <Button variant="primary" onClick={handleDeploy} disabled={!canDeploy} data-testid="deploy-confirm-button">
           Deploy
         </Button>
       </ModalFooter>

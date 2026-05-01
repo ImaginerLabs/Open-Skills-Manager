@@ -230,11 +230,12 @@ export const SkillCard = memo(function SkillCard<T extends Skill>({
             onClick?.();
           }
         }}
+        data-testid="skill-card"
       >
         {viewMode === 'list' ? (
           <>
             <div className={styles.listRow}>
-              <h3 className={styles.listName} title={displayName}>
+              <h3 className={styles.listName} title={displayName} data-testid="skill-name">
                 {renderName(displayName)}
               </h3>
               {getSymlinkBadge(skill)}
@@ -266,12 +267,13 @@ export const SkillCard = memo(function SkillCard<T extends Skill>({
                   className={styles.menuButton}
                   onClick={openMenu}
                   aria-label="Open context menu"
+                  data-testid="skill-menu-button"
                 >
                   <DotsThree size={16} weight="bold" />
                 </button>
               )}
             </div>
-            <p className={styles.listDescription} title={skill.description}>
+            <p className={styles.listDescription} title={skill.description} data-testid="skill-description">
               {renderDescription(skill.description)}
             </p>
             {matchedSnippet && (
@@ -283,7 +285,7 @@ export const SkillCard = memo(function SkillCard<T extends Skill>({
         ) : (
           <>
             <div className={styles.header}>
-              <h3 className={styles.name} title={displayName}>
+              <h3 className={styles.name} title={displayName} data-testid="skill-name">
                 {renderName(displayName)}
               </h3>
               {menuItems.length > 0 && (
@@ -292,13 +294,14 @@ export const SkillCard = memo(function SkillCard<T extends Skill>({
                   className={styles.menuButton}
                   onClick={openMenu}
                   aria-label="Open context menu"
+                  data-testid="skill-menu-button"
                 >
                   <DotsThree size={16} weight="bold" />
                 </button>
               )}
             </div>
 
-            <p className={styles.description} title={skill.description}>
+            <p className={styles.description} title={skill.description} data-testid="skill-description">
               {renderDescription(skill.description)}
             </p>
 

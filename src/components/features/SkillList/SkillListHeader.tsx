@@ -35,6 +35,7 @@ export function SkillListHeader({
             className={styles.searchInput}
             spellCheck={false}
             autoComplete="off"
+            data-testid="search-input"
           />
         </div>
         {showViewToggle && (

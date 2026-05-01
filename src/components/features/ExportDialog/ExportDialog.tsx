@@ -74,7 +74,7 @@ export function ExportDialog({
   ];
 
   return (
-    <Modal open={isOpen} onClose={handleClose} title="Export Skills">
+    <Modal open={isOpen} onClose={handleClose} title="Export Skills" data-testid="export-dialog">
       <div className={styles.content}>
         <p className={styles.description}>
           {isMultiExport
@@ -118,7 +118,7 @@ export function ExportDialog({
         <Button variant="secondary" onClick={handleClose} disabled={isExporting}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={handleExport} disabled={isExporting}>
+        <Button variant="primary" onClick={handleExport} disabled={isExporting} data-testid="export-confirm-button">
           {isExporting ? 'Exporting...' : `Export ${isMultiExport ? `${skillCount} Skills` : 'Skill'}`}
         </Button>
       </ModalFooter>

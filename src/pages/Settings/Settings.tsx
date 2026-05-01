@@ -126,7 +126,7 @@ export function Settings(): React.ReactElement {
   }, [setTheme, setLanguage, showToast, showConfirmDialog, refreshAll]);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-testid="settings-page">
       <header className={styles.header}>
         <div className={styles.titleSection}>
           <h1 className={styles.title}>Settings</h1>

@@ -296,7 +296,7 @@ export function Global(): React.ReactElement {
   };
 
   return (
-    <SkillListLayout className={styles.page}>
+    <SkillListLayout className={styles.page} data-testid="global-page">
       <SkillListHeader
         title="Global Skills"
         count={skills.length}

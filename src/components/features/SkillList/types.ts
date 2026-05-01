@@ -9,7 +9,7 @@ export type ViewMode = 'grid' | 'list';
 export type SortOption = 'name' | 'date' | 'size';
 export type SortDirection = 'asc' | 'desc';
 
-export interface SkillListLayoutProps {
+export interface SkillListLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string | undefined;
 }

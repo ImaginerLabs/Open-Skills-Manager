@@ -16,7 +16,7 @@ const iconMap: Record<ToastType, React.ReactNode> = {
 
 export function Toast({ toast, onDismiss }: ToastProps): React.ReactElement {
   return (
-    <div className={[styles.toast, styles[toast.type]].filter(Boolean).join(' ')}>
+    <div className={[styles.toast, styles[toast.type]].filter(Boolean).join(' ')} data-testid="toast-message">
       <span className={styles.icon}>{iconMap[toast.type]}</span>
       <span className={styles.message}>{toast.message}</span>
       <button

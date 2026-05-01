@@ -12,7 +12,7 @@ export interface ImportOptionsProps {
 export function ImportOptions({ onSelectFolder, onSelectZip }: ImportOptionsProps): ReactNode {
   return (
     <div className={styles.options}>
-      <button className={styles.optionButton} onClick={onSelectFolder} type="button">
+      <button className={styles.optionButton} onClick={onSelectFolder} type="button" data-testid="select-folder-button">
         <span className={styles.optionIcon}>
           <FolderOpen size={32} weight="duotone" />
         </span>
@@ -20,7 +20,7 @@ export function ImportOptions({ onSelectFolder, onSelectZip }: ImportOptionsProp
         <span className={styles.optionDescription}>Select skill folder(s)</span>
       </button>
 
-      <button className={styles.optionButton} onClick={onSelectZip} type="button">
+      <button className={styles.optionButton} onClick={onSelectZip} type="button" data-testid="select-zip-button">
         <span className={styles.optionIcon}>
           <FileArchive size={32} weight="duotone" />
         </span>

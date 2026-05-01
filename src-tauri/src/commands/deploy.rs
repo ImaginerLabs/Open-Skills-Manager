@@ -1,6 +1,7 @@
 use super::library::{IpcResult, get_library_path, load_skill_metadata};
 use super::global::get_global_skills_path;
 use super::config::load_config;
+use crate::storage::service::get_storage;
 use crate::utils::fs::copy_dir_all;
 use std::fs;
 use std::path::PathBuf;
@@ -53,12 +54,23 @@ fn get_project_scope_name_for_ide(ide_id: &str) -> String {
 pub fn deploy_to_global(skill_id: String) -> IpcResult<Deployment> {
     let library_path = get_library_path();
     let global_path = get_global_skills_path();
-    let persisted_metadata = load_skill_metadata();
 
-    // Find the skill folder by ID
-    let folder_name_from_id = persisted_metadata.iter()
+    // Try to find skill using new storage layer first
+    let storage_result = get_storage().read_library();
+    let folder_name_from_storage = storage_result.ok().and_then(|library_data| {
+        library_data.skills.values()
+            .find(|entry| entry.id == skill_id)
+            .map(|entry| entry.folder_name.clone())
+    });
+
+    // Fallback to old metadata system
+    let persisted_metadata = load_skill_metadata();
+    let folder_name_from_metadata = persisted_metadata.iter()
         .find(|(_, entry)| entry.id == skill_id)
         .map(|(_, entry)| entry.folder_name.clone());
+
+    // Use whichever found the folder name
+    let folder_name_from_id = folder_name_from_storage.or(folder_name_from_metadata);
 
     let mut skill_folder: Option<PathBuf> = None;
     let mut folder_name = String::new();
@@ -124,12 +136,23 @@ pub fn deploy_to_project(skill_id: String, project_id: String) -> IpcResult<Depl
     let project_path = project_id;
 
     let library_path = get_library_path();
-    let persisted_metadata = load_skill_metadata();
 
-    // Find the skill folder by ID
-    let folder_name_from_id = persisted_metadata.iter()
+    // Try to find skill using new storage layer first
+    let storage_result = get_storage().read_library();
+    let folder_name_from_storage = storage_result.ok().and_then(|library_data| {
+        library_data.skills.values()
+            .find(|entry| entry.id == skill_id)
+            .map(|entry| entry.folder_name.clone())
+    });
+
+    // Fallback to old metadata system
+    let persisted_metadata = load_skill_metadata();
+    let folder_name_from_metadata = persisted_metadata.iter()
         .find(|(_, entry)| entry.id == skill_id)
         .map(|(_, entry)| entry.folder_name.clone());
+
+    // Use whichever found the folder name
+    let folder_name_from_id = folder_name_from_storage.or(folder_name_from_metadata);
 
     let mut skill_folder: Option<PathBuf> = None;
     let mut folder_name = String::new();
@@ -270,12 +293,23 @@ pub fn library_validate_deployments() -> IpcResult<Vec<String>> {
 pub fn deploy_to_global_for_ide(skill_id: String, target_ide_id: String) -> IpcResult<Deployment> {
     let library_path = get_library_path();
     let global_path = get_global_skills_path_for_ide(&target_ide_id);
-    let persisted_metadata = load_skill_metadata();
 
-    // Find the skill folder by ID
-    let folder_name_from_id = persisted_metadata.iter()
+    // Try to find skill using new storage layer first
+    let storage_result = get_storage().read_library();
+    let folder_name_from_storage = storage_result.ok().and_then(|library_data| {
+        library_data.skills.values()
+            .find(|entry| entry.id == skill_id)
+            .map(|entry| entry.folder_name.clone())
+    });
+
+    // Fallback to old metadata system
+    let persisted_metadata = load_skill_metadata();
+    let folder_name_from_metadata = persisted_metadata.iter()
         .find(|(_, entry)| entry.id == skill_id)
         .map(|(_, entry)| entry.folder_name.clone());
+
+    // Use whichever found the folder name
+    let folder_name_from_id = folder_name_from_storage.or(folder_name_from_metadata);
 
     let mut skill_folder: Option<PathBuf> = None;
     let mut folder_name = String::new();
@@ -341,12 +375,23 @@ pub fn deploy_to_project_for_ide(skill_id: String, project_id: String, target_id
     let project_scope_name = get_project_scope_name_for_ide(&target_ide_id);
 
     let library_path = get_library_path();
-    let persisted_metadata = load_skill_metadata();
 
-    // Find the skill folder by ID
-    let folder_name_from_id = persisted_metadata.iter()
+    // Try to find skill using new storage layer first
+    let storage_result = get_storage().read_library();
+    let folder_name_from_storage = storage_result.ok().and_then(|library_data| {
+        library_data.skills.values()
+            .find(|entry| entry.id == skill_id)
+            .map(|entry| entry.folder_name.clone())
+    });
+
+    // Fallback to old metadata system
+    let persisted_metadata = load_skill_metadata();
+    let folder_name_from_metadata = persisted_metadata.iter()
         .find(|(_, entry)| entry.id == skill_id)
         .map(|(_, entry)| entry.folder_name.clone());
+
+    // Use whichever found the folder name
+    let folder_name_from_id = folder_name_from_storage.or(folder_name_from_metadata);
 
     let mut skill_folder: Option<PathBuf> = None;
     let mut folder_name = String::new();

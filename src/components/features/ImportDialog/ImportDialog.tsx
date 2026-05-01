@@ -213,7 +213,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
 
   return (
     <>
-      <Modal open={isOpen} onClose={handleClose} className={styles.dialog}>
+      <Modal open={isOpen} onClose={handleClose} className={styles.dialog} data-testid="import-dialog">
         <div className={styles.header}>
           <h2 className={styles.title}>Import Skills</h2>
           <button className={styles.closeButton} onClick={handleClose} aria-label="Close">
@@ -233,7 +233,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
 
           {items.length > 0 && (
             <div className={styles.selectedFiles}>
-              <div className={styles.fileList}>
+              <div className={styles.fileList} data-testid="import-file-list">
                 {items.map((item) => (
                   <div key={item.id} className={styles.fileItem}>
                     <span className={styles.fileIcon}>
@@ -259,7 +259,7 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
           )}
 
           {hasInvalidItems && (
-            <div className={styles.validationError}>
+            <div className={styles.validationError} data-testid="validation-error">
               <Warning size={16} className={styles.errorIcon} />
               <span className={styles.errorMessage}>
                 Some items have validation errors and will be skipped.
@@ -269,13 +269,14 @@ export function ImportDialog({ isOpen, onClose, onImportStart, selectedCategoryI
         </div>
 
         <div className={styles.footer}>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="ghost" onClick={handleClose} data-testid="import-cancel-button">
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={handleImport}
             disabled={validItems.length === 0 || isValidating}
+            data-testid="import-confirm-button"
           >
             {isValidating
               ? 'Validating...'

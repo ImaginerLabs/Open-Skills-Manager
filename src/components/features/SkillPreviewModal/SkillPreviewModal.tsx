@@ -64,7 +64,7 @@ export function SkillPreviewModal({
   const displayName = skill.name.replace(/^["']|["']$/g, '');
 
   return (
-    <Modal open={isOpen && !isClosing} onClose={handleClose} className={styles.modal}>
+    <Modal open={isOpen && !isClosing} onClose={handleClose} className={styles.modal} data-testid="skill-preview-modal">
       <div className={styles.header}>
         <h2 className={styles.title}>{displayName}</h2>
         <button
@@ -72,6 +72,7 @@ export function SkillPreviewModal({
           className={styles.closeButton}
           onClick={handleClose}
           aria-label="Close preview"
+          data-testid="skill-preview-close"
         >
           <X size={20} />
         </button>

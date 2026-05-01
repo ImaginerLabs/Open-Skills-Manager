@@ -65,6 +65,7 @@ export function GlobalSkillsItem({
           [styles.scopeItemLink, isActive && styles.active].filter(Boolean).join(' ')
         }
         onContextMenu={handleContextMenu}
+        data-testid="nav-global"
       >
         <span className={styles.expandIcon} />
         <Globe size={16} />
