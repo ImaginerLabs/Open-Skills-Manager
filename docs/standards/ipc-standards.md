@@ -78,7 +78,65 @@
 | 通道 | 方向 | 用途 |
 |------|------|------|
 | `icloud_sync_status` | Renderer → Main | 检查同步状态 |
+| `icloud_get_conflicts` | Renderer → Main | 获取未解决的冲突列表 |
 | `icloud_resolve_conflict` | Renderer → Main | 解决同步冲突 |
+| `icloud_container_path` | Renderer → Main | 获取 iCloud 容器路径 |
+| `icloud_quota_check` | Renderer → Main | 检查 iCloud 存储配额 |
+
+#### 冲突检测机制
+
+冲突检测基于以下条件：
+1. 本地和 iCloud 两边都存在同一技能
+2. `SKILL.md` 内容 hash 不同
+3. 两边都在上次同步后修改过
+
+#### 冲突解决策略
+
+| 策略 | 行为 |
+|------|------|
+| `local` | 保留本地版本，推送到 iCloud |
+| `remote` | 保留远程版本，拉取到本地 |
+| `both` | 保留两者，创建远程版本副本 |
+
+#### ConflictInfo 类型
+
+```typescript
+interface ConflictInfo {
+  skillId: string;
+  skillName: string;
+  localVersion: {
+    modifiedTime: string;
+    size: number;
+    deviceName: string;
+  };
+  remoteVersion: {
+    modifiedTime: string;
+    size: number;
+    deviceName: string;
+  };
+}
+```
+
+#### ConflictRecord 类型（内部）
+
+```typescript
+interface ConflictRecord {
+  id: string;
+  skillId: string;
+  skillName: string;
+  conflictType: 'ContentConflict' | 'MetadataConflict' | 'BothConflict' | 'DeleteVsModify';
+  status: 'Detected' | 'Acknowledged' | 'Resolving' | 'Resolved';
+  localHash: string;
+  remoteHash: string;
+  localMtime: string;
+  remoteMtime: string;
+  localDevice: string;
+  remoteDevice: string;
+  detectedAt: string;
+  resolvedAt?: string;
+  resolution?: 'local' | 'remote' | 'both';
+}
+```
 
 ### 本地化与主题
 

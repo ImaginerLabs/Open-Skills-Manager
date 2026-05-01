@@ -15,7 +15,7 @@ export interface UseIcloudSyncResult {
   refresh: () => Promise<void>;
 }
 
-const POLL_INTERVAL = 1000; // 1 second - fast polling for desktop app
+const POLL_INTERVAL = 5000; // 5 seconds - reduce IPC calls by 80%
 
 export function useIcloudSync(): UseIcloudSyncResult {
   const [syncState, setSyncState] = useState<SyncState | null>(null);

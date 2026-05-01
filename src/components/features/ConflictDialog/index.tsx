@@ -47,8 +47,9 @@ export function ConflictDialog({
       onClose={handleClose}
       title={`Sync Conflict: ${conflict.skillName}`}
       className={styles.conflictModal}
+      data-testid="conflict-dialog"
     >
-      <div className={styles.content}>
+      <div className={styles.content} data-testid="conflict-content">
         <div className={styles.warningBanner}>
           <Warning size={20} weight="fill" />
           <span>
@@ -69,6 +70,7 @@ export function ConflictDialog({
             type="button"
             className={`${styles.optionButton} ${selectedResolution === 'local' ? styles.selected : ''}`}
             onClick={() => setSelectedResolution('local')}
+            data-testid="resolve-local-btn"
           >
             <div className={styles.optionContent}>
               <Check size={18} weight={selectedResolution === 'local' ? 'bold' : 'regular'} />
@@ -83,6 +85,7 @@ export function ConflictDialog({
             type="button"
             className={`${styles.optionButton} ${selectedResolution === 'remote' ? styles.selected : ''}`}
             onClick={() => setSelectedResolution('remote')}
+            data-testid="resolve-remote-btn"
           >
             <div className={styles.optionContent}>
               <Check size={18} weight={selectedResolution === 'remote' ? 'bold' : 'regular'} />
@@ -97,6 +100,7 @@ export function ConflictDialog({
             type="button"
             className={`${styles.optionButton} ${selectedResolution === 'both' ? styles.selected : ''}`}
             onClick={() => setSelectedResolution('both')}
+            data-testid="resolve-both-btn"
           >
             <div className={styles.optionContent}>
               <Copy size={18} weight={selectedResolution === 'both' ? 'bold' : 'regular'} />
