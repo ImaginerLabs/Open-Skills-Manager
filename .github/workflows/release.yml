@@ -76,7 +76,7 @@ jobs:
           else
             echo "WARNING: TAURI_SIGNING_PRIVATE_KEY is NOT set!"
           fi
-          pnpm tauri build ${{ matrix.args }}
+          pnpm tauri build --release ${{ matrix.args }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
