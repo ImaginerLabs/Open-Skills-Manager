@@ -262,9 +262,13 @@ jobs:
           1. 下载对应架构的 DMG 文件
           2. 双击打开 DMG
           3. 将应用拖入 Applications 文件夹
-          4. 首次运行时 macOS 会提示「无法验证开发者」
-          5. 打开「系统设置 > 隐私与安全性」，点击「仍要打开」
-          6. 或使用命令: `xattr -cr /Applications/Open\ Skills\ Manager.app`
+          4. **重要**: 打开终端，运行以下命令移除隔离属性：
+             \`\`\`bash
+             xattr -cr "/Applications/Open Skills Manager.app"
+             \`\`\`
+          5. 现在可以正常打开应用了
+
+          > ⚠️ 应用未签名，上述命令是必须的步骤，否则 macOS 会提示「已损坏」。
 
           ### 系统要求
 
