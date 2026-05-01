@@ -64,16 +64,13 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Build Tauri app
+      - name: Build Tauri app (unsigned)
         run: pnpm tauri build ${{ matrix.args }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        # 注意：未配置 Apple 签名证书，构建未签名应用
+        # 用户首次运行需在「系统设置 > 隐私与安全性」中允许
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -247,6 +244,8 @@ jobs:
           | macOS | Apple Silicon (M1/M2/M3) | \`Open-Skills-Manager_aarch64.dmg\` |
           | macOS | Intel (x86_64) | \`Open-Skills-Manager_x86_64.dmg\` |
 
+          > ⚠️ **注意**: 应用未签名，首次运行需在「系统设置 > 隐私与安全性」中允许。
+
           ### 📝 更新内容
 
           EOF
@@ -263,7 +262,9 @@ jobs:
           1. 下载对应架构的 DMG 文件
           2. 双击打开 DMG
           3. 将应用拖入 Applications 文件夹
-          4. 首次运行可能需要在「系统设置 > 隐私与安全性」中允许运行
+          4. 首次运行时 macOS 会提示「无法验证开发者」
+          5. 打开「系统设置 > 隐私与安全性」，点击「仍要打开」
+          6. 或使用命令: `xattr -cr /Applications/Open\ Skills\ Manager.app`
 
           ### 系统要求
 
