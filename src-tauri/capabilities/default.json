@@ -6,6 +6,8 @@
     "core:default",
     "dialog:default",
     "opener:default",
+    "updater:default",
+    "process:default",
     "fs:allow-appdata-read",
     "fs:allow-appdata-write",
     "fs:allow-appdata-meta",

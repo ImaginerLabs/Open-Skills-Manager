@@ -183,9 +183,19 @@ export function Settings(): React.ReactElement {
 
         <section className={styles.section}>
           <header className={styles.sectionHeader}>
-            <ArrowsClockwise size={18} className={styles.sectionIcon} />
-            <h2 className={styles.sectionTitle}>Updates</h2>
+            <Gear size={18} className={styles.sectionIcon} />
+            <h2 className={styles.sectionTitle}>About</h2>
           </header>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
+              <span className={styles.settingName}>Version</span>
+              <span className={styles.settingDescription}>{appName}</span>
+            </div>
+            <div className={styles.settingValue}>
+              <span className={styles.settingName}>{currentVersion || appVersion || '...'}</span>
+            </div>
+          </div>
 
           <div className={styles.settingRow}>
             <div className={styles.settingLabel}>
@@ -201,16 +211,6 @@ export function Settings(): React.ReactElement {
                 <option value="true">Enabled</option>
                 <option value="false">Disabled</option>
               </select>
-            </div>
-          </div>
-
-          <div className={styles.settingRow}>
-            <div className={styles.settingLabel}>
-              <span className={styles.settingName}>Current Version</span>
-              <span className={styles.settingDescription}>{appName}</span>
-            </div>
-            <div className={styles.settingValue}>
-              <span className={styles.settingName}>{currentVersion || appVersion || '...'}</span>
             </div>
           </div>
 
@@ -258,23 +258,6 @@ export function Settings(): React.ReactElement {
               </div>
             </div>
           )}
-        </section>
-
-        <section className={styles.section}>
-          <header className={styles.sectionHeader}>
-            <Gear size={18} className={styles.sectionIcon} />
-            <h2 className={styles.sectionTitle}>About</h2>
-          </header>
-
-          <div className={styles.settingRow}>
-            <div className={styles.settingLabel}>
-              <span className={styles.settingName}>Version</span>
-              <span className={styles.settingDescription}>{appName}</span>
-            </div>
-            <div className={styles.settingValue}>
-              <span className={styles.settingName}>{appVersion || '...'}</span>
-            </div>
-          </div>
 
           <div className={styles.settingRow}>
             <div className={styles.settingLabel}>
