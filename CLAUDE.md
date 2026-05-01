@@ -62,6 +62,9 @@ pnpm format:check     # Prettier 检查
 │      global.rs    → Global Skills 管理                    │
 │      project.rs   → Project Skills 管理                   │
 │      deploy.rs    → 技能部署                              │
+│      storage.rs   → 统一存储层命令                        │
+│      update.rs    → 自动更新                              │
+│    storage/       → 统一存储层 (config, library, sync)    │
 │    services/      → Rust 业务服务                        │
 │    utils/         → Rust 工具函数                        │
 └─────────────────────────────────────────────────────────┘
@@ -86,6 +89,8 @@ pnpm format:check     # Prettier 检查
 | Global | `global_list`, `global_pull` | Global Skills 管理 |
 | Project | `project_list`, `project_skills`, `project_refresh` | Project Skills 管理 |
 | Deploy | `deploy_to_global`, `deploy_to_project` | 技能部署 |
+| Storage | `storage_config_get`, `storage_library_*` | 统一存储层 |
+| Update | `update_check`, `update_download`, `update_install` | 自动更新 |
 | Search | `search`, `search_with_snippets` | 统一搜索 |
 | iCloud | `icloud_sync_status`, `icloud_resolve_conflict` | iCloud 同步 |
 
@@ -102,6 +107,7 @@ pnpm format:check     # Prettier 检查
 | `ideStore` | IDE 配置和切换 | 无 |
 | `uiStore` | UI 状态 (toast, modal, theme) | 无 |
 | `settingsStore` | 应用设置 | 全部 |
+| `updateStore` | 自动更新状态 | 无 |
 
 ### 核心类型
 
@@ -121,6 +127,7 @@ pnpm format:check     # Prettier 检查
 | `useSidebarDragDrop` | Sidebar 拖拽逻辑 |
 | `useBatchDeploy` | 批量部署逻辑 |
 | `useSearch` | 统一搜索逻辑 |
+| `useUpdate` | 自动更新状态和操作 |
 
 ## 设计系统
 
@@ -237,6 +244,33 @@ claude mcp add --transport stdio tauri-automation \
 | `state-management.md` | Zustand store 模式、选择器模式 |
 | `testing-standards.md` | 单元测试结构、Vitest 配置 |
 | `git-standards.md` | 提交格式、分支命名、PR 规范 |
+
+## CI/CD 发布流程
+
+项目使用 GitHub Actions 自动构建和发布。
+
+### 发布新版本
+
+```bash
+# 1. 更新版本号（自动更新 package.json, tauri.conf.json, Cargo.toml）
+pnpm version 0.2.1
+
+# 2. 提交并创建 tag
+git add -A && git commit -m "chore: bump version to 0.2.1"
+git tag v0.2.1
+
+# 3. 推送（触发 Release 工作流）
+git push origin main && git push origin v0.2.1
+```
+
+### 工作流说明
+
+| 工作流 | 触发条件 | 内容 |
+|--------|----------|------|
+| CI | push/PR 到 main | lint, test, build |
+| Release | 推送 `v*` tag | 构建 DMG, 发布 GitHub Release |
+
+详细说明见 `.github/CI-CD.md`。
 
 ## BMad 框架
 
