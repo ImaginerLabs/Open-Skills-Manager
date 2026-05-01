@@ -195,7 +195,8 @@ src-tauri/target/
 
 # TypeScript build artifacts
 *.tsbuildinfo
-*.config.js
 *.config.d.ts
+# But keep eslint.config.js
+!eslint.config.js
 
 .vscode
