@@ -69,7 +69,14 @@ jobs:
         run: pnpm install
 
       - name: Build Tauri app
-        run: pnpm tauri build ${{ matrix.args }}
+        run: |
+          echo "Checking if TAURI_SIGNING_PRIVATE_KEY is set..."
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is set (length: ${#TAURI_SIGNING_PRIVATE_KEY})"
+          else
+            echo "WARNING: TAURI_SIGNING_PRIVATE_KEY is NOT set!"
+          fi
+          pnpm tauri build ${{ matrix.args }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
