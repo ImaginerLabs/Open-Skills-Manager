@@ -7,11 +7,13 @@
  * pnpm version 会自动更新 package.json，此脚本更新:
  * - src-tauri/tauri.conf.json
  * - src-tauri/Cargo.toml
+ * - src-tauri/Cargo.lock (通过 cargo generate-lockfile)
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,5 +49,16 @@ cargoToml = cargoToml.replace(
 );
 fs.writeFileSync(cargoTomlPath, cargoToml);
 console.log(`✅ Cargo.toml: ${oldCargoVersion} → ${VERSION}`);
+
+// 3. 更新 Cargo.lock (强制 cargo 重新生成)
+const cargoDir = path.join(ROOT_DIR, 'src-tauri');
+try {
+  execSync('cargo generate-lockfile', { cwd: cargoDir, stdio: 'pipe' });
+  console.log(`✅ Cargo.lock: 已更新`);
+} catch (e) {
+  // cargo generate-lockfile 可能不存在，用 cargo check 替代
+  execSync('cargo check --quiet', { cwd: cargoDir, stdio: 'pipe' });
+  console.log(`✅ Cargo.lock: 已更新 (via cargo check)`);
+}
 
 console.log(`\n✨ 版本号已同步`);
