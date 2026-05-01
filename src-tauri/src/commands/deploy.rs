@@ -270,6 +270,50 @@ pub fn deploy_from_global(skill_id: String, project_id: String) -> IpcResult<Dep
     IpcResult::success(deployment)
 }
 
+/// Deploy a skill from a project to global scope
+#[tauri::command]
+pub fn deploy_from_project_to_global(skill_path: String) -> IpcResult<Deployment> {
+    let source_path = PathBuf::from(&skill_path);
+
+    if !source_path.exists() {
+        return IpcResult::error("E203", &format!("Skill not found at path: {}", skill_path));
+    }
+
+    let global_path = get_global_skills_path();
+
+    if let Err(e) = fs::create_dir_all(&global_path) {
+        return IpcResult::error("E101", &format!("Failed to create global skills directory: {}", e));
+    }
+
+    let folder_name = source_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let dest_path = global_path.join(&folder_name);
+    if dest_path.exists() {
+        // For now, we'll overwrite. In the future, this should trigger a conflict dialog
+        if let Err(e) = fs::remove_dir_all(&dest_path) {
+            return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
+        }
+    }
+
+    if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        return IpcResult::error("E105", &format!("Failed to copy skill to global: {}", e));
+    }
+
+    let deployment = Deployment {
+        id: generate_deployment_id(),
+        skill_id: folder_name.clone(),
+        target_scope: "global".to_string(),
+        target_path: dest_path.to_string_lossy().to_string(),
+        project_name: None,
+        deployed_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    IpcResult::success(deployment)
+}
+
 /// Remove a deployment record (does not delete the deployed skill)
 #[tauri::command]
 pub fn deployment_remove(_skill_id: String, _deployment_id: String) -> IpcResult<()> {

@@ -14,12 +14,14 @@ import { useUIStore } from '../../../stores/uiStore';
 import { formatDate } from '../../../utils/formatters';
 import { toLibrarySkillFormat } from '../../../utils/skillConverters';
 import { SkillPreviewModal, type SkillPreviewData } from '../SkillPreviewModal';
+import { libraryService } from '../../../services/libraryService';
+import { deployService } from '../../../services/deployService';
 import styles from './ProjectSkillsView.module.scss';
 
 export function ProjectSkillsView(): React.ReactElement {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects, selectedProject, selectProject } = useProjectStore();
-  const { refreshProjects, refreshLibrary } = useSidebarData();
+  const { refreshProjects, refreshLibrary, refreshGlobal } = useSidebarData();
 
   const [selectedSkill, setSelectedSkill] = useState<ProjectSkill | null>(null);
   const [skillMdContent, setSkillMdContent] = useState<string>('');
@@ -131,8 +133,6 @@ export function ProjectSkillsView(): React.ReactElement {
     if (!deploySkill) return;
 
     if (target.type === 'library') {
-      // Deploy to Library (pull to library)
-      const { libraryService } = await import('../../../services/libraryService');
       const result = await libraryService.import({
         path: deploySkill.path,
         groupId: target.groupId,
@@ -140,13 +140,20 @@ export function ProjectSkillsView(): React.ReactElement {
       });
       if (result.success) {
         showToast('success', `Skill "${deploySkill.name}" added to Library`);
-        // Refresh sidebar to update Library counts
         refreshLibrary();
       } else {
         showToast('error', `Failed to add to Library: ${result.error.message}`);
       }
+    } else if (target.type === 'global') {
+      const result = await deployService.fromProjectToGlobal(deploySkill.path);
+      if (result.success) {
+        showToast('success', `Skill "${deploySkill.name}" deployed to Global`);
+        refreshGlobal();
+      } else {
+        showToast('error', `Failed to deploy to Global: ${result.error.message}`);
+      }
     }
-  }, [deploySkill, showToast, refreshLibrary]);
+  }, [deploySkill, showToast, refreshLibrary, refreshGlobal]);
 
   const { onCopyPath } = useSkillActions({ scope: 'project', skills });
 
@@ -166,7 +173,6 @@ export function ProjectSkillsView(): React.ReactElement {
   const handleExportStart = useCallback(
     async (format: 'zip' | 'folder', skillsToExport: ExportableSkill[]) => {
       setShowExportDialog(false);
-      const { libraryService } = await import('../../../services/libraryService');
       for (const s of skillsToExport) {
         const result = await libraryService.exportFromPath(s.path!, s.name, format);
         if (result?.success) {

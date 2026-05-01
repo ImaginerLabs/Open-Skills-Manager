@@ -19,6 +19,9 @@ export const deployService = {
     invokeIPC<void>('deploy_to_project', { skillId, projectId }),
   fromGlobal: (skillId: string, projectId: string) =>
     invokeIPC<void>('deploy_from_global', { skillId, projectId }),
+  // Deploy from project to global - skillPath is the full path to the skill folder
+  fromProjectToGlobal: (skillPath: string) =>
+    invokeIPC<void>('deploy_from_project_to_global', { skillPath }),
 
   // Cross-IDE deployment methods
   toGlobalForIDE: (skillId: string, targetIdeId: string) =>
