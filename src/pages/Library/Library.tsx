@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus } from '@phosphor-icons/react';
+import { Plus, Warning } from '@phosphor-icons/react';
 import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { ImportDialog } from '../../components/features/ImportDialog';
 import { ImportProgress } from '../../components/features/ImportProgress';
 import { ExportDialog, type ExportableSkill } from '../../components/features/ExportDialog';
 import { ExportProgress } from '../../components/features/ExportProgress';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
 import { SkillPreviewModal, type SkillPreviewData } from '../../components/features/SkillPreviewModal';
+import { ConflictDialog } from '../../components/features/ConflictDialog';
 import { libraryService } from '../../services/libraryService';
 import { useLibraryFilters } from '../../hooks/useLibraryFilters';
 import { useBatchDeploy } from '../../hooks/useBatchDeploy';
@@ -93,6 +95,10 @@ export function Library(): React.ReactElement {
   const [exportSkills, setExportSkills] = useState<ExportableSkill[]>([]);
   const [showDeployTargetDialog, setShowDeployTargetDialog] = useState(false);
   const [deploySkills, setDeploySkills] = useState<LibrarySkill[]>([]);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+
+  // Conflict management
+  const { conflicts, hasConflicts, resolveConflict } = useOfflineSync();
 
   const {
     searchQuery,
@@ -262,6 +268,37 @@ export function Library(): React.ReactElement {
     onReveal,
   }), [handleDeleteSkill, handleExportSkill, handleDeploySkill, onCopyPath, onReveal]);
 
+  // Conflict resolution handler
+  const handleResolveConflict = useCallback(async (skillId: string, resolution: 'local' | 'remote' | 'both') => {
+    const success = await resolveConflict(skillId, resolution);
+    if (success) {
+      const conflict = conflicts.find(c => c.skillId === skillId);
+      const RESOLUTION_LABELS = {
+        local: 'local version',
+        remote: 'remote version',
+        both: 'both versions',
+      } as const;
+      const resolutionText = RESOLUTION_LABELS[resolution];
+      showToast('success', `Conflict resolved: kept ${resolutionText}${conflict ? ` for "${conflict.skillName}"` : ''}`);
+      setLoading(true);
+      try {
+        const result = await libraryService.list();
+        if (result.success) {
+          setSkills(result.data);
+        }
+      } catch {
+        // Ignore refresh errors
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      showToast('error', 'Failed to resolve conflict');
+    }
+  }, [resolveConflict, conflicts, showToast, setLoading, setSkills]);
+
+  // Get first conflict for dialog
+  const activeConflict = conflicts[0] ?? null;
+
   const hasSkills = skills.length > 0;
 
   return (
@@ -287,6 +324,19 @@ export function Library(): React.ReactElement {
         <div className={styles.error} data-testid="library-error">
           <p>{error}</p>
         </div>
+      )}
+
+      {hasConflicts && (
+        <button
+          type="button"
+          className={styles.conflictBanner}
+          onClick={() => setShowConflictDialog(true)}
+          data-testid="conflict-banner"
+        >
+          <Warning size={18} weight="fill" />
+          <span>{conflicts.length} skill{conflicts.length !== 1 ? 's' : ''} have sync conflicts</span>
+          <span className={styles.conflictAction}>Click to resolve</span>
+        </button>
       )}
 
       <div className={styles.listContainer}>
@@ -365,6 +415,13 @@ export function Library(): React.ReactElement {
         onClose={handleDeployDialogClose}
         onCancel={cancelDeploy}
         onRetryFailed={retryDeployFailed}
+      />
+
+      <ConflictDialog
+        open={showConflictDialog}
+        conflict={activeConflict}
+        onClose={() => setShowConflictDialog(false)}
+        onResolve={handleResolveConflict}
       />
     </SkillListLayout>
   );

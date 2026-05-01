@@ -22,6 +22,7 @@ export const config = {
       './specs/library/skill-import.spec.mjs',
       './specs/library/skill-deploy.spec.mjs',
       './specs/library/skill-export.spec.mjs',
+      './specs/library/conflict.spec.mjs',
       './specs/global/global-skills.spec.mjs',
       './specs/projects/project-management.spec.mjs',
       './specs/settings/settings.spec.mjs',

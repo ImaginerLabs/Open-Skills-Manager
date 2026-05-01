@@ -145,7 +145,7 @@ impl StorageService {
             last_sync_error: Arc::new(RwLock::new(None)),
             last_sync_time: Arc::new(RwLock::new(None)),
             sync_debouncer: Arc::new(Mutex::new(None)),
-            sync_debounce_ms: 500,
+            sync_debounce_ms: 2000,
             sync_generation: Arc::new(AtomicU64::new(0)),
         };
 

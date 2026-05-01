@@ -363,6 +363,18 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
 
     let mut synced_count = 0u32;
 
+    // Detect conflicts before syncing
+    let conflicts = crate::services::icloud_bridge::detect_conflicts()
+        .unwrap_or_default();
+    let conflict_skill_ids: std::collections::HashSet<String> = conflicts
+        .iter()
+        .map(|c| c.skill_id.clone())
+        .collect();
+
+    if !conflict_skill_ids.is_empty() {
+        println!("Found {} conflicting skills, skipping auto-sync for them", conflict_skill_ids.len());
+    }
+
     // Get all skills from both locations
     let local_skills = list_skills(&local_library);
     let icloud_skills = list_skills(&icloud_library);
@@ -374,8 +386,22 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
         Err(_) => std::collections::HashMap::new(),
     };
 
+    // Helper to check if skill should be skipped due to conflict
+    let should_skip_conflict = |skill_name: &str| -> bool {
+        if conflict_skill_ids.contains(skill_name) {
+            println!("Skipping sync for conflicting skill: {}", skill_name);
+            true
+        } else {
+            false
+        }
+    };
+
     // Sync from iCloud to local (if newer and not from us)
     for (skill_name, icloud_time) in &icloud_skills {
+        if should_skip_conflict(skill_name) {
+            continue;
+        }
+
         // Check if this skill was deleted locally (tombstone exists)
         if let Some(tombstone) = tombstones.get(skill_name) {
             // If tombstone is newer than iCloud version, delete from iCloud
@@ -422,6 +448,10 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
 
     // Sync from local to iCloud (if newer)
     for (skill_name, local_time) in &local_skills {
+        if should_skip_conflict(skill_name) {
+            continue;
+        }
+
         let icloud_time = icloud_skills.get(skill_name);
 
         let should_push = match icloud_time {
@@ -449,6 +479,10 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
 
     // Delete from iCloud any skills that don't exist locally and have a local tombstone
     for (skill_name, tombstone) in &tombstones {
+        if should_skip_conflict(skill_name) {
+            continue;
+        }
+
         if !local_skills.contains_key(skill_name) {
             let icloud_path = icloud_library.join(skill_name);
             if icloud_path.exists() {

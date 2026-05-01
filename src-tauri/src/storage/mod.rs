@@ -4,12 +4,15 @@
 mod types;
 pub mod service;
 mod sync;
-mod migrate;
+pub mod migrate;
+pub mod conflict;
+pub mod conflict_store;
 
 #[cfg(test)]
 mod tests;
 
 pub use types::*;
 pub use service::StorageService;
-pub use sync::{SyncEngine, SyncResult};
-pub use migrate::{MigrationService, MigrationResult};
+pub use conflict::{ConflictRecord, ConflictType, ConflictStatus, SkillInfo};
+pub use conflict_store::ConflictStore;
+pub use migrate::MigrationService;

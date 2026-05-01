@@ -49,6 +49,41 @@
   }
 }
 
+.conflictBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin: 0 var(--space-4);
+  background: rgba(255, 214, 10, 0.1);
+  border: 1px solid rgba(255, 214, 10, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease, transform var(--duration-instant) ease;
+
+  &:hover {
+    background: rgba(255, 214, 10, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  .light & {
+    background: rgba(255, 214, 10, 0.15);
+  }
+}
+
+.conflictAction {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-normal);
+}
+
 // Reduced motion
 @media (prefers-reduced-motion: reduce) {
   .importButton {
