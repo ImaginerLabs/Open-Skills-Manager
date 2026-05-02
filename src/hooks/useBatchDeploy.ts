@@ -40,7 +40,7 @@ export function useBatchDeploy(): UseBatchDeployResult {
   const pendingSkillsRef = useRef<LibrarySkill[]>([]);
   const optionsRef = useRef<BatchDeployOptions>({ targetScope: 'global' });
 
-  const deploySkill = useCallback(async (skill: LibrarySkill): Promise<boolean> => {
+  const deploySkill = useCallback(async (skill: LibrarySkill): Promise<{ success: boolean; error?: string }> => {
     const { targetScope, targetIdeId, projectId, sourceScope } = optionsRef.current;
     const effectiveIdeId = targetIdeId ?? activeIdeId;
     const isCrossIDE = targetIdeId !== undefined && targetIdeId !== activeIdeId;
@@ -57,12 +57,17 @@ export function useBatchDeploy(): UseBatchDeployResult {
         args = { skillId: skill.folderName, projectId };
       } else {
         console.error('Global source only supports project target');
-        return false;
+        return { success: false, error: 'Global source only supports project target' };
       }
     } else if (effectiveSourceScope === 'project') {
-      // Deploy from project - not supported yet
-      console.error('Deploy from project is not supported');
-      return false;
+      // Deploy from project to global
+      if (targetScope === 'global') {
+        channel = 'deploy_from_project_to_global';
+        args = { skillPath: skill.path };
+      } else {
+        console.error('Project source only supports global target');
+        return { success: false, error: 'Project source only supports global target' };
+      }
     } else {
       // Deploy from library
       if (targetScope === 'global') {
@@ -77,7 +82,7 @@ export function useBatchDeploy(): UseBatchDeployResult {
         // Project scope
         if (!projectId) {
           console.error('Project ID is required for project scope deployment');
-          return false;
+          return { success: false, error: 'Project ID is required for project scope deployment' };
         }
         if (isCrossIDE) {
           channel = 'deploy_to_project_for_ide';
@@ -90,7 +95,10 @@ export function useBatchDeploy(): UseBatchDeployResult {
     }
 
     const response = await invokeIPC<void>(channel, args);
-    return response.success;
+    if (response.success) {
+      return { success: true };
+    }
+    return { success: false, error: response.error?.message ?? 'Deployment failed' };
   }, [activeIdeId]);
 
   const processQueue = useCallback(async () => {
@@ -124,8 +132,8 @@ export function useBatchDeploy(): UseBatchDeployResult {
       setProgress(i + 1);
 
       try {
-        const success = await deploySkill(skill);
-        if (success) {
+        const result = await deploySkill(skill);
+        if (result.success) {
           const deployment: Deployment = {
             id: crypto.randomUUID(),
             skillId: skill.id,
@@ -139,7 +147,7 @@ export function useBatchDeploy(): UseBatchDeployResult {
           initialResult.failed.push({
             skillId: skill.id,
             skillName: skill.name,
-            error: 'Deployment failed',
+            error: result.error ?? 'Deployment failed',
           });
         }
       } catch (err) {
