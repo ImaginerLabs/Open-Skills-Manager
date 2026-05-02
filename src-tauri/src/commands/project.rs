@@ -301,12 +301,13 @@ pub fn project_skills(project_id: String) -> IpcResult<Vec<ProjectSkill>> {
 
     let skills = scan_project_skills(&project_id, &project_path);
 
-    // Update last_accessed
+    // Update last_accessed and skill_count
     let now = chrono::Utc::now().to_rfc3339();
     if let Some(p) = projects.iter_mut().find(|p| p.id == project_id) {
         p.last_accessed = Some(now);
+        p.skill_count = skills.len() as u32;
         if let Err(e) = save_projects(&projects) {
-            eprintln!("Warning: Failed to update last_accessed: {}", e);
+            eprintln!("Warning: Failed to update last_accessed and skill_count: {}", e);
         }
     }
 

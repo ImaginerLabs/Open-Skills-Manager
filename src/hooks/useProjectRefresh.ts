@@ -28,6 +28,7 @@ export function useProjectRefresh(
     setRefreshing,
     setRefreshError,
     setProjectSkills,
+    updateProjectSkillCount,
   } = useProjectStore();
 
   const { showToast } = useUIStore();
@@ -52,6 +53,7 @@ export function useProjectRefresh(
 
         if (result.success && result.data) {
           setProjectSkills(id, result.data);
+          updateProjectSkillCount(id, result.data.length);
           return true;
         } else {
           const message = result.success ? 'Unknown error' : result.error.message;
@@ -73,7 +75,7 @@ export function useProjectRefresh(
         }
       }
     },
-    [projectId, setRefreshing, setRefreshError, setProjectSkills, showToast]
+    [projectId, setRefreshing, setRefreshError, setProjectSkills, updateProjectSkillCount, showToast]
   );
 
   const refreshAll = useCallback(async (): Promise<boolean> => {

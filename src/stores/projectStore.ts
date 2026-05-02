@@ -51,6 +51,7 @@ interface ProjectActions {
   removeProject: (id: string) => void;
   selectProject: (project: Project | null) => void;
   setProjectSkills: (projectId: string, skills: ProjectSkill[]) => void;
+  updateProjectSkillCount: (projectId: string, count: number) => void;
   setLoading: (loading: boolean) => void;
   setRefreshing: (refreshing: boolean, projectId?: string) => void;
   setRefreshError: (error: string | null) => void;
@@ -102,6 +103,12 @@ export const useProjectStore = create<ProjectStore>()(
             newRefreshMap.set(projectId, new Date());
             return { projectSkills: newMap, lastRefreshAt: newRefreshMap };
           }),
+        updateProjectSkillCount: (projectId, count) =>
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId ? { ...p, skillCount: count } : p
+            ),
+          })),
         setLoading: (loading) => set({ isLoading: loading }),
         setRefreshing: (refreshing, projectId) =>
           set({ isRefreshing: refreshing, refreshingProjectId: projectId ?? null }),
