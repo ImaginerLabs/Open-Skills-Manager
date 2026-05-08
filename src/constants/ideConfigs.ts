@@ -41,7 +41,16 @@ export const DEFAULT_IDE_CONFIGS: IDEConfig[] = [
     isEnabled: true,
     icon: 'gemini',
   },
+  {
+    id: 'trae',
+    name: 'Trae',
+    globalScopePath: '~/.trae/skills',
+    projectScopeName: '.trae',
+    projects: [],
+    isEnabled: true,
+    icon: 'trae',
+  },
 ];
 
 // IDE icon names for type safety
-export type IDEIconName = 'claude-code' | 'claude' | 'opencode' | 'cursor' | 'gemini';
+export type IDEIconName = 'claude-code' | 'claude' | 'opencode' | 'cursor' | 'gemini' | 'trae';

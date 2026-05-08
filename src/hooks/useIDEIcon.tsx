@@ -3,6 +3,7 @@ import ClaudeCodeAvatar from '@lobehub/icons/es/ClaudeCode/components/Avatar';
 import GeminiAvatar from '@lobehub/icons/es/Gemini/components/Avatar';
 import OpenCodeAvatar from '@lobehub/icons/es/OpenCode/components/Avatar';
 import CursorAvatar from '@lobehub/icons/es/Cursor/components/Avatar';
+import TraeAvatar from '@lobehub/icons/es/Trae/components/Avatar';
 import { getIconByName, isIDEIcon } from '@/components/ui/IconPicker';
 import styles from '@/components/common/IDESwitcher/IDESwitcher.module.scss';
 
@@ -18,6 +19,8 @@ export function useIDEIcon() {
         return <CursorAvatar size={size} />;
       case 'gemini':
         return <GeminiAvatar size={size} />;
+      case 'trae':
+        return <TraeAvatar size={size} />;
     }
     const icon = getIconByName(iconName, size);
     if (!icon) return null;
