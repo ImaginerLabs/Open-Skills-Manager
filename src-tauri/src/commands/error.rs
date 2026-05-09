@@ -1,19 +1,30 @@
 use super::library::IpcResult;
-use crate::utils::logger;
+use crate::utils::logger::{log, LogLevel, LogSource};
 
 #[tauri::command]
 pub fn error_get_logs(limit: Option<usize>) -> IpcResult<Vec<serde_json::Value>> {
-    let logs = logger::get_logs(limit);
+    let logs = crate::utils::logger::get_logs(limit);
     IpcResult::success(logs)
 }
 
 #[tauri::command]
-pub fn error_report(message: String, stack: Option<String>, context: Option<serde_json::Value>) -> IpcResult<()> {
-    let ctx = context.unwrap_or_else(|| serde_json::json!({
-        "stack": stack,
-        "source": "frontend",
-    }));
+pub fn error_report(
+    message: String,
+    stack: Option<String>,
+    context: Option<serde_json::Value>,
+) -> IpcResult<()> {
+    let ctx = context.unwrap_or_else(|| serde_json::json!({}));
 
-    logger::log_error("FE0001", &message, ctx);
+    // Use log_write internally
+    log(
+        LogLevel::Error,
+        "SYSTEM",
+        "FE0001",
+        &message,
+        LogSource::Frontend,
+        Some(ctx),
+        stack,
+    );
+
     IpcResult::success(())
 }

@@ -6,16 +6,28 @@ mod storage;
 mod utils;
 
 use tauri::Manager;
+use utils::logger::{log, LogLevel, LogSource};
 
 use commands::{
     library, global, project, deploy, search, config, ide, sync, migration, icloud, locale, theme, update, security,
-    error, performance,
+    error, log as log_commands, performance,
     storage as storage_commands,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     utils::logger::init_logger();
+
+    // Log application startup
+    log(
+        LogLevel::Info,
+        "SYSTEM",
+        "I0001",
+        "Application started",
+        LogSource::Backend,
+        None,
+        None,
+    );
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init());
@@ -155,6 +167,14 @@ pub fn run() {
             // Error commands
             error::error_get_logs,
             error::error_report,
+            // Log commands
+            log_commands::log_list,
+            log_commands::log_export,
+            log_commands::log_clear,
+            log_commands::log_write,
+            log_commands::log_stats,
+            log_commands::log_path,
+            log_commands::log_list_with_stats,
             // Performance commands
             performance::performance_get_startup,
             performance::performance_get_memory,

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { logService, LOG_MODULES, LOG_CODES } from '../../../services/logService';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { libraryService } from '../../../services/libraryService';
 
@@ -36,6 +37,7 @@ export function useLibraryImport(
           const result = await libraryService.import({ path, categoryId, groupId });
           if (result.success) {
             successful++;
+            logService.info(LOG_MODULES.LIBRARY, 'IMPORT_SUCCESS', `Skill imported: ${name}`, { path });
           } else {
             failed++;
             failedItems.push({
@@ -43,14 +45,21 @@ export function useLibraryImport(
               error: result.error.message,
               code: result.error.code,
             });
+            logService.error(LOG_MODULES.LIBRARY, LOG_CODES.LIBRARY_IMPORT_FAILED, `Import failed: ${name}`, {
+              path,
+              error: result.error.message,
+              code: result.error.code,
+            });
           }
         } catch (e) {
           failed++;
+          const errorMsg = e instanceof Error ? e.message : 'Import failed';
           failedItems.push({
             name,
-            error: e instanceof Error ? e.message : 'Import failed',
+            error: errorMsg,
             code: 'IMPORT_ERROR',
           });
+          logService.reportError(LOG_MODULES.LIBRARY, LOG_CODES.LIBRARY_IMPORT_FAILED, e instanceof Error ? e : new Error(errorMsg), { path, name });
         }
       }
 

@@ -7,6 +7,7 @@ use super::AppError;
 use crate::paths;
 use crate::storage::service::get_storage;
 use crate::utils::fs::copy_dir_all;
+use crate::utils::logger::{log, LogLevel, LogSource};
 
 // ============================================================================
 // Client Identity
@@ -194,8 +195,29 @@ pub fn sync_full() -> IpcResult<SyncResult> {
     let mut synced_items = 0u32;
     let mut errors = Vec::new();
 
+    log(
+        LogLevel::Info,
+        "SYNC",
+        "I0001",
+        "iCloud sync started",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "timestamp": timestamp,
+        })),
+        None,
+    );
+
     // Check if iCloud is available
     if !paths::icloud_is_available() {
+        log(
+            LogLevel::Error,
+            "SYNC",
+            "E0001",
+            "iCloud not available",
+            LogSource::Backend,
+            None,
+            None,
+        );
         return IpcResult::success(SyncResult {
             success: false,
             synced_items: 0,
@@ -206,6 +228,15 @@ pub fn sync_full() -> IpcResult<SyncResult> {
 
     // Ensure iCloud structure exists
     if let Err(e) = paths::ensure_icloud_structure() {
+        log(
+            LogLevel::Error,
+            "SYNC",
+            "E0002",
+            &format!("Failed to initialize iCloud: {}", e),
+            LogSource::Backend,
+            None,
+            None,
+        );
         return IpcResult::success(SyncResult {
             success: false,
             synced_items: 0,
@@ -218,6 +249,15 @@ pub fn sync_full() -> IpcResult<SyncResult> {
     let client_identity = match get_or_create_client_identity() {
         Ok(id) => id,
         Err(e) => {
+            log(
+                LogLevel::Error,
+                "SYNC",
+                "E0003",
+                &format!("Failed to get client identity: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
             errors.push(format!("Failed to get client identity: {}", e));
             return IpcResult::success(SyncResult {
                 success: false,
@@ -233,13 +273,35 @@ pub fn sync_full() -> IpcResult<SyncResult> {
         Ok(synced) => {
             if synced { synced_items += 1; }
         }
-        Err(e) => errors.push(format!("Config sync failed: {}", e)),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "SYNC",
+                "E0004",
+                &format!("Config sync failed: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
+            errors.push(format!("Config sync failed: {}", e));
+        }
     }
 
     // Sync library skills
     match sync_library(&client_identity) {
         Ok(count) => synced_items += count,
-        Err(e) => errors.push(format!("Library sync failed: {}", e)),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "SYNC",
+                "E0005",
+                &format!("Library sync failed: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
+            errors.push(format!("Library sync failed: {}", e));
+        }
     }
 
     // Update sync state
@@ -248,11 +310,35 @@ pub fn sync_full() -> IpcResult<SyncResult> {
         last_sync_by: Some(client_identity.client_id.clone()),
     };
     if let Err(e) = save_sync_state(&sync_state) {
+        log(
+            LogLevel::Error,
+            "SYNC",
+            "E0006",
+            &format!("Failed to update sync state: {}", e),
+            LogSource::Backend,
+            None,
+            None,
+        );
         errors.push(format!("Failed to update sync state: {}", e));
     }
 
+    let success = errors.is_empty();
+    log(
+        LogLevel::Info,
+        "SYNC",
+        if success { "I0002" } else { "E0007" },
+        if success { "iCloud sync completed" } else { "iCloud sync completed with errors" },
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "synced_items": synced_items,
+            "error_count": errors.len(),
+            "timestamp": timestamp,
+        })),
+        None,
+    );
+
     IpcResult::success(SyncResult {
-        success: errors.is_empty(),
+        success,
         synced_items,
         errors,
         timestamp,

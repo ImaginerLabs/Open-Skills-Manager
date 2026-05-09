@@ -36,6 +36,39 @@ export function formatDate(date: string | Date | undefined | null): string {
 }
 
 /**
+ * Format datetime options
+ */
+export interface FormatDateTimeOptions {
+  includeSeconds?: boolean;
+  includeYear?: boolean;
+}
+
+/**
+ * Format datetime to localized string
+ * Supports configuration for seconds and year display
+ */
+export function formatDateTime(
+  date: string | Date | undefined | null,
+  options?: FormatDateTimeOptions
+): string {
+  if (!date) return 'Unknown';
+  try {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: options?.includeYear ? 'numeric' : '2-digit',
+      year: options?.includeYear ? 'numeric' : undefined,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: options?.includeSeconds ? '2-digit' : undefined,
+    });
+  } catch {
+    return 'Unknown';
+  }
+}
+
+/**
  * Normalize date field to string format for SkillPreviewData
  */
 export function normalizeSkillDate(

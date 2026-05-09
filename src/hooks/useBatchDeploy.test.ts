@@ -9,6 +9,32 @@ vi.mock('@/services/ipcService', () => ({
   invokeIPC: vi.fn(),
 }));
 
+// Mock logService
+vi.mock('@/services/logService', () => ({
+  logService: {
+    info: vi.fn(),
+    error: vi.fn(),
+    reportError: vi.fn(),
+  },
+  LOG_MODULES: {
+    LIBRARY: 'LIBRARY',
+    GLOBAL: 'GLOBAL',
+    PROJECT: 'PROJECT',
+    DEPLOY: 'DEPLOY',
+    SYNC: 'SYNC',
+    CONFIG: 'CONFIG',
+    IDE: 'IDE',
+    UPDATE: 'UPDATE',
+    STORAGE: 'STORAGE',
+    UI: 'UI',
+    PERF: 'PERF',
+  },
+  LOG_CODES: {
+    DEPLOY_TO_GLOBAL_FAILED: 'DEPLOY_TO_GLOBAL_FAILED',
+    DEPLOY_BATCH_FAILED: 'DEPLOY_BATCH_FAILED',
+  },
+}));
+
 // Mock ideStore
 vi.mock('@/stores/ideStore', () => ({
   useIDEStore: vi.fn(() => ({ activeIdeId: 'claude-code' })),

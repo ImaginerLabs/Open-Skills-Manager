@@ -14,6 +14,7 @@ pub mod theme;
 pub mod update;
 pub mod security;
 pub mod error;
+pub mod log;
 pub mod performance;
 pub mod storage;
 

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowsClockwise, FolderOpen, Gear, PaintBrush, Warning } from '@phosphor-icons/react';
+import { ArrowsClockwise, FolderOpen, Gear, PaintBrush, Warning, FileText } from '@phosphor-icons/react';
 import { getName, getVersion } from '@tauri-apps/api/app';
+import { logService, LOG_MODULES, LOG_CODES } from '../../services/logService';
 import { ICloudSettings } from '../../components/features/SettingsPage/ICloudSettings';
+import { LogViewer } from '../../components/features/SettingsPage/LogViewer';
 import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
+import { formatSize } from '../../utils/formatters';
 // Stores imported for getState() access during factory reset
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useGlobalStore } from '../../stores/globalStore';
@@ -15,23 +18,13 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useIDEStore } from '../../stores/ideStore';
 import styles from './Settings.module.scss';
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const k = 1024;
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  const value = bytes / Math.pow(k, i);
-  return `${value.toFixed(1)} ${units[i]}`;
-}
-
 export function Settings(): React.ReactElement {
   const { theme, setTheme, setLanguage, autoUpdateCheck, setAutoUpdateCheck } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const { refreshAll } = useSidebarData();
   const [appVersion, setAppVersion] = useState<string>('');
   const [appName, setAppName] = useState<string>('');
+  const [showLogViewer, setShowLogViewer] = useState(false);
 
   const {
     status,
@@ -61,8 +54,10 @@ export function Settings(): React.ReactElement {
   const handleForceSync = useCallback(async () => {
     try {
       await forceSync();
+      logService.info(LOG_MODULES.SYNC, 'FORCE_SYNC_SUCCESS', 'iCloud sync completed');
       showToast('success', 'Sync completed successfully');
     } catch (e) {
+      logService.reportError(LOG_MODULES.SYNC, LOG_CODES.SYNC_FAILED, e instanceof Error ? e : new Error('Sync failed'), {});
       showToast('error', e instanceof Error ? e.message : 'Sync failed');
     }
   }, [forceSync, showToast]);
@@ -128,8 +123,10 @@ export function Settings(): React.ReactElement {
           // Refresh sidebar to show empty state
           refreshAll();
 
+          logService.info(LOG_MODULES.SYSTEM, 'FACTORY_RESET_SUCCESS', 'Factory reset completed');
           showToast('success', 'All data has been reset to factory defaults');
         } catch (e) {
+          logService.reportError(LOG_MODULES.SYSTEM, LOG_CODES.OPERATION_FAILED, e instanceof Error ? e : new Error('Factory reset failed'), {});
           showToast('error', e instanceof Error ? e.message : 'Failed to reset settings');
         }
       },
@@ -265,7 +262,7 @@ export function Settings(): React.ReactElement {
               <span className={styles.settingDescription}>Local storage for skills and settings</span>
             </div>
             <div className={styles.settingValue}>
-              <span className={styles.settingName}>{formatBytes(storageUsed)}</span>
+              <span className={styles.settingName}>{formatSize(storageUsed)}</span>
             </div>
           </div>
 
@@ -288,6 +285,23 @@ export function Settings(): React.ReactElement {
 
           <div className={styles.settingRow}>
             <div className={styles.settingLabel}>
+              <span className={styles.settingName}>View Logs</span>
+              <span className={styles.settingDescription}>View application logs for debugging</span>
+            </div>
+            <div className={styles.settingValue}>
+              <button
+                type="button"
+                className={styles.select}
+                onClick={() => setShowLogViewer(true)}
+              >
+                <FileText size={16} weight="bold" />
+                Open Log Viewer
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>
               <span className={styles.settingName}>Factory Reset</span>
               <span className={styles.settingDescription}>Reset all settings to defaults and clear iCloud data</span>
             </div>
@@ -304,6 +318,8 @@ export function Settings(): React.ReactElement {
           </div>
         </section>
       </div>
+
+      <LogViewer open={showLogViewer} onClose={() => setShowLogViewer(false)} />
     </div>
   );
 }

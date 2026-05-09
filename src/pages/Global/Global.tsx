@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react';
+import { logService, LOG_MODULES, LOG_CODES } from '../../services/logService';
 import { useGlobalStore, type GlobalSkill } from '../../stores/globalStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { BatchDeployTargetDialog, BatchDeployDialog, type DeployTarget } from '../../components/features/DeploymentTracking';
@@ -96,14 +97,21 @@ export function Global(): React.ReactElement {
       if (result.success) {
         setSkills(result.data);
         setLastRefreshAt(new Date());
+        logService.info(LOG_MODULES.GLOBAL, 'REFRESH_SUCCESS', 'Global skills refreshed', {
+          count: result.data.length,
+        });
         showToast('success', 'Global skills refreshed');
       } else {
         setError(result.error.message);
+        logService.error(LOG_MODULES.GLOBAL, LOG_CODES.GLOBAL_PULL_FAILED, 'Refresh failed', {
+          error: result.error.message,
+        });
         showToast('error', `Failed to refresh: ${result.error.message}`);
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error';
       setError(message);
+      logService.reportError(LOG_MODULES.GLOBAL, LOG_CODES.GLOBAL_PULL_FAILED, e instanceof Error ? e : new Error(message), {});
       showToast('error', `Failed to refresh: ${message}`);
     } finally {
       setRefreshing(false);
@@ -156,16 +164,29 @@ export function Global(): React.ReactElement {
               if (selectedSkill?.id === skillId) {
                 selectSkill(null);
               }
+              logService.info(LOG_MODULES.GLOBAL, 'DELETE_SUCCESS', `Global skill deleted: ${skill?.name}`, {
+                skillId,
+                skillName: skill?.name,
+              });
               showToast('success', 'Global skill deleted');
               // Refresh sidebar to update counts
               refreshGlobal();
             } else {
               setError(result.error.message);
+              logService.error(LOG_MODULES.GLOBAL, LOG_CODES.GLOBAL_UNINSTALL_FAILED, `Delete failed: ${skill?.name}`, {
+                skillId,
+                skillName: skill?.name,
+                error: result.error.message,
+              });
               showToast('error', `Failed to delete: ${result.error.message}`);
             }
           } catch (e) {
             const message = e instanceof Error ? e.message : 'Unknown error';
             setError(message);
+            logService.reportError(LOG_MODULES.GLOBAL, LOG_CODES.GLOBAL_UNINSTALL_FAILED, e instanceof Error ? e : new Error(message), {
+              skillId,
+              skillName: skill?.name,
+            });
             showToast('error', `Failed to delete: ${message}`);
           } finally {
             setLoading(false);
@@ -232,10 +253,19 @@ export function Global(): React.ReactElement {
         categoryId: target.categoryId,
       });
       if (result.success) {
+        logService.info(LOG_MODULES.GLOBAL, 'PULL_TO_LIBRARY_SUCCESS', `Skill added to Library: ${deploySkill.name}`, {
+          skillId: deploySkill.id,
+          skillName: deploySkill.name,
+        });
         showToast('success', `Skill "${deploySkill.name}" added to Library`);
         // Refresh sidebar to update Library counts
         refreshLibrary();
       } else {
+        logService.error(LOG_MODULES.GLOBAL, LOG_CODES.GLOBAL_PULL_FAILED, `Failed to add to Library: ${deploySkill.name}`, {
+          skillId: deploySkill.id,
+          skillName: deploySkill.name,
+          error: result.error.message,
+        });
         showToast('error', `Failed to add to Library: ${result.error.message}`);
       }
     } else if (target.type === 'project' && target.projectId) {

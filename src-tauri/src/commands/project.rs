@@ -3,6 +3,7 @@ use super::AppError;
 use crate::storage::service::get_storage;
 use crate::storage::Project;
 use crate::services::skill::{SkillService, ScanOptions};
+use crate::utils::logger::{log, LogLevel, LogSource};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -244,11 +245,38 @@ pub fn project_add(path: String) -> IpcResult<Project> {
     projects.push(project.clone());
 
     if let Err(e) = save_projects(&projects) {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0001",
+            &format!("Failed to save project: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_name": project.name,
+                "project_path": project.path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E102WriteFailed(format!("Projects: {}", e)).code(),
             &format!("Failed to save project: {}", e)
         );
     }
+
+    log(
+        LogLevel::Info,
+        "PROJECT",
+        "I0001",
+        &format!("Project added: {}", project.name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "project_id": project.id,
+            "project_name": project.name,
+            "project_path": project.path,
+            "skill_count": skill_count,
+        })),
+        None,
+    );
 
     IpcResult::success(project)
 }
@@ -258,9 +286,25 @@ pub fn project_remove(id: String) -> IpcResult<()> {
     let mut projects = load_projects();
     let initial_len = projects.len();
 
+    // Find project name before removal for logging
+    let project_name = projects.iter()
+        .find(|p| p.id == id)
+        .map(|p| p.name.clone());
+
     projects.retain(|p| p.id != id);
 
     if projects.len() == initial_len {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0002",
+            &format!("Project not found: {}", id),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": id,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E003NotFound(format!("Project: {}", id)).code(),
             &format!("Project not found: {}", id)
@@ -268,11 +312,34 @@ pub fn project_remove(id: String) -> IpcResult<()> {
     }
 
     if let Err(e) = save_projects(&projects) {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0003",
+            &format!("Failed to save projects after removal: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": id,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E102WriteFailed(format!("Projects: {}", e)).code(),
             &format!("Failed to save projects after removal: {}", e)
         );
     }
+
+    log(
+        LogLevel::Info,
+        "PROJECT",
+        "I0002",
+        &format!("Project removed: {}", project_name.unwrap_or_default()),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "project_id": id,
+        })),
+        None,
+    );
 
     IpcResult::success(())
 }
@@ -554,15 +621,41 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
 
     let source_path = match skill_folder {
         Some(p) => p,
-        None => return IpcResult::error(
-            AppError::E203SkillNotFound(format!("Skill: {}", skill_id)).code(),
-            &format!("Skill not found in project: {}", skill_id)
-        ),
+        None => {
+            log(
+                LogLevel::Error,
+                "PROJECT",
+                "E0004",
+                &format!("Skill not found in project: {}", skill_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "skill_id": skill_id,
+                })),
+                None,
+            );
+            return IpcResult::error(
+                AppError::E203SkillNotFound(format!("Skill: {}", skill_id)).code(),
+                &format!("Skill not found in project: {}", skill_id)
+            );
+        },
     };
 
     // Copy to library
     let library_path = get_library_path();
     if let Err(e) = fs::create_dir_all(&library_path) {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0005",
+            &format!("Failed to create library directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "skill_id": skill_id,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E101CreateDirFailed(format!("Library directory: {}", e)).code(),
             &format!("Failed to create library directory: {}", e)
@@ -573,6 +666,19 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
 
     // Copy the skill folder to library
     if let Err(e) = copy_dir_all(&source_path, &dest) {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0006",
+            &format!("Failed to copy skill to library: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "skill_id": skill_id,
+                "folder_name": folder_name,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E105CopyFailed(format!("Skill directory: {}", e)).code(),
             &format!("Failed to copy skill to library: {}", e)
@@ -613,15 +719,31 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
     // Persist skill metadata
     let mut persisted_metadata = load_skill_metadata();
     persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
-        id: skill_id_new,
-        folder_name,
-        category_id,
-        group_id,
-        imported_at,
+        id: skill_id_new.clone(),
+        folder_name: folder_name.clone(),
+        category_id: category_id.clone(),
+        group_id: group_id.clone(),
+        imported_at: imported_at.clone(),
     });
     if let Err(e) = save_skill_metadata(&persisted_metadata) {
         eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
     }
+
+    log(
+        LogLevel::Info,
+        "PROJECT",
+        "I0003",
+        &format!("Skill pulled to library: {}", folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id_new,
+            "folder_name": folder_name,
+            "project_id": project_id,
+            "project_name": project.name,
+            "imported_at": imported_at,
+        })),
+        None,
+    );
 
     IpcResult::success(skill)
 }

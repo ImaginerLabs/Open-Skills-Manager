@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Warning } from '@phosphor-icons/react';
+import { logService, LOG_MODULES, LOG_CODES } from '../../services/logService';
 import { useLibraryStore, type LibrarySkill } from '../../stores/libraryStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
@@ -165,16 +166,29 @@ export function Library(): React.ReactElement {
                 selectSkill(null);
                 setSkillMdContent('');
               }
+              logService.info(LOG_MODULES.LIBRARY, 'DELETE_SUCCESS', `Skill deleted: ${skill?.name}`, {
+                skillId,
+                skillName: skill?.name,
+              });
               showToast('success', 'Skill deleted from library');
               // Refresh sidebar to update counts
               refreshLibrary();
             } else {
               setError(result.error.message);
+              logService.error(LOG_MODULES.LIBRARY, LOG_CODES.LIBRARY_DELETE_FAILED, `Delete failed: ${skill?.name}`, {
+                skillId,
+                skillName: skill?.name,
+                error: result.error.message,
+              });
               showToast('error', `Failed to delete: ${result.error.message}`);
             }
           } catch (e) {
             const message = e instanceof Error ? e.message : 'Unknown error';
             setError(message);
+            logService.reportError(LOG_MODULES.LIBRARY, LOG_CODES.LIBRARY_DELETE_FAILED, e instanceof Error ? e : new Error(message), {
+              skillId,
+              skillName: skill?.name,
+            });
             showToast('error', `Failed to delete: ${message}`);
           } finally {
             setLoading(false);

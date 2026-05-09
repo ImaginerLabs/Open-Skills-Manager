@@ -4,6 +4,7 @@ use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 
 use super::library::IpcResult;
+use crate::utils::logger::{log, LogLevel, LogSource};
 
 /// Global state for update tracking
 static UPDATE_AVAILABLE: AtomicBool = AtomicBool::new(false);
@@ -41,10 +42,31 @@ impl Default for UpdateStatus {
 pub async fn update_check(app: AppHandle) -> IpcResult<UpdateInfo> {
     let current_version = app.config().version.clone().unwrap_or_default();
 
+    log(
+        LogLevel::Info,
+        "UPDATE",
+        "I0001",
+        "Checking for updates",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "current_version": current_version,
+        })),
+        None,
+    );
+
     // Get updater from app handle
     let updater = match app.updater() {
         Ok(u) => u,
         Err(e) => {
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0001",
+                &format!("Failed to get updater: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return IpcResult::error("UPDATER_ERROR", &format!("Failed to get updater: {}", e));
         }
     };
@@ -53,6 +75,17 @@ pub async fn update_check(app: AppHandle) -> IpcResult<UpdateInfo> {
     let update = match updater.check().await {
         Ok(Some(update)) => update,
         Ok(None) => {
+            log(
+                LogLevel::Info,
+                "UPDATE",
+                "I0002",
+                "No updates available",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "current_version": current_version,
+                })),
+                None,
+            );
             UPDATE_AVAILABLE.store(false, Ordering::SeqCst);
             return IpcResult::success(UpdateInfo {
                 available: false,
@@ -64,12 +97,34 @@ pub async fn update_check(app: AppHandle) -> IpcResult<UpdateInfo> {
             });
         }
         Err(e) => {
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0002",
+                &format!("Update check failed: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return IpcResult::error("CHECK_FAILED", &format!("Update check failed: {}", e));
         }
     };
 
     // Update is available
     UPDATE_AVAILABLE.store(true, Ordering::SeqCst);
+
+    log(
+        LogLevel::Info,
+        "UPDATE",
+        "I0003",
+        &format!("Update available: {}", update.version),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "current_version": current_version,
+            "latest_version": update.version,
+        })),
+        None,
+    );
 
     IpcResult::success(UpdateInfo {
         available: true,
@@ -92,11 +147,32 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
 
     let current_version = app.config().version.clone().unwrap_or_default();
 
+    log(
+        LogLevel::Info,
+        "UPDATE",
+        "I0004",
+        "Starting update download",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "current_version": current_version,
+        })),
+        None,
+    );
+
     // Get updater
     let updater = match app.updater() {
         Ok(u) => u,
         Err(e) => {
             UPDATE_DOWNLOADING.store(false, Ordering::SeqCst);
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0003",
+                &format!("Failed to get updater: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return IpcResult::error("UPDATER_ERROR", &format!("Failed to get updater: {}", e));
         }
     };
@@ -106,10 +182,28 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
         Ok(Some(update)) => update,
         Ok(None) => {
             UPDATE_DOWNLOADING.store(false, Ordering::SeqCst);
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0004",
+                "No update available to download",
+                LogSource::Backend,
+                None,
+                None,
+            );
             return IpcResult::error("NO_UPDATE", "No update available to download");
         }
         Err(e) => {
             UPDATE_DOWNLOADING.store(false, Ordering::SeqCst);
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0005",
+                &format!("Update check failed: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return IpcResult::error("CHECK_FAILED", &format!("Update check failed: {}", e));
         }
     };
@@ -140,6 +234,19 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
             UPDATE_DOWNLOADING.store(false, Ordering::SeqCst);
             UPDATE_READY.store(true, Ordering::SeqCst);
 
+            log(
+                LogLevel::Info,
+                "UPDATE",
+                "I0005",
+                &format!("Update downloaded: {}", latest_version),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "current_version": current_version,
+                    "latest_version": latest_version,
+                })),
+                None,
+            );
+
             IpcResult::success(UpdateInfo {
                 available: true,
                 current_version,
@@ -152,6 +259,19 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
         Err(e) => {
             UPDATE_DOWNLOADING.store(false, Ordering::SeqCst);
 
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0006",
+                &format!("Failed to download update: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "current_version": current_version,
+                    "latest_version": latest_version,
+                })),
+                None,
+            );
+
             IpcResult::error("DOWNLOAD_FAILED", &format!("Failed to download update: {}", e))
         }
     }
@@ -160,19 +280,55 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
 /// Install the downloaded update and restart the app
 #[tauri::command]
 pub async fn update_install(app: AppHandle) -> IpcResult<()> {
+    let current_version = app.config().version.clone().unwrap_or_default();
+
     if !UPDATE_READY.load(Ordering::SeqCst) {
         // If update is ready from download, restart
         // Otherwise, try to download first
         if !UPDATE_AVAILABLE.load(Ordering::SeqCst) {
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0007",
+                "No update available to install",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "current_version": current_version,
+                })),
+                None,
+            );
             return IpcResult::error("NO_UPDATE", "No update available to install");
         }
 
         // Download first
         let result = update_download(app.clone()).await;
         if !result.success {
+            log(
+                LogLevel::Error,
+                "UPDATE",
+                "E0008",
+                "Failed to download update before install",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "current_version": current_version,
+                })),
+                None,
+            );
             return IpcResult::error("DOWNLOAD_FAILED", "Failed to download update before install");
         }
     }
+
+    log(
+        LogLevel::Info,
+        "UPDATE",
+        "I0006",
+        "Installing update and restarting app",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "current_version": current_version,
+        })),
+        None,
+    );
 
     // Restart the app to apply update
     app.request_restart();

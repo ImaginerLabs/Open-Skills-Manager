@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { logService, LOG_MODULES, LOG_CODES } from '@/services/logService';
 import { invokeIPC } from '@/services/ipcService';
 import type { LibrarySkill, Deployment } from '@/stores/libraryStore';
 import { useIDEStore } from '@/stores/ideStore';
@@ -96,9 +97,21 @@ export function useBatchDeploy(): UseBatchDeployResult {
 
     const response = await invokeIPC<void>(channel, args);
     if (response.success) {
+      logService.info(LOG_MODULES.DEPLOY, 'DEPLOY_SUCCESS', `Skill deployed: ${skill.name}`, {
+        skillId: skill.id,
+        skillName: skill.name,
+        targetScope,
+        projectId,
+      });
       return { success: true };
     }
-    return { success: false, error: response.error?.message ?? 'Deployment failed' };
+    const errorMsg = response.error?.message ?? 'Deployment failed';
+    logService.error(LOG_MODULES.DEPLOY, LOG_CODES.DEPLOY_TO_GLOBAL_FAILED, `Deploy failed: ${skill.name}`, {
+      skillId: skill.id,
+      skillName: skill.name,
+      error: errorMsg,
+    });
+    return { success: false, error: errorMsg };
   }, [activeIdeId]);
 
   const processQueue = useCallback(async () => {
@@ -151,10 +164,15 @@ export function useBatchDeploy(): UseBatchDeployResult {
           });
         }
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         initialResult.failed.push({
           skillId: skill.id,
           skillName: skill.name,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          error: errorMsg,
+        });
+        logService.reportError(LOG_MODULES.DEPLOY, LOG_CODES.DEPLOY_BATCH_FAILED, err instanceof Error ? err : new Error(errorMsg), {
+          skillId: skill.id,
+          skillName: skill.name,
         });
       }
     }

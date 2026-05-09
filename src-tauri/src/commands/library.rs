@@ -11,6 +11,7 @@ use crate::parsers::SkillFrontmatter;
 use crate::paths;
 use crate::storage::service::get_storage;
 use crate::utils::fs::{copy_dir_all, count_files, has_resources, is_symlink as is_symlink_dir};
+use crate::utils::logger::{log, LogLevel, LogSource};
 // Re-export Group and Category from storage types for IPC commands
 pub use crate::storage::{Group, Category, SkillEntry};
 
@@ -374,6 +375,18 @@ pub fn library_delete(id: String) -> IpcResult<()> {
     let skill_dir = library_path.join(&folder_name);
     if skill_dir.exists() {
         if let Err(e) = fs::remove_dir_all(&skill_dir) {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0001",
+                &format!("Failed to delete skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                    "folder_name": folder_name,
+                })),
+                None,
+            );
             return IpcResult::error(AppError::E104DeleteFailed(
                 format!("Skill: {}", e)
             ).code(), &format!("Failed to delete skill: {}", e));
@@ -384,6 +397,19 @@ pub fn library_delete(id: String) -> IpcResult<()> {
     if let Err(e) = crate::storage::service::get_storage().remove_skill(&folder_name) {
         eprintln!("Warning: Failed to remove skill from storage: {}", e);
     }
+
+    log(
+        LogLevel::Info,
+        "LIBRARY",
+        "I0003",
+        &format!("Skill deleted: {}", folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": id,
+            "folder_name": folder_name,
+        })),
+        None,
+    );
 
     IpcResult::success(())
 }
@@ -483,7 +509,7 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
 
     // Persist skill metadata via storage layer
     if let Err(e) = get_storage().add_skill(SkillEntry {
-        id: skill_id,
+        id: skill_id.clone(),
         folder_name: folder_name.clone(),
         category_id,
         group_id,
@@ -492,6 +518,21 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
     }) {
         eprintln!("Warning: Failed to save skill metadata after import: {}", e);
     }
+
+    // Log successful import
+    log(
+        LogLevel::Info,
+        "LIBRARY",
+        "I0002",
+        &format!("Skill imported: {}", skill.name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "path": path,
+        })),
+        None,
+    );
 
     IpcResult::success(skill)
 }
@@ -709,10 +750,24 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
         // Create zip file
         let file = match fs::File::create(&dest_buf) {
             Ok(f) => f,
-            Err(e) => return IpcResult::error(
-                AppError::E102WriteFailed(format!("Zip file: {}", e)).code(),
-                &format!("Failed to create zip file: {}", e)
-            ),
+            Err(e) => {
+                log(
+                    LogLevel::Error,
+                    "LIBRARY",
+                    "E0002",
+                    &format!("Failed to create zip file: {}", e),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "skill_id": id,
+                        "dest_path": dest,
+                    })),
+                    None,
+                );
+                return IpcResult::error(
+                    AppError::E102WriteFailed(format!("Zip file: {}", e)).code(),
+                    &format!("Failed to create zip file: {}", e)
+                );
+            }
         };
 
         let mut zip = ZipWriter::new(file);
@@ -721,6 +776,18 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 
         // Add skill folder contents to zip
         if let Err(e) = add_dir_to_zip(&mut zip, &skill_path, &folder_name, options) {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0003",
+                &format!("Failed to add skill to zip: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                    "folder_name": folder_name,
+                })),
+                None,
+            );
             return IpcResult::error(
                 AppError::E102WriteFailed(format!("Zip archive: {}", e)).code(),
                 &format!("Failed to add skill to zip: {}", e)
@@ -729,11 +796,36 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 
         // Finalize zip
         if let Err(e) = zip.finish() {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0004",
+                &format!("Failed to finalize zip: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                })),
+                None,
+            );
             return IpcResult::error(
                 AppError::E102WriteFailed(format!("Zip finalization: {}", e)).code(),
                 &format!("Failed to finalize zip: {}", e)
             );
         }
+
+        log(
+            LogLevel::Info,
+            "LIBRARY",
+            "I0004",
+            &format!("Skill exported as zip: {}", folder_name),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": id,
+                "folder_name": folder_name,
+                "dest_path": dest,
+            })),
+            None,
+        );
 
         IpcResult::success(dest)
     } else {
@@ -750,11 +842,38 @@ pub fn library_export(id: String, format: String, dest_path: Option<String>) -> 
 
         // Copy skill folder to destination
         if let Err(e) = copy_dir_all(&skill_path, &dest_buf) {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0005",
+                &format!("Failed to copy skill folder: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                    "folder_name": folder_name,
+                    "dest_path": dest,
+                })),
+                None,
+            );
             return IpcResult::error(
                 AppError::E105CopyFailed(format!("Skill folder: {}", e)).code(),
                 &format!("Failed to copy skill folder: {}", e)
             );
         }
+
+        log(
+            LogLevel::Info,
+            "LIBRARY",
+            "I0005",
+            &format!("Skill exported as folder: {}", folder_name),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": id,
+                "folder_name": folder_name,
+                "dest_path": dest,
+            })),
+            None,
+        );
 
         IpcResult::success(dest)
     }
@@ -981,10 +1100,37 @@ pub fn library_groups_create(name: String, icon: Option<String>, notes: Option<S
     });
 
     match result {
-        Ok(_) => IpcResult::success(group),
-        Err(e) => IpcResult::error(AppError::E102WriteFailed(
-            format!("Groups: {}", e)
-        ).code(), &e),
+        Ok(_) => {
+            log(
+                LogLevel::Info,
+                "LIBRARY",
+                "I0006",
+                &format!("Group created: {}", group.name),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "group_id": group.id,
+                    "group_name": group.name,
+                })),
+                None,
+            );
+            IpcResult::success(group)
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0006",
+                &format!("Failed to create group: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "group_name": group.name,
+                })),
+                None,
+            );
+            IpcResult::error(AppError::E102WriteFailed(
+                format!("Groups: {}", e)
+            ).code(), &e)
+        },
     }
 }
 
@@ -1028,16 +1174,51 @@ pub fn library_groups_delete(id: String) -> IpcResult<()> {
         Ok(updated_groups) => {
             // Check if the group was actually deleted by checking if it still exists
             if updated_groups.iter().any(|g| g.id == id) {
+                log(
+                    LogLevel::Error,
+                    "LIBRARY",
+                    "E0007",
+                    &format!("Group not found: {}", id),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "group_id": id,
+                    })),
+                    None,
+                );
                 IpcResult::error(AppError::E302GroupNotFound(
                     format!("Group: {}", id)
                 ).code(), &format!("Group not found: {}", id))
             } else {
+                log(
+                    LogLevel::Info,
+                    "LIBRARY",
+                    "I0007",
+                    "Group deleted",
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "group_id": id,
+                    })),
+                    None,
+                );
                 IpcResult::success(())
             }
         }
-        Err(e) => IpcResult::error(AppError::E102WriteFailed(
-            format!("Groups: {}", e)
-        ).code(), &e),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0008",
+                &format!("Failed to delete group: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "group_id": id,
+                })),
+                None,
+            );
+            IpcResult::error(AppError::E102WriteFailed(
+                format!("Groups: {}", e)
+            ).code(), &e)
+        },
     }
 }
 
@@ -1068,10 +1249,39 @@ pub fn library_categories_create(group_id: String, name: String, icon: Option<St
     });
 
     match result {
-        Ok(_) => IpcResult::success(category),
-        Err(e) => IpcResult::error(AppError::E102WriteFailed(
-            format!("Groups: {}", e)
-        ).code(), &e),
+        Ok(_) => {
+            log(
+                LogLevel::Info,
+                "LIBRARY",
+                "I0008",
+                &format!("Category created: {}", category.name),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "category_id": category.id,
+                    "category_name": category.name,
+                    "group_id": group_id,
+                })),
+                None,
+            );
+            IpcResult::success(category)
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0009",
+                &format!("Failed to create category: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "category_name": category.name,
+                    "group_id": group_id,
+                })),
+                None,
+            );
+            IpcResult::error(AppError::E102WriteFailed(
+                format!("Groups: {}", e)
+            ).code(), &e)
+        },
     }
 }
 
@@ -1118,10 +1328,38 @@ pub fn library_categories_delete(group_id: String, category_id: String) -> IpcRe
     });
 
     match result {
-        Ok(_) => IpcResult::success(()),
-        Err(e) => IpcResult::error(AppError::E102WriteFailed(
-            format!("Groups: {}", e)
-        ).code(), &e),
+        Ok(_) => {
+            log(
+                LogLevel::Info,
+                "LIBRARY",
+                "I0009",
+                "Category deleted",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "category_id": category_id,
+                    "group_id": group_id,
+                })),
+                None,
+            );
+            IpcResult::success(())
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "LIBRARY",
+                "E0010",
+                &format!("Failed to delete category: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "category_id": category_id,
+                    "group_id": group_id,
+                })),
+                None,
+            );
+            IpcResult::error(AppError::E102WriteFailed(
+                format!("Groups: {}", e)
+            ).code(), &e)
+        },
     }
 }
 

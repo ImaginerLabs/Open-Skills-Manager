@@ -1,4 +1,5 @@
 import { CloudArrowDown, CloudArrowUp, Files } from '@phosphor-icons/react';
+import { formatSize, formatDateTime } from '@/utils/formatters';
 import type { ConflictVersion } from '@/services/icloudService';
 import styles from './ConflictDialog.module.scss';
 
@@ -6,28 +7,6 @@ export interface ConflictPreviewProps {
   localVersion: ConflictVersion;
   remoteVersion: ConflictVersion;
   skillName: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const k = 1024;
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${units[i]}`;
-}
-
-function formatDateTime(isoString: string): string {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return 'Unknown';
-  }
 }
 
 export function ConflictPreview({
@@ -53,7 +32,7 @@ export function ConflictPreview({
         </div>
         <div className={styles.versionRow}>
           <span className={styles.versionKey}>Size</span>
-          <span className={styles.versionValue}>{formatBytes(version.size)}</span>
+          <span className={styles.versionValue}>{formatSize(version.size)}</span>
         </div>
         <div className={styles.versionRow}>
           <span className={styles.versionKey}>Device</span>

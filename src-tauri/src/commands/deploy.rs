@@ -3,6 +3,7 @@ use super::global::get_global_skills_path;
 use super::config::load_config;
 use crate::storage::service::get_storage;
 use crate::utils::fs::copy_dir_all;
+use crate::utils::logger::{log, LogLevel, LogSource};
 use std::fs;
 use std::path::PathBuf;
 
@@ -124,6 +125,21 @@ pub fn deploy_to_global(skill_id: String) -> IpcResult<Deployment> {
         project_name: None,
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
+
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "I0010",
+        &format!("Skill deployed to global: {}", folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
 
     IpcResult::success(deployment)
 }

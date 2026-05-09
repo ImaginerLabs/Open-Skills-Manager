@@ -2,6 +2,7 @@ use super::library::{IpcResult, get_library_path, load_skill_metadata, save_skil
 use crate::storage::service::get_storage;
 use crate::services::skill::{SkillService, ScanOptions};
 use crate::utils::fs::copy_dir_all;
+use crate::utils::logger::{log, LogLevel, LogSource};
 use std::fs;
 use std::path::PathBuf;
 use crate::paths;
@@ -145,8 +146,36 @@ pub fn global_delete(id: String) -> IpcResult<()> {
 
                 if is_match {
                     match SkillService::delete_skill(&path) {
-                        Ok(()) => return IpcResult::success(()),
-                        Err(e) => return IpcResult::error("E104", &format!("Failed to delete skill: {}", e)),
+                        Ok(()) => {
+                            log(
+                                LogLevel::Info,
+                                "GLOBAL",
+                                "I0001",
+                                &format!("Skill deleted: {}", folder_name),
+                                LogSource::Backend,
+                                Some(serde_json::json!({
+                                    "skill_id": id,
+                                    "folder_name": folder_name,
+                                })),
+                                None,
+                            );
+                            return IpcResult::success(());
+                        },
+                        Err(e) => {
+                            log(
+                                LogLevel::Error,
+                                "GLOBAL",
+                                "E0001",
+                                &format!("Failed to delete skill: {}", e),
+                                LogSource::Backend,
+                                Some(serde_json::json!({
+                                    "skill_id": id,
+                                    "folder_name": folder_name,
+                                })),
+                                None,
+                            );
+                            return IpcResult::error("E104", &format!("Failed to delete skill: {}", e));
+                        }
                     }
                 }
             }
@@ -183,7 +212,20 @@ pub fn global_pull(id: String) -> IpcResult<()> {
 
         let source = match found_path {
             Some(p) => p,
-            None => return IpcResult::error("E203", &format!("Skill not found in global: {}", id)),
+            None => {
+                log(
+                    LogLevel::Error,
+                    "GLOBAL",
+                    "E0002",
+                    &format!("Skill not found in global: {}", id),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "skill_id": id,
+                    })),
+                    None,
+                );
+                return IpcResult::error("E203", &format!("Skill not found in global: {}", id));
+            },
         };
 
         let folder_name = source.file_name()
@@ -192,6 +234,17 @@ pub fn global_pull(id: String) -> IpcResult<()> {
 
         // Ensure library directory exists
         if let Err(e) = fs::create_dir_all(&library_path) {
+            log(
+                LogLevel::Error,
+                "GLOBAL",
+                "E0003",
+                &format!("Failed to create library directory: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                })),
+                None,
+            );
             return IpcResult::error("E101", &format!("Failed to create library directory: {}", e));
         }
 
@@ -200,12 +253,36 @@ pub fn global_pull(id: String) -> IpcResult<()> {
         // Remove existing if present
         if dest_path.exists() {
             if let Err(e) = fs::remove_dir_all(&dest_path) {
+                log(
+                    LogLevel::Error,
+                    "GLOBAL",
+                    "E0004",
+                    &format!("Failed to remove existing skill: {}", e),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "skill_id": id,
+                        "folder_name": folder_name,
+                    })),
+                    None,
+                );
                 return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
             }
         }
 
         // Copy to library (handles symlinks properly)
         if let Err(e) = copy_dir_all(&source, &dest_path) {
+            log(
+                LogLevel::Error,
+                "GLOBAL",
+                "E0005",
+                &format!("Failed to copy skill to library: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                    "folder_name": folder_name,
+                })),
+                None,
+            );
             return IpcResult::error("E105", &format!("Failed to copy skill to library: {}", e));
         }
 
@@ -214,15 +291,29 @@ pub fn global_pull(id: String) -> IpcResult<()> {
         let imported_at = chrono::Utc::now().to_rfc3339();
         let mut persisted_metadata = load_skill_metadata();
         persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
-            id: skill_id,
-            folder_name,
+            id: skill_id.clone(),
+            folder_name: folder_name.clone(),
             group_id: None,
             category_id: None,
-            imported_at,
+            imported_at: imported_at.clone(),
         });
         if let Err(e) = save_skill_metadata(&persisted_metadata) {
             eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
         }
+
+        log(
+            LogLevel::Info,
+            "GLOBAL",
+            "I0002",
+            &format!("Skill pulled to library: {}", folder_name),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "folder_name": folder_name,
+                "imported_at": imported_at,
+            })),
+            None,
+        );
 
         return IpcResult::success(());
     }
@@ -234,6 +325,17 @@ pub fn global_pull(id: String) -> IpcResult<()> {
 
     // Ensure library directory exists
     if let Err(e) = fs::create_dir_all(&library_path) {
+        log(
+            LogLevel::Error,
+            "GLOBAL",
+            "E0003",
+            &format!("Failed to create library directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": id,
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create library directory: {}", e));
     }
 
@@ -242,12 +344,36 @@ pub fn global_pull(id: String) -> IpcResult<()> {
     // Remove existing if present
     if dest_path.exists() {
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "GLOBAL",
+                "E0004",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": id,
+                    "folder_name": folder_name,
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy to library (handles symlinks properly)
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "GLOBAL",
+            "E0005",
+            &format!("Failed to copy skill to library: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": id,
+                "folder_name": folder_name,
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to library: {}", e));
     }
 
@@ -256,15 +382,29 @@ pub fn global_pull(id: String) -> IpcResult<()> {
     let imported_at = chrono::Utc::now().to_rfc3339();
     let mut persisted_metadata = load_skill_metadata();
     persisted_metadata.insert(folder_name.clone(), SkillMetadataEntry {
-        id: skill_id,
-        folder_name,
+        id: skill_id.clone(),
+        folder_name: folder_name.clone(),
         group_id: None,
         category_id: None,
-        imported_at,
+        imported_at: imported_at.clone(),
     });
     if let Err(e) = save_skill_metadata(&persisted_metadata) {
         eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
     }
+
+    log(
+        LogLevel::Info,
+        "GLOBAL",
+        "I0002",
+        &format!("Skill pulled to library: {}", folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "imported_at": imported_at,
+        })),
+        None,
+    );
 
     IpcResult::success(())
 }

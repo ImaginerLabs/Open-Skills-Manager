@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { logService, LOG_MODULES, LOG_CODES } from '../../../services/logService';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { libraryService } from '../../../services/libraryService';
@@ -53,6 +54,12 @@ export function useLibraryExport(): UseLibraryExportResult {
           }
         }
         completeExport();
+        const skillNames = skillsToExport.map((s) => s.name).join(', ');
+        logService.info(LOG_MODULES.LIBRARY, 'EXPORT_SUCCESS', `Exported ${skillsToExport.length} skill(s)`, {
+          format,
+          count: skillsToExport.length,
+          skills: skillNames,
+        });
         showToast(
           'success',
           `Exported ${skillsToExport.length} skill${skillsToExport.length !== 1 ? 's' : ''} successfully`
@@ -60,6 +67,10 @@ export function useLibraryExport(): UseLibraryExportResult {
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Export failed';
         setExportError(message);
+        logService.reportError(LOG_MODULES.LIBRARY, LOG_CODES.LIBRARY_EXPORT_FAILED, e instanceof Error ? e : new Error(message), {
+          format,
+          skillCount: skillsToExport.length,
+        });
         showToast('error', message);
       }
     },
