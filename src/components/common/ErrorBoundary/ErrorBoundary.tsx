@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { Warning, ArrowClockwise, House, Link } from '@phosphor-icons/react';
 import { Button } from '../../ui';
+import { logService, LOG_MODULES, LOG_CODES } from '../../../services/logService';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -25,8 +26,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
-    // Log error via errorService
-    console.error('Error caught by boundary:', error, errorInfo);
+    // Log error via logService
+    logService.reportError(
+      LOG_MODULES.SYSTEM,
+      LOG_CODES.UI_RENDER_ERROR,
+      error,
+      { componentStack: errorInfo.componentStack }
+    );
   }
 
   handleRetry = (): void => {

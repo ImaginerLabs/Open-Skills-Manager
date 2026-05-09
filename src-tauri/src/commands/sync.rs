@@ -157,6 +157,15 @@ pub fn sync_status() -> IpcResult<SyncStatusInfo> {
     let icloud_available = paths::icloud_is_available();
 
     if !icloud_available {
+        log(
+            LogLevel::Warn,
+            "SYNC",
+            "SYNC_STATUS_UNAVAILABLE",
+            "iCloud not available for sync",
+            LogSource::Backend,
+            None,
+            None,
+        );
         return IpcResult::success(SyncStatusInfo {
             status: SyncStatus::Offline,
             last_sync_time: None,
@@ -177,6 +186,26 @@ pub fn sync_status() -> IpcResult<SyncStatusInfo> {
     } else {
         SyncStatus::Pending
     };
+
+    log(
+        LogLevel::Info,
+        "SYNC",
+        "SYNC_STATUS_SUCCESS",
+        "Sync status retrieved",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "status": match status {
+                SyncStatus::Synced => "synced",
+                SyncStatus::Syncing => "syncing",
+                SyncStatus::Pending => "pending",
+                SyncStatus::Offline => "offline",
+                SyncStatus::Error => "error",
+            },
+            "storage_used": storage_used,
+            "icloud_available": true,
+        })),
+        None,
+    );
 
     IpcResult::success(SyncStatusInfo {
         status,
@@ -352,24 +381,75 @@ pub fn sync_enable(enabled: bool) -> IpcResult<()> {
     match storage.write_config(|config| {
         config.sync_enabled = enabled;
     }) {
-        Ok(_) => IpcResult::success(()),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(_) => {
+            log(
+                LogLevel::Info,
+                "SYNC",
+                "SYNC_ENABLE_SUCCESS",
+                "Sync setting updated",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "enabled": enabled,
+                })),
+                None,
+            );
+            IpcResult::success(())
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "SYNC",
+                "SYNC_ENABLE_FAILED",
+                &format!("Failed to update sync setting: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "enabled": enabled,
+                    "error": &e,
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn sync_icloud_path() -> IpcResult<String> {
     let path = paths::get_icloud_container_path();
-    IpcResult::success(path.to_string_lossy().to_string())
+    let path_str = path.to_string_lossy().to_string();
+    log(
+        LogLevel::Info,
+        "SYNC",
+        "ICLOUD_PATH_RETRIEVED",
+        "iCloud path retrieved",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "path": &path_str,
+        })),
+        None,
+    );
+    IpcResult::success(path_str)
 }
 
 #[tauri::command]
 pub fn sync_local_path() -> IpcResult<String> {
     let path = paths::get_app_support_path();
-    IpcResult::success(path.to_string_lossy().to_string())
+    let path_str = path.to_string_lossy().to_string();
+    log(
+        LogLevel::Info,
+        "SYNC",
+        "LOCAL_PATH_RETRIEVED",
+        "Local path retrieved",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "path": &path_str,
+        })),
+        None,
+    );
+    IpcResult::success(path_str)
 }
 
 // ============================================================================
@@ -458,7 +538,17 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
         .collect();
 
     if !conflict_skill_ids.is_empty() {
-        println!("Found {} conflicting skills, skipping auto-sync for them", conflict_skill_ids.len());
+        log(
+            LogLevel::Warn,
+            "SYNC",
+            "SYNC_CONFLICTS_DETECTED",
+            &format!("Found {} conflicting skills, skipping auto-sync for them", conflict_skill_ids.len()),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "conflict_count": conflict_skill_ids.len(),
+            })),
+            None,
+        );
     }
 
     // Get all skills from both locations
@@ -475,7 +565,17 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
     // Helper to check if skill should be skipped due to conflict
     let should_skip_conflict = |skill_name: &str| -> bool {
         if conflict_skill_ids.contains(skill_name) {
-            println!("Skipping sync for conflicting skill: {}", skill_name);
+            log(
+                LogLevel::Debug,
+                "SYNC",
+                "SYNC_SKILL_SKIPPED",
+                &format!("Skipping sync for conflicting skill: {}", skill_name),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_name": skill_name,
+                })),
+                None,
+            );
             true
         } else {
             false
@@ -500,7 +600,18 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
                         fs::remove_dir_all(&icloud_path)
                             .map_err(|e| format!("Failed to delete iCloud skill: {}", e))?;
                         synced_count += 1;
-                        println!("Deleted skill from iCloud: {}", skill_name);
+                        log(
+                            LogLevel::Info,
+                            "SYNC",
+                            "SYNC_SKILL_DELETED",
+                            &format!("Deleted skill from iCloud: {}", skill_name),
+                            LogSource::Backend,
+                            Some(serde_json::json!({
+                                "skill_name": skill_name,
+                                "reason": "tombstone_newer",
+                            })),
+                            None,
+                        );
                     }
                     continue; // Skip further processing for this skill
                 }
@@ -585,7 +696,18 @@ fn sync_library(_client_identity: &ClientIdentity) -> Result<u32, String> {
                                     fs::remove_dir_all(&icloud_path)
                                         .map_err(|e| format!("Failed to delete iCloud skill: {}", e))?;
                                     synced_count += 1;
-                                    println!("Deleted skill from iCloud (tombstone): {}", skill_name);
+                                    log(
+                                        LogLevel::Info,
+                                        "SYNC",
+                                        "SYNC_SKILL_DELETED",
+                                        &format!("Deleted skill from iCloud (tombstone): {}", skill_name),
+                                        LogSource::Backend,
+                                        Some(serde_json::json!({
+                                            "skill_name": skill_name,
+                                            "reason": "tombstone_cleanup",
+                                        })),
+                                        None,
+                                    );
                                 }
                             }
                         }
@@ -669,7 +791,17 @@ fn calculate_dir_size(path: &PathBuf) -> u64 {
 pub fn trigger_full_sync() {
     std::thread::spawn(|| {
         if let Err(e) = do_full_sync_background() {
-            eprintln!("Background sync failed: {}", e);
+            log(
+                LogLevel::Error,
+                "SYNC",
+                "SYNC_BACKGROUND_FAILED",
+                &format!("Background sync failed: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": &e,
+                })),
+                None,
+            );
         }
     });
 }
@@ -680,13 +812,29 @@ fn do_full_sync_background() -> Result<(), String> {
     let storage = get_storage();
     let config = storage.read_config()?;
     if !config.sync_enabled {
-        println!("Sync skipped: disabled in settings");
+        log(
+            LogLevel::Debug,
+            "SYNC",
+            "SYNC_SKIPPED_DISABLED",
+            "Sync skipped: disabled in settings",
+            LogSource::Backend,
+            None,
+            None,
+        );
         return Ok(()); // Sync disabled, skip
     }
 
     // Check if iCloud is available
     if !paths::icloud_is_available() {
-        println!("Sync skipped: iCloud not available");
+        log(
+            LogLevel::Debug,
+            "SYNC",
+            "SYNC_SKIPPED_UNAVAILABLE",
+            "Sync skipped: iCloud not available",
+            LogSource::Backend,
+            None,
+            None,
+        );
         return Ok(()); // iCloud not available, skip
     }
 
@@ -708,11 +856,21 @@ fn do_full_sync_background() -> Result<(), String> {
     // Update sync state
     let sync_state = SyncState {
         last_sync_time: Some(chrono::Utc::now().to_rfc3339()),
-        last_sync_by: Some(client_identity.client_id),
+        last_sync_by: Some(client_identity.client_id.clone()),
     };
     save_sync_state(&sync_state)?;
 
-    println!("Background sync completed successfully");
+    log(
+        LogLevel::Info,
+        "SYNC",
+        "SYNC_BACKGROUND_SUCCESS",
+        "Background sync completed successfully",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "client_id": client_identity.client_id,
+        })),
+        None,
+    );
     Ok(())
 }
 
@@ -731,9 +889,30 @@ fn sync_metadata() -> Result<(), String> {
         let icloud_file = icloud_container.join(file_name);
         if icloud_file.exists() {
             if let Err(e) = fs::remove_file(&icloud_file) {
-                println!("Warning: Failed to remove {} from iCloud: {}", file_name, e);
+                log(
+                    LogLevel::Warn,
+                    "SYNC",
+                    "SYNC_METADATA_CLEANUP_FAILED",
+                    &format!("Failed to remove {} from iCloud: {}", file_name, e),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "file_name": file_name,
+                        "error": &e.to_string(),
+                    })),
+                    None,
+                );
             } else {
-                println!("Removed excluded file from iCloud: {}", file_name);
+                log(
+                    LogLevel::Info,
+                    "SYNC",
+                    "SYNC_METADATA_CLEANUP",
+                    &format!("Removed excluded file from iCloud: {}", file_name),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "file_name": file_name,
+                    })),
+                    None,
+                );
             }
         }
     }

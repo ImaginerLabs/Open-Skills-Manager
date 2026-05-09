@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::parsers::SkillFrontmatter;
 use crate::utils::fs::{count_files, has_resources, is_symlink};
+use crate::utils::logger::{log, LogLevel, LogSource};
 
 /// Parsed skill metadata from SKILL.md frontmatter
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,7 +68,29 @@ pub struct SkillService;
 impl SkillService {
     /// Parse SKILL.md frontmatter using existing parser
     pub fn parse_skill_md(path: &Path) -> Option<SkillMeta> {
-        SkillFrontmatter::from_path_or_default(path).map(SkillMeta::from)
+        let result = SkillFrontmatter::from_path_or_default(path).map(SkillMeta::from);
+        if result.is_some() {
+            log(
+                LogLevel::Debug,
+                "LIBRARY",
+                "SKILL_PARSE_SUCCESS",
+                &format!("Parsed SKILL.md: {:?}", path),
+                LogSource::Backend,
+                None,
+                None,
+            );
+        } else {
+            log(
+                LogLevel::Warn,
+                "LIBRARY",
+                "SKILL_PARSE_FAILED",
+                &format!("Failed to parse SKILL.md: {:?}", path),
+                LogSource::Backend,
+                None,
+                None,
+            );
+        }
+        result
     }
 
     /// Count lines and characters in a SKILL.md file
@@ -86,6 +109,15 @@ impl SkillService {
         let mut skills = Vec::new();
 
         if !dir.exists() {
+            log(
+                LogLevel::Debug,
+                "LIBRARY",
+                "SCAN_DIR_NOT_EXISTS",
+                &format!("Directory does not exist: {:?}", dir),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return skills;
         }
 
@@ -99,6 +131,16 @@ impl SkillService {
                 }
             }
         }
+
+        log(
+            LogLevel::Debug,
+            "LIBRARY",
+            "SCAN_DIR_COMPLETE",
+            &format!("Scanned {} skills in {:?}", skills.len(), dir),
+            LogSource::Backend,
+            None,
+            None,
+        );
 
         skills
     }
@@ -155,11 +197,38 @@ impl SkillService {
 
     /// Delete a skill directory
     pub fn delete_skill(path: &Path) -> Result<(), String> {
-        if is_symlink(path) {
+        let result = if is_symlink(path) {
             fs::remove_file(path).map_err(|e| e.to_string())
         } else {
             fs::remove_dir_all(path).map_err(|e| e.to_string())
+        };
+
+        match &result {
+            Ok(_) => {
+                log(
+                    LogLevel::Info,
+                    "LIBRARY",
+                    "SKILL_DELETE_SUCCESS",
+                    &format!("Deleted skill: {:?}", path),
+                    LogSource::Backend,
+                    None,
+                    None,
+                );
+            }
+            Err(e) => {
+                log(
+                    LogLevel::Error,
+                    "LIBRARY",
+                    "SKILL_DELETE_FAILED",
+                    &format!("Failed to delete skill {:?}: {}", path, e),
+                    LogSource::Backend,
+                    None,
+                    None,
+                );
+            }
         }
+
+        result
     }
 }
 

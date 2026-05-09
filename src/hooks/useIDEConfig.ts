@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useIDEStore } from '@/stores';
 import { configService } from '@/services';
 import { DEFAULT_IDE_CONFIGS, DEFAULT_IDE_ID } from '@/constants/ideConfigs';
+import { logService, LOG_MODULES, LOG_CODES } from '@/services/logService';
 
 export function useIDEConfig() {
   const { ideConfigs, activeIdeId, setActiveIDE, setIDEConfigs, setLoading } = useIDEStore(
@@ -38,7 +39,12 @@ export function useIDEConfig() {
           hasInitialized.current = true;
         }
       } catch (error) {
-        console.error('Failed to load IDE configs:', error);
+        logService.error(
+          LOG_MODULES.SYSTEM,
+          LOG_CODES.IDE_CONFIG_NOT_FOUND,
+          'Failed to load IDE configs',
+          { error: error instanceof Error ? error.message : String(error) }
+        );
         setIDEConfigs(DEFAULT_IDE_CONFIGS);
         if (!hasInitialized.current) {
           setActiveIDE(DEFAULT_IDE_ID);

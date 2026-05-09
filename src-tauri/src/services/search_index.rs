@@ -9,6 +9,7 @@ use crate::commands::project::{get_active_ide_project_scope_name, load_projects}
 use crate::paths::get_library_path;
 use crate::parsers::SkillFrontmatter;
 use crate::utils::fs::count_files_usize;
+use crate::utils::logger::{log, LogLevel, LogSource};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchScope {
@@ -100,23 +101,63 @@ impl SearchIndex {
 
         // Index library skills
         let library_count = self.index_library_skills();
-        println!("[SearchIndex] Indexed {} library skills", library_count);
+        log(
+            LogLevel::Info,
+            "SYSTEM",
+            "INDEX_LIBRARY_COMPLETE",
+            &format!("Indexed {} library skills", library_count),
+            LogSource::Backend,
+            None,
+            None,
+        );
 
         // Index global skills
         let global_count = self.index_global_skills();
-        println!("[SearchIndex] Indexed {} global skills", global_count);
+        log(
+            LogLevel::Info,
+            "SYSTEM",
+            "INDEX_GLOBAL_COMPLETE",
+            &format!("Indexed {} global skills", global_count),
+            LogSource::Backend,
+            None,
+            None,
+        );
 
         // Index project skills
         let project_count = self.index_project_skills();
-        println!("[SearchIndex] Indexed {} project skills", project_count);
+        log(
+            LogLevel::Info,
+            "SYSTEM",
+            "INDEX_PROJECT_COMPLETE",
+            &format!("Indexed {} project skills", project_count),
+            LogSource::Backend,
+            None,
+            None,
+        );
 
-        println!("[SearchIndex] Total documents: {}, Total terms: {}", self.documents.len(), self.index.len());
+        log(
+            LogLevel::Info,
+            "SYSTEM",
+            "INDEX_BUILD_COMPLETE",
+            &format!("Total documents: {}, Total terms: {}", self.documents.len(), self.index.len()),
+            LogSource::Backend,
+            None,
+            None,
+        );
     }
 
     fn index_library_skills(&mut self) -> usize {
         let library_path = get_library_path();
         if !library_path.exists() {
-            println!("[SearchIndex] Library path does not exist: {:?}", library_path);
+            log(
+                LogLevel::Debug,
+                "SYSTEM",
+                "INDEX_LIBRARY_PATH_MISSING",
+                &format!("Library path does not exist: {:?}", library_path),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return 0;
         }
 
@@ -164,11 +205,27 @@ impl SearchIndex {
     fn index_global_skills(&mut self) -> usize {
         let global_path = get_global_skills_path();
         if !global_path.exists() {
-            println!("[SearchIndex] Global skills path does not exist: {:?}", global_path);
+            log(
+                LogLevel::Debug,
+                "SYSTEM",
+                "INDEX_GLOBAL_PATH_MISSING",
+                &format!("Global skills path does not exist: {:?}", global_path),
+                LogSource::Backend,
+                None,
+                None,
+            );
             return 0;
         }
 
-        println!("[SearchIndex] Global skills path: {:?}", global_path);
+        log(
+            LogLevel::Debug,
+            "SYSTEM",
+            "INDEX_GLOBAL_PATH",
+            &format!("Global skills path: {:?}", global_path),
+            LogSource::Backend,
+            None,
+            None,
+        );
         let mut count = 0;
 
         if let Ok(entries) = fs::read_dir(&global_path) {

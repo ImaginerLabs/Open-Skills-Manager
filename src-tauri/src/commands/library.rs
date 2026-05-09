@@ -12,6 +12,7 @@ use crate::paths;
 use crate::storage::service::get_storage;
 use crate::utils::fs::{copy_dir_all, count_files, has_resources, is_symlink as is_symlink_dir};
 use crate::utils::logger::{log, LogLevel, LogSource};
+use serde_json::json;
 // Re-export Group and Category from storage types for IPC commands
 pub use crate::storage::{Group, Category, SkillEntry};
 
@@ -212,7 +213,15 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                     if library_data.deleted_skills.contains_key(&folder_name) {
                         // Clean up zombie folder that was restored by iCloud sync
                         if let Err(e) = fs::remove_dir_all(&path) {
-                            eprintln!("Warning: Failed to remove tombstoned folder {}: {}", folder_name, e);
+                            log(
+                                LogLevel::Warn,
+                                "LIBRARY",
+                                "TOMBSTONE_CLEANUP_FAILED",
+                                &format!("Failed to remove tombstoned folder {}: {}", folder_name, e),
+                                LogSource::Backend,
+                                Some(json!({ "folder_name": folder_name, "error": e.to_string() })),
+                                None,
+                            );
                         }
                         continue;
                     }
@@ -236,7 +245,15 @@ pub fn library_list() -> IpcResult<Vec<LibrarySkill>> {
                         };
                         // Add to storage
                         if let Err(e) = get_storage().add_skill(new_entry) {
-                            eprintln!("Warning: Failed to add skill to storage: {}", e);
+                            log(
+                                LogLevel::Warn,
+                                "LIBRARY",
+                                "STORAGE_ADD_FAILED",
+                                &format!("Failed to add skill to storage: {}", e),
+                                LogSource::Backend,
+                                Some(json!({ "skill_id": new_id, "error": e.to_string() })),
+                                None,
+                            );
                         }
                         (new_id, None, None, now.clone())
                     };
@@ -395,7 +412,15 @@ pub fn library_delete(id: String) -> IpcResult<()> {
 
     // Remove from storage layer (handles metadata removal, tombstone creation, and sync)
     if let Err(e) = crate::storage::service::get_storage().remove_skill(&folder_name) {
-        eprintln!("Warning: Failed to remove skill from storage: {}", e);
+        log(
+            LogLevel::Warn,
+            "LIBRARY",
+            "STORAGE_REMOVE_FAILED",
+            &format!("Failed to remove skill from storage: {}", e),
+            LogSource::Backend,
+            Some(json!({ "folder_name": folder_name, "error": e.to_string() })),
+            None,
+        );
     }
 
     log(
@@ -516,7 +541,15 @@ pub fn library_import(path: String, category_id: Option<String>, group_id: Optio
         imported_at,
         updated_at: None,
     }) {
-        eprintln!("Warning: Failed to save skill metadata after import: {}", e);
+        log(
+            LogLevel::Warn,
+            "LIBRARY",
+            "METADATA_SAVE_FAILED",
+            &format!("Failed to save skill metadata after import: {}", e),
+            LogSource::Backend,
+            Some(json!({ "folder_name": folder_name, "error": e.to_string() })),
+            None,
+        );
     }
 
     // Log successful import
@@ -674,7 +707,15 @@ fn import_from_zip(zip_path: &Path, category_id: Option<String>, group_id: Optio
         imported_at,
         updated_at: None,
     }) {
-        eprintln!("Warning: Failed to save skill metadata after zip import: {}", e);
+        log(
+            LogLevel::Warn,
+            "LIBRARY",
+            "METADATA_SAVE_FAILED",
+            &format!("Failed to save skill metadata after zip import: {}", e),
+            LogSource::Backend,
+            Some(json!({ "folder_name": folder_name, "error": e.to_string() })),
+            None,
+        );
     }
 
     IpcResult::success(skill)

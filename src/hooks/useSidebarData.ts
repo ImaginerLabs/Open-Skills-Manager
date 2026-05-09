@@ -6,6 +6,7 @@ import { libraryService } from '../services/libraryService';
 import { globalService } from '../services/globalService';
 import { projectService } from '../services/projectService';
 import { ideService } from '../services/ideService';
+import { logService, LOG_MODULES, LOG_CODES } from '../services/logService';
 
 export interface UseSidebarDataResult {
   refreshAll: (ideId?: string) => Promise<void>;
@@ -39,7 +40,12 @@ export function useSidebarData(): UseSidebarDataResult {
         setGroups(groupsResult.data);
       }
     } catch (error) {
-      console.error('[useSidebarData] Failed to refresh library:', error);
+      logService.error(
+        LOG_MODULES.LIBRARY,
+        LOG_CODES.SIDEBAR_REFRESH_FAILED,
+        'Failed to refresh library',
+        { error: error instanceof Error ? error.message : String(error) }
+      );
     }
   }, [setLibrarySkills, setGroups]);
 
@@ -52,7 +58,12 @@ export function useSidebarData(): UseSidebarDataResult {
         setGlobalSkills(result.data);
       }
     } catch (error) {
-      console.error('[useSidebarData] Failed to refresh global:', error);
+      logService.error(
+        LOG_MODULES.GLOBAL,
+        LOG_CODES.SIDEBAR_REFRESH_FAILED,
+        'Failed to refresh global',
+        { ideId, error: error instanceof Error ? error.message : String(error) }
+      );
     }
   }, [setGlobalSkills]);
 
@@ -65,7 +76,12 @@ export function useSidebarData(): UseSidebarDataResult {
         setProjects(result.data);
       }
     } catch (error) {
-      console.error('[useSidebarData] Failed to refresh projects:', error);
+      logService.error(
+        LOG_MODULES.PROJECT,
+        LOG_CODES.SIDEBAR_REFRESH_FAILED,
+        'Failed to refresh projects',
+        { ideId, error: error instanceof Error ? error.message : String(error) }
+      );
     }
   }, [setProjects]);
 

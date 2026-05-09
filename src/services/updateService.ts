@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { logService, LOG_MODULES, LOG_CODES } from './logService';
 
 export interface UpdateInfo {
   available: boolean;
@@ -40,7 +41,12 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 
     return null;
   } catch (error) {
-    console.error('Failed to check for updates:', error);
+    logService.error(
+      LOG_MODULES.UPDATE,
+      LOG_CODES.UPDATE_CHECK_FAILED,
+      'Failed to check for updates',
+      { error: error instanceof Error ? error.message : String(error) }
+    );
     throw error;
   }
 }

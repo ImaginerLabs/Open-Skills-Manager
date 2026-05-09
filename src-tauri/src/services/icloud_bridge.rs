@@ -4,6 +4,7 @@ use crate::paths::{
     get_library_path, get_metadata_path,
 };
 use crate::storage::{ConflictRecord, ConflictType, SkillInfo, ConflictStore};
+use crate::utils::logger::{log, LogLevel, LogSource};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
@@ -509,7 +510,15 @@ pub fn get_conflicts() -> Vec<ConflictInfo> {
 
     if should_detect {
         if let Err(e) = detect_conflicts() {
-            println!("Warning: Failed to detect conflicts: {}", e);
+            log(
+                LogLevel::Warn,
+                "SYNC",
+                "SYNC_CONFLICT_DETECTION_FAILED",
+                &format!("Failed to detect conflicts: {}", e),
+                LogSource::Backend,
+                None,
+                None,
+            );
         }
         if let Ok(mut last_detection) = LAST_CONFLICT_DETECTION.lock() {
             *last_detection = Some(SystemTime::now());

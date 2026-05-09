@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { storageService, type SyncState, type SyncStatusInfo } from '../services/storageService';
 import { icloudService } from '../services/icloudService';
+import { logService, LOG_MODULES } from '../services/logService';
 
 export interface UseIcloudSyncResult {
   status: 'synced' | 'syncing' | 'pending' | 'offline' | 'error';
@@ -90,7 +91,9 @@ export function useIcloudSync(): UseIcloudSyncResult {
 
     // Use the event from syncStatusInfo which is computed by backend
     if (syncStatusInfo?.event) {
-      console.log('[useIcloudSync] event type:', syncStatusInfo.event.type);
+      logService.info(LOG_MODULES.SYNC, 'SYNC_EVENT', 'Sync event received', {
+        type: syncStatusInfo.event.type,
+      });
       switch (syncStatusInfo.event.type) {
         case 'syncCompleted':
           return 'synced';

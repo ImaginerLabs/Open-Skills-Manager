@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { storageService, type Settings as BackendSettings } from '../services/storageService';
+import { logService, LOG_MODULES, LOG_CODES } from '../services/logService';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type Language = 'auto' | 'en' | 'zh-CN';
@@ -72,7 +73,12 @@ export const useSettingsStore = create<SettingsStore>()(
               state.defaultImportCategory
             )
           ).catch((error) => {
-            console.error('Failed to sync theme with backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_SAVE_FAILED,
+              'Failed to sync theme with backend',
+              { theme, error: error instanceof Error ? error.message : String(error) }
+            );
           });
         },
         setLanguage: (language) => {
@@ -87,7 +93,12 @@ export const useSettingsStore = create<SettingsStore>()(
               state.defaultImportCategory
             )
           ).catch((error) => {
-            console.error('Failed to sync language with backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_SAVE_FAILED,
+              'Failed to sync language with backend',
+              { language, error: error instanceof Error ? error.message : String(error) }
+            );
           });
         },
         setAutoUpdateCheck: (autoUpdateCheck) => {
@@ -102,7 +113,12 @@ export const useSettingsStore = create<SettingsStore>()(
               state.defaultImportCategory
             )
           ).catch((error) => {
-            console.error('Failed to sync autoUpdateCheck with backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_SAVE_FAILED,
+              'Failed to sync autoUpdateCheck with backend',
+              { autoUpdateCheck, error: error instanceof Error ? error.message : String(error) }
+            );
           });
         },
         setAutoRefreshInterval: (autoRefreshInterval) => {
@@ -117,7 +133,12 @@ export const useSettingsStore = create<SettingsStore>()(
               state.defaultImportCategory
             )
           ).catch((error) => {
-            console.error('Failed to sync autoRefreshInterval with backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_SAVE_FAILED,
+              'Failed to sync autoRefreshInterval with backend',
+              { autoRefreshInterval, error: error instanceof Error ? error.message : String(error) }
+            );
           });
         },
         setDefaultImportCategory: (defaultImportCategory) => {
@@ -132,7 +153,12 @@ export const useSettingsStore = create<SettingsStore>()(
               defaultImportCategory
             )
           ).catch((error) => {
-            console.error('Failed to sync defaultImportCategory with backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_SAVE_FAILED,
+              'Failed to sync defaultImportCategory with backend',
+              { defaultImportCategory, error: error instanceof Error ? error.message : String(error) }
+            );
           });
         },
         initializeFromBackend: async () => {
@@ -148,7 +174,12 @@ export const useSettingsStore = create<SettingsStore>()(
               _initialized: true,
             });
           } catch (error) {
-            console.error('Failed to initialize settings from backend:', error);
+            logService.error(
+              LOG_MODULES.SYSTEM,
+              LOG_CODES.CONFIG_LOAD_FAILED,
+              'Failed to initialize settings from backend',
+              { error: error instanceof Error ? error.message : String(error) }
+            );
           }
         },
 

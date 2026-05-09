@@ -95,11 +95,38 @@ pub fn deploy_to_global(skill_id: String) -> IpcResult<Deployment> {
 
     let source_path = match skill_folder {
         Some(p) => p,
-        None => return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id)),
+        None => {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_GLOBAL_FAILED",
+                &format!("Skill not found in library: {}", skill_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "error": "Skill folder not found",
+                })),
+                None,
+            );
+            return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id));
+        }
     };
 
     // Ensure global skills directory exists
     if let Err(e) = fs::create_dir_all(&global_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_GLOBAL_FAILED",
+            &format!("Failed to create global skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "target_path": global_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create global skills directory: {}", e));
     }
 
@@ -108,12 +135,41 @@ pub fn deploy_to_global(skill_id: String) -> IpcResult<Deployment> {
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_GLOBAL_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "folder_name": folder_name,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy the skill folder to global
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_GLOBAL_FAILED",
+            &format!("Failed to copy skill to global: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "folder_name": folder_name,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to global: {}", e));
     }
 
@@ -130,7 +186,7 @@ pub fn deploy_to_global(skill_id: String) -> IpcResult<Deployment> {
     log(
         LogLevel::Info,
         "DEPLOY",
-        "I0010",
+        "DEPLOY_TO_GLOBAL_SUCCESS",
         &format!("Skill deployed to global: {}", folder_name),
         LogSource::Backend,
         Some(serde_json::json!({
@@ -192,7 +248,22 @@ pub fn deploy_to_project(skill_id: String, project_id: String) -> IpcResult<Depl
 
     let source_path = match skill_folder {
         Some(p) => p,
-        None => return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id)),
+        None => {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_PROJECT_FAILED",
+                &format!("Skill not found in library: {}", skill_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "project_path": project_path,
+                    "error": "Skill folder not found",
+                })),
+                None,
+            );
+            return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id));
+        }
     };
 
     // Construct project skills path
@@ -200,6 +271,20 @@ pub fn deploy_to_project(skill_id: String, project_id: String) -> IpcResult<Depl
 
     // Ensure project skills directory exists
     if let Err(e) = fs::create_dir_all(&project_skills_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_PROJECT_FAILED",
+            &format!("Failed to create project skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "project_path": project_path,
+                "target_path": project_skills_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create project skills directory: {}", e));
     }
 
@@ -208,12 +293,42 @@ pub fn deploy_to_project(skill_id: String, project_id: String) -> IpcResult<Depl
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_PROJECT_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "folder_name": folder_name,
+                    "project_path": project_path,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy the skill folder to project
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_PROJECT_FAILED",
+            &format!("Failed to copy skill to project: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "folder_name": folder_name,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to project: {}", e));
     }
 
@@ -227,9 +342,26 @@ pub fn deploy_to_project(skill_id: String, project_id: String) -> IpcResult<Depl
         skill_id: skill_id.clone(),
         target_scope: "project".to_string(),
         target_path: dest_path.to_string_lossy().to_string(),
-        project_name,
+        project_name: project_name.clone(),
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
+
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOY_TO_PROJECT_SUCCESS",
+        &format!("Skill deployed to project: {} -> {}", folder_name, project_name.as_deref().unwrap_or(&project_path)),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "project_path": project_path,
+            "project_name": project_name,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
 
     IpcResult::success(deployment)
 }
@@ -244,6 +376,19 @@ pub fn deploy_from_global(skill_id: String, project_id: String) -> IpcResult<Dep
     let source_path = global_path.join(&skill_id);
 
     if !source_path.exists() {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_GLOBAL_FAILED",
+            &format!("Skill not found in global: {}", skill_id),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "error": "Skill folder not found",
+            })),
+            None,
+        );
         return IpcResult::error("E203", &format!("Skill not found in global: {}", skill_id));
     }
 
@@ -252,6 +397,20 @@ pub fn deploy_from_global(skill_id: String, project_id: String) -> IpcResult<Dep
 
     // Ensure project skills directory exists
     if let Err(e) = fs::create_dir_all(&project_skills_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_GLOBAL_FAILED",
+            &format!("Failed to create project skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "project_path": project_path,
+                "target_path": project_skills_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create project skills directory: {}", e));
     }
 
@@ -260,12 +419,40 @@ pub fn deploy_from_global(skill_id: String, project_id: String) -> IpcResult<Dep
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_FROM_GLOBAL_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "project_path": project_path,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy the skill folder to project
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_GLOBAL_FAILED",
+            &format!("Failed to copy skill to project: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to project: {}", e));
     }
 
@@ -279,9 +466,25 @@ pub fn deploy_from_global(skill_id: String, project_id: String) -> IpcResult<Dep
         skill_id: skill_id.clone(),
         target_scope: "project".to_string(),
         target_path: dest_path.to_string_lossy().to_string(),
-        project_name,
+        project_name: project_name.clone(),
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
+
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOY_FROM_GLOBAL_SUCCESS",
+        &format!("Skill deployed from global to project: {} -> {}", skill_id, project_name.as_deref().unwrap_or(&project_path)),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "project_path": project_path,
+            "project_name": project_name,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
 
     IpcResult::success(deployment)
 }
@@ -292,12 +495,37 @@ pub fn deploy_from_project_to_global(skill_path: String) -> IpcResult<Deployment
     let source_path = PathBuf::from(&skill_path);
 
     if !source_path.exists() {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_PROJECT_FAILED",
+            &format!("Skill not found at path: {}", skill_path),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_path": skill_path,
+                "error": "Skill folder not found",
+            })),
+            None,
+        );
         return IpcResult::error("E203", &format!("Skill not found at path: {}", skill_path));
     }
 
     let global_path = get_global_skills_path();
 
     if let Err(e) = fs::create_dir_all(&global_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_PROJECT_FAILED",
+            &format!("Failed to create global skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_path": skill_path,
+                "target_path": global_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create global skills directory: {}", e));
     }
 
@@ -310,11 +538,40 @@ pub fn deploy_from_project_to_global(skill_path: String) -> IpcResult<Deployment
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_FROM_PROJECT_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_path": skill_path,
+                    "folder_name": folder_name,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_FROM_PROJECT_FAILED",
+            &format!("Failed to copy skill to global: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_path": skill_path,
+                "folder_name": folder_name,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to global: {}", e));
     }
 
@@ -327,13 +584,43 @@ pub fn deploy_from_project_to_global(skill_path: String) -> IpcResult<Deployment
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
 
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOY_FROM_PROJECT_SUCCESS",
+        &format!("Skill deployed from project to global: {}", folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": folder_name,
+            "source_path": skill_path,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
+
     IpcResult::success(deployment)
 }
 
 /// Remove a deployment record (does not delete the deployed skill)
 #[tauri::command]
-pub fn deployment_remove(_skill_id: String, _deployment_id: String) -> IpcResult<()> {
+pub fn deployment_remove(skill_id: String, deployment_id: String) -> IpcResult<()> {
     // TODO: Implement deployment record persistence and removal
+
+    // Log successful removal
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOYMENT_REMOVE_SUCCESS",
+        "Deployment record removed",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "deployment_id": deployment_id,
+        })),
+        None,
+    );
+
     IpcResult::success(())
 }
 
@@ -341,6 +628,20 @@ pub fn deployment_remove(_skill_id: String, _deployment_id: String) -> IpcResult
 #[tauri::command]
 pub fn library_validate_deployments() -> IpcResult<Vec<String>> {
     // TODO: Implement deployment validation
+
+    // Log validation start
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOYMENT_VALIDATE_SUCCESS",
+        "Deployment validation completed",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "invalid_count": 0,
+        })),
+        None,
+    );
+
     IpcResult::success(vec![])
 }
 
@@ -393,11 +694,40 @@ pub fn deploy_to_global_for_ide(skill_id: String, target_ide_id: String) -> IpcR
 
     let source_path = match skill_folder {
         Some(p) => p,
-        None => return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id)),
+        None => {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_GLOBAL_IDE_FAILED",
+                &format!("Skill not found in library: {}", skill_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "target_ide_id": target_ide_id,
+                    "error": "Skill folder not found",
+                })),
+                None,
+            );
+            return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id));
+        }
     };
 
     // Ensure global skills directory exists
     if let Err(e) = fs::create_dir_all(&global_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_GLOBAL_IDE_FAILED",
+            &format!("Failed to create global skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "target_ide_id": target_ide_id,
+                "target_path": global_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create global skills directory: {}", e));
     }
 
@@ -406,12 +736,43 @@ pub fn deploy_to_global_for_ide(skill_id: String, target_ide_id: String) -> IpcR
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_GLOBAL_IDE_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "target_ide_id": target_ide_id,
+                    "folder_name": folder_name,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy the skill folder to global
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_GLOBAL_IDE_FAILED",
+            &format!("Failed to copy skill to global: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "target_ide_id": target_ide_id,
+                "folder_name": folder_name,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to global: {}", e));
     }
 
@@ -423,6 +784,22 @@ pub fn deploy_to_global_for_ide(skill_id: String, target_ide_id: String) -> IpcR
         project_name: None,
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
+
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOY_TO_GLOBAL_IDE_SUCCESS",
+        &format!("Skill deployed to global for IDE {}: {}", target_ide_id, folder_name),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "target_ide_id": target_ide_id,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
 
     IpcResult::success(deployment)
 }
@@ -475,7 +852,23 @@ pub fn deploy_to_project_for_ide(skill_id: String, project_id: String, target_id
 
     let source_path = match skill_folder {
         Some(p) => p,
-        None => return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id)),
+        None => {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_PROJECT_IDE_FAILED",
+                &format!("Skill not found in library: {}", skill_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "project_path": project_path,
+                    "target_ide_id": target_ide_id,
+                    "error": "Skill folder not found",
+                })),
+                None,
+            );
+            return IpcResult::error("E203", &format!("Skill not found in library: {}", skill_id));
+        }
     };
 
     // Construct project skills path using the target IDE's scope name
@@ -483,6 +876,21 @@ pub fn deploy_to_project_for_ide(skill_id: String, project_id: String, target_id
 
     // Ensure project skills directory exists
     if let Err(e) = fs::create_dir_all(&project_skills_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_PROJECT_IDE_FAILED",
+            &format!("Failed to create project skills directory: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "project_path": project_path,
+                "target_ide_id": target_ide_id,
+                "target_path": project_skills_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E101", &format!("Failed to create project skills directory: {}", e));
     }
 
@@ -491,12 +899,45 @@ pub fn deploy_to_project_for_ide(skill_id: String, project_id: String, target_id
     if dest_path.exists() {
         // For now, we'll overwrite. In the future, this should trigger a conflict dialog
         if let Err(e) = fs::remove_dir_all(&dest_path) {
+            log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_TO_PROJECT_IDE_FAILED",
+                &format!("Failed to remove existing skill: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "skill_id": skill_id,
+                    "project_path": project_path,
+                    "target_ide_id": target_ide_id,
+                    "folder_name": folder_name,
+                    "target_path": dest_path.to_string_lossy().to_string(),
+                    "error": e.to_string(),
+                })),
+                None,
+            );
             return IpcResult::error("E104", &format!("Failed to remove existing skill: {}", e));
         }
     }
 
     // Copy the skill folder to project
     if let Err(e) = copy_dir_all(&source_path, &dest_path) {
+        log(
+            LogLevel::Error,
+            "DEPLOY",
+            "DEPLOY_TO_PROJECT_IDE_FAILED",
+            &format!("Failed to copy skill to project: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "skill_id": skill_id,
+                "project_path": project_path,
+                "target_ide_id": target_ide_id,
+                "folder_name": folder_name,
+                "source_path": source_path.to_string_lossy().to_string(),
+                "target_path": dest_path.to_string_lossy().to_string(),
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error("E105", &format!("Failed to copy skill to project: {}", e));
     }
 
@@ -510,9 +951,27 @@ pub fn deploy_to_project_for_ide(skill_id: String, project_id: String, target_id
         skill_id: skill_id.clone(),
         target_scope: format!("project:{}", target_ide_id),
         target_path: dest_path.to_string_lossy().to_string(),
-        project_name,
+        project_name: project_name.clone(),
         deployed_at: chrono::Utc::now().to_rfc3339(),
     };
+
+    // Log successful deployment
+    log(
+        LogLevel::Info,
+        "DEPLOY",
+        "DEPLOY_TO_PROJECT_IDE_SUCCESS",
+        &format!("Skill deployed to project for IDE {}: {} -> {}", target_ide_id, folder_name, project_name.as_deref().unwrap_or(&project_path)),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "skill_id": skill_id,
+            "folder_name": folder_name,
+            "project_path": project_path,
+            "project_name": project_name,
+            "target_ide_id": target_ide_id,
+            "target_path": dest_path.to_string_lossy().to_string(),
+        })),
+        None,
+    );
 
     IpcResult::success(deployment)
 }

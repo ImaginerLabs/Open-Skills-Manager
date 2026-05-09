@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
+import { logService, LOG_MODULES } from '../services/logService';
 
 export interface Project {
   id: string;
@@ -92,7 +93,9 @@ export const useProjectStore = create<ProjectStore>()(
             };
           }),
         selectProject: (project) => {
-          console.log('[projectStore] selectProject:', project?.id ?? 'null');
+          logService.debug(LOG_MODULES.PROJECT, 'PROJECT_SELECT', 'selectProject', {
+            projectId: project?.id ?? 'null',
+          });
           set({ selectedProject: project });
         },
         setProjectSkills: (projectId, skills) =>

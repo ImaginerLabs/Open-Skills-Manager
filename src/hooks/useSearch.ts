@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useUIStore, GroupedSearchResults, SearchResult } from '@/stores/uiStore';
 import { searchService } from '@/services/searchService';
+import { logService, LOG_MODULES, LOG_CODES } from '@/services/logService';
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
@@ -44,14 +45,17 @@ export function useSearch(): UseSearchResult {
   const abortController = useRef<AbortController | null>(null);
 
   const performSearch = useCallback(async (query: string) => {
-    console.log('[useSearch] performSearch called with query:', query);
+    logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_PERFORM', 'Performing search', { query });
 
     if (abortController.current) {
       abortController.current.abort();
     }
 
     if (query.length < MIN_QUERY_LENGTH) {
-      console.log('[useSearch] Query too short, clearing results');
+      logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_QUERY_SHORT', 'Query too short, clearing results', {
+        length: query.length,
+        minLength: MIN_QUERY_LENGTH,
+      });
       searchActions.setSearchResults(null);
       searchActions.setSearching(false);
       return;
@@ -77,23 +81,40 @@ export function useSearch(): UseSearchResult {
       searchOptions.categoryId = searchState.selectedCategoryId;
     }
 
-    console.log('[useSearch] Calling searchService.search with options:', searchOptions);
+    logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_OPTIONS', 'Search options', searchOptions);
 
     try {
       const result = await searchService.search(searchOptions);
 
-      console.log('[useSearch] Search result:', result);
+      logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_RAW_RESULT', 'Raw search result', {
+        success: result.success,
+        count: result.success ? result.data.length : undefined,
+      });
 
       if (result.success) {
         const grouped = groupResults(result.data);
-        console.log('[useSearch] Grouped results:', grouped);
+        logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_GROUPED', 'Grouped results', {
+          libraryCount: grouped.library.length,
+          globalCount: grouped.global.length,
+          projectCount: Object.keys(grouped.projects).length,
+        });
         searchActions.setSearchResults(grouped);
       } else {
-        console.error('[useSearch] Search failed:', result.error);
+        logService.error(
+          LOG_MODULES.SYSTEM,
+          LOG_CODES.SEARCH_FAILED,
+          'Search failed',
+          { error: result.error }
+        );
         searchActions.setSearchResults(null);
       }
     } catch (error) {
-      console.error('[useSearch] Search exception:', error);
+      logService.error(
+        LOG_MODULES.SYSTEM,
+        LOG_CODES.SEARCH_FAILED,
+        'Search exception',
+        { error: error instanceof Error ? error.message : String(error) }
+      );
       if (!abortController.current?.signal.aborted) {
         searchActions.setSearchResults(null);
       }

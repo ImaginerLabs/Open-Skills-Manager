@@ -7,6 +7,7 @@ import {
 } from '../services/updateService';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useUIStore } from '../stores/uiStore';
+import { logService, LOG_MODULES, LOG_CODES } from '../services/logService';
 
 export interface UseAutoUpdateResult {
   appName: string;
@@ -62,7 +63,12 @@ export function useAutoUpdate(): UseAutoUpdateResult {
       return info;
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : '检查更新失败';
-      console.error('Update check failed:', e);
+      logService.error(
+        LOG_MODULES.UPDATE,
+        LOG_CODES.UPDATE_CHECK_FAILED,
+        'Update check failed',
+        { error: errorMessage }
+      );
       if (showSuccessToast) {
         setError(errorMessage);
         showToast('error', errorMessage);
@@ -113,6 +119,12 @@ export function useAutoUpdate(): UseAutoUpdateResult {
           // App will restart automatically, no need to update state
         } catch (e) {
           const errorMessage = e instanceof Error ? e.message : '下载更新失败';
+          logService.error(
+            LOG_MODULES.UPDATE,
+            LOG_CODES.UPDATE_DOWNLOAD_FAILED,
+            'Update download failed',
+            { error: errorMessage }
+          );
           setError(errorMessage);
           showToast('error', errorMessage);
           setIsDownloading(false);

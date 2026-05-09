@@ -4,6 +4,7 @@ import { useSelectionStore } from '@/stores/selectionStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { ALL_GROUP_ID } from '@/components/features/CategoryManager';
+import { logService, LOG_MODULES, LOG_CODES } from '@/services/logService';
 
 /**
  * 统一选择逻辑 Hook
@@ -59,7 +60,10 @@ export function useSelection() {
    */
   const handleSelectLibrary = useCallback(
     (groupId?: string, categoryId?: string) => {
-      console.log('[useSelection] handleSelectLibrary:', groupId, categoryId);
+      logService.debug(LOG_MODULES.SYSTEM, LOG_CODES.SELECTION_DEBUG, 'handleSelectLibrary', {
+        groupId,
+        categoryId,
+      });
 
       // 更新统一选择状态
       selectLibrary(groupId, categoryId);
@@ -84,7 +88,7 @@ export function useSelection() {
    */
   const handleSelectGlobal = useCallback(
     () => {
-      console.log('[useSelection] handleSelectGlobal');
+      logService.debug(LOG_MODULES.SYSTEM, LOG_CODES.SELECTION_DEBUG, 'handleSelectGlobal', {});
 
       // 更新统一选择状态
       selectGlobal();
@@ -105,7 +109,9 @@ export function useSelection() {
    */
   const handleSelectProject = useCallback(
     (projectId: string | null) => {
-      console.log('[useSelection] handleSelectProject:', projectId ?? 'null');
+      logService.debug(LOG_MODULES.SYSTEM, LOG_CODES.SELECTION_DEBUG, 'handleSelectProject', {
+        projectId: projectId ?? 'null',
+      });
 
       if (!projectId) {
         // 清除选择
@@ -117,7 +123,12 @@ export function useSelection() {
       // 查找项目
       const project = projects.find((p) => p.id === projectId);
       if (!project) {
-        console.warn('[useSelection] Project not found:', projectId);
+        logService.warn(
+          LOG_MODULES.PROJECT,
+          LOG_CODES.SELECTION_PROJECT_NOT_FOUND,
+          'Project not found',
+          { projectId }
+        );
         return;
       }
 
@@ -146,7 +157,7 @@ export function useSelection() {
         source === 'none' &&
         location.pathname.startsWith('/library')
       ) {
-        console.log('[useSelection] ensureDefaultSelection: selecting All group');
+        logService.debug(LOG_MODULES.SYSTEM, LOG_CODES.SELECTION_DEBUG, 'ensureDefaultSelection: selecting All group', {});
         handleSelectLibrary(ALL_GROUP_ID);
       }
     },
@@ -159,7 +170,7 @@ export function useSelection() {
    */
   const handleClearSelection = useCallback(
     () => {
-      console.log('[useSelection] handleClearSelection');
+      logService.debug(LOG_MODULES.SYSTEM, LOG_CODES.SELECTION_DEBUG, 'handleClearSelection', {});
       clearSelection();
       selectGroup(undefined);
       selectProject(null);

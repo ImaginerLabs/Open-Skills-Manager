@@ -5,6 +5,7 @@ use crate::storage::Project;
 use crate::services::skill::{SkillService, ScanOptions};
 use crate::utils::logger::{log, LogLevel, LogSource};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 
@@ -160,7 +161,17 @@ pub fn project_list() -> IpcResult<Vec<Project>> {
 
     // Save updated status
     if let Err(e) = save_projects(&updated_projects) {
-        eprintln!("Warning: Failed to save projects status: {}", e);
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0007",
+            &format!("Failed to save projects status: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "error": e.to_string(),
+            })),
+            None,
+        );
     }
 
     IpcResult::success(updated_projects)
@@ -351,15 +362,40 @@ pub fn project_skills(project_id: String) -> IpcResult<Vec<ProjectSkill>> {
     let project = projects.iter().find(|p| p.id == project_id);
     let project = match project {
         Some(p) => p,
-        None => return IpcResult::error(
-            AppError::E003NotFound(format!("Project: {}", project_id)).code(),
-            &format!("Project not found: {}", project_id)
-        ),
+        None => {
+            log(
+                LogLevel::Error,
+                "PROJECT",
+                "E0008",
+                &format!("Project not found: {}", project_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                })),
+                None,
+            );
+            return IpcResult::error(
+                AppError::E003NotFound(format!("Project: {}", project_id)).code(),
+                &format!("Project not found: {}", project_id)
+            );
+        }
     };
 
     let project_path = PathBuf::from(&project.path);
 
     if !project_path.exists() {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0009",
+            &format!("Project path no longer exists: {}", project.path),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "project_path": project.path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E100FileNotFound(project.path.clone()).code(),
             &format!("Project path no longer exists: {}", project.path)
@@ -374,7 +410,18 @@ pub fn project_skills(project_id: String) -> IpcResult<Vec<ProjectSkill>> {
         p.last_accessed = Some(now);
         p.skill_count = skills.len() as u32;
         if let Err(e) = save_projects(&projects) {
-            eprintln!("Warning: Failed to update last_accessed and skill_count: {}", e);
+            log(
+                LogLevel::Error,
+                "PROJECT",
+                "E0010",
+                &format!("Failed to update project access info: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "error": e.to_string(),
+                })),
+                None,
+            );
         }
     }
 
@@ -386,7 +433,7 @@ pub fn project_refresh(project_id: Option<String>) -> IpcResult<()> {
     let mut projects = load_projects();
     let now = chrono::Utc::now().to_rfc3339();
 
-    match project_id {
+    match project_id.clone() {
         Some(id) => {
             // Refresh specific project
             if let Some(project) = projects.iter_mut().find(|p| p.id == id) {
@@ -396,11 +443,22 @@ pub fn project_refresh(project_id: Option<String>) -> IpcResult<()> {
                 if project.exists {
                     project.skill_count = count_skills_in_project(&path);
                     project.last_accessed = Some(now.clone());
-                    project.last_scanned_at = Some(now);
+                    project.last_scanned_at = Some(now.clone());
                 } else {
                     project.skill_count = 0;
                 }
             } else {
+                log(
+                    LogLevel::Error,
+                    "PROJECT",
+                    "E0011",
+                    &format!("Project not found for refresh: {}", id),
+                    LogSource::Backend,
+                    Some(serde_json::json!({
+                        "project_id": id,
+                    })),
+                    None,
+                );
                 return IpcResult::error(
                     AppError::E003NotFound(format!("Project: {}", id)).code(),
                     &format!("Project not found: {}", id)
@@ -425,11 +483,35 @@ pub fn project_refresh(project_id: Option<String>) -> IpcResult<()> {
     }
 
     if let Err(e) = save_projects(&projects) {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0012",
+            &format!("Failed to save projects after refresh: {}", e),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "error": e.to_string(),
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E102WriteFailed(format!("Projects: {}", e)).code(),
             &format!("Failed to save projects after refresh: {}", e)
         );
     }
+
+    log(
+        LogLevel::Info,
+        "PROJECT",
+        "I0004",
+        &format!("Project refreshed: {}", project_id.as_deref().unwrap_or("all")),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "project_id": project_id,
+        })),
+        None,
+    );
 
     IpcResult::success(())
 }
@@ -445,15 +527,42 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
     let project = projects.iter().find(|p| p.id == project_id);
     let project = match project {
         Some(p) => p,
-        None => return IpcResult::error(
-            AppError::E003NotFound(format!("Project: {}", project_id)).code(),
-            &format!("Project not found: {}", project_id)
-        ),
+        None => {
+            log(
+                LogLevel::Error,
+                "PROJECT",
+                "E0013",
+                &format!("Project not found: {}", project_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "skill_id": skill_id,
+                })),
+                None,
+            );
+            return IpcResult::error(
+                AppError::E003NotFound(format!("Project: {}", project_id)).code(),
+                &format!("Project not found: {}", project_id)
+            );
+        }
     };
 
     let project_path = PathBuf::from(&project.path);
 
     if !project_path.exists() {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0014",
+            &format!("Project path no longer exists: {}", project.path),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "skill_id": skill_id,
+                "project_path": project.path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E100FileNotFound(project.path.clone()).code(),
             &format!("Project path no longer exists: {}", project.path)
@@ -501,6 +610,18 @@ pub fn project_skill_get(project_id: String, skill_id: String) -> IpcResult<Proj
         }
     }
 
+    log(
+        LogLevel::Error,
+        "PROJECT",
+        "E0015",
+        &format!("Skill not found in project: {}", skill_id),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "project_id": project_id,
+            "skill_id": skill_id,
+        })),
+        None,
+    );
     IpcResult::error(
         AppError::E203SkillNotFound(format!("Skill: {}", skill_id)).code(),
         &format!("Skill not found in project: {}", skill_id)
@@ -514,15 +635,42 @@ pub fn project_skill_delete(project_id: String, skill_id: String) -> IpcResult<(
     let project = projects.iter().find(|p| p.id == project_id);
     let project = match project {
         Some(p) => p,
-        None => return IpcResult::error(
-            AppError::E003NotFound(format!("Project: {}", project_id)).code(),
-            &format!("Project not found: {}", project_id)
-        ),
+        None => {
+            log(
+                LogLevel::Error,
+                "PROJECT",
+                "E0016",
+                &format!("Project not found: {}", project_id),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "skill_id": skill_id,
+                })),
+                None,
+            );
+            return IpcResult::error(
+                AppError::E003NotFound(format!("Project: {}", project_id)).code(),
+                &format!("Project not found: {}", project_id)
+            );
+        }
     };
 
     let project_path = PathBuf::from(&project.path);
 
     if !project_path.exists() {
+        log(
+            LogLevel::Error,
+            "PROJECT",
+            "E0017",
+            &format!("Project path no longer exists: {}", project.path),
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "project_id": project_id,
+                "skill_id": skill_id,
+                "project_path": project.path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E100FileNotFound(project.path.clone()).code(),
             &format!("Project path no longer exists: {}", project.path)
@@ -544,17 +692,57 @@ pub fn project_skill_delete(project_id: String, skill_id: String) -> IpcResult<(
 
                 if is_match {
                     if let Err(e) = fs::remove_dir_all(&path) {
+                        log(
+                            LogLevel::Error,
+                            "PROJECT",
+                            "E0018",
+                            &format!("Failed to delete skill: {}", e),
+                            LogSource::Backend,
+                            Some(serde_json::json!({
+                                "project_id": project_id,
+                                "skill_id": skill_id,
+                                "folder_name": folder_name,
+                                "error": e.to_string(),
+                            })),
+                            None,
+                        );
                         return IpcResult::error(
                             AppError::E104DeleteFailed(format!("Skill: {}", e)).code(),
                             &format!("Failed to delete skill: {}", e)
                         );
                     }
+                    log(
+                        LogLevel::Info,
+                        "PROJECT",
+                        "I0005",
+                        &format!("Skill deleted: {}", folder_name),
+                        LogSource::Backend,
+                        Some(serde_json::json!({
+                            "project_id": project_id,
+                            "skill_id": skill_id,
+                            "folder_name": folder_name,
+                            "project_name": project.name,
+                        })),
+                        None,
+                    );
                     return IpcResult::success(());
                 }
             }
         }
     }
 
+    log(
+        LogLevel::Error,
+        "PROJECT",
+        "E0019",
+        &format!("Skill not found for deletion: {}", skill_id),
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "project_id": project_id,
+            "skill_id": skill_id,
+        })),
+        None,
+    );
     IpcResult::error(
         AppError::E203SkillNotFound(format!("Skill: {}", skill_id)).code(),
         &format!("Skill not found in project: {}", skill_id)
@@ -726,7 +914,15 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
         imported_at: imported_at.clone(),
     });
     if let Err(e) = save_skill_metadata(&persisted_metadata) {
-        eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
+        log(
+            LogLevel::Warn,
+            "PROJECT",
+            "METADATA_SAVE_FAILED",
+            &format!("Failed to save skill metadata after pull: {}", e),
+            LogSource::Backend,
+            Some(json!({ "skill_id": skill_id, "error": e.to_string() })),
+            None,
+        );
     }
 
     log(

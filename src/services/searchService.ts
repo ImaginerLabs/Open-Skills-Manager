@@ -1,4 +1,5 @@
 import { invokeIPC } from './ipcService';
+import { logService, LOG_MODULES } from './logService';
 
 export interface SearchResult {
   id: string;
@@ -20,10 +21,17 @@ export const searchService = {
     projectId?: string;
     categoryId?: string;
   }) => {
-    console.log('[searchService] Invoking IPC search with options:', options);
+    logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_START', 'Invoking IPC search', {
+      scope: options.scope,
+      projectId: options.projectId,
+      categoryId: options.categoryId,
+    });
     // Backend expects { options: SearchOptionsInput }
     const result = await invokeIPC<SearchResult[]>('search', { options });
-    console.log('[searchService] IPC result:', result);
+    logService.debug(LOG_MODULES.SYSTEM, 'SEARCH_RESULT', 'IPC result received', {
+      success: result.success,
+      count: result.success ? result.data.length : 0,
+    });
     return result;
   },
 };

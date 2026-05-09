@@ -3,6 +3,7 @@ use crate::storage::service::get_storage;
 use crate::services::skill::{SkillService, ScanOptions};
 use crate::utils::fs::copy_dir_all;
 use crate::utils::logger::{log, LogLevel, LogSource};
+use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 use crate::paths;
@@ -298,7 +299,15 @@ pub fn global_pull(id: String) -> IpcResult<()> {
             imported_at: imported_at.clone(),
         });
         if let Err(e) = save_skill_metadata(&persisted_metadata) {
-            eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
+            log(
+                LogLevel::Warn,
+                "GLOBAL",
+                "METADATA_SAVE_FAILED",
+                &format!("Failed to save skill metadata after pull: {}", e),
+                LogSource::Backend,
+                Some(json!({ "skill_id": skill_id, "error": e.to_string() })),
+                None,
+            );
         }
 
         log(
@@ -389,7 +398,15 @@ pub fn global_pull(id: String) -> IpcResult<()> {
         imported_at: imported_at.clone(),
     });
     if let Err(e) = save_skill_metadata(&persisted_metadata) {
-        eprintln!("Warning: Failed to save skill metadata after pull: {}", e);
+        log(
+            LogLevel::Warn,
+            "GLOBAL",
+            "METADATA_SAVE_FAILED",
+            &format!("Failed to save skill metadata after pull: {}", e),
+            LogSource::Backend,
+            Some(json!({ "skill_id": skill_id, "error": e.to_string() })),
+            None,
+        );
     }
 
     log(

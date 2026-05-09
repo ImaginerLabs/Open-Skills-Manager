@@ -6,6 +6,7 @@ use super::library::IpcResult;
 use super::AppError;
 use crate::paths;
 use crate::storage::Group;
+use crate::utils::logger::{log, LogLevel, LogSource};
 
 // ============================================================================
 // Config Version
@@ -253,35 +254,123 @@ where
 #[tauri::command]
 pub fn config_get() -> IpcResult<OpenSkillsManagerConfig> {
     match load_config() {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E103ReadFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0001",
+                "Config loaded successfully",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "version": config.version,
+                    "active_ide": config.active_ide_id,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0001",
+                &format!("Failed to load config: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_set(config: OpenSkillsManagerConfig) -> IpcResult<()> {
+    let version = config.version.clone();
+    let active_ide = config.active_ide_id.clone();
+
     match save_config(&config) {
-        Ok(()) => IpcResult::success(()),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(()) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0002",
+                "Config saved successfully",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "version": version,
+                    "active_ide": active_ide,
+                })),
+                None,
+            );
+            IpcResult::success(())
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0002",
+                &format!("Failed to save config: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_set_settings(settings: Settings) -> IpcResult<OpenSkillsManagerConfig> {
+    let settings_summary = serde_json::json!({
+        "theme": &settings.theme,
+        "language": &settings.language,
+        "auto_update_check": settings.auto_update_check,
+        "auto_refresh_interval": settings.auto_refresh_interval,
+    });
+
     match update_config(|config| {
         config.settings = settings;
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0003",
+                "Settings updated successfully",
+                LogSource::Backend,
+                Some(settings_summary),
+                None,
+            );
+            IpcResult::success(config)
+        },
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0003",
+                &format!("Failed to update settings: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -297,49 +386,138 @@ pub fn config_get_active_ide() -> IpcResult<IDEConfig> {
                 .find(|ide| ide.id == config.active_ide_id)
                 .cloned()
                 .unwrap_or_else(|| config.ide_configs.first().cloned().unwrap_or_default());
+
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0004",
+                "Active IDE retrieved",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": &active_ide.id,
+                    "ide_name": &active_ide.name,
+                })),
+                None,
+            );
             IpcResult::success(active_ide)
         }
-        Err(e) => IpcResult::error(
-            AppError::E103ReadFailed(e.clone()).code(),
-            &e,
-        ),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0004",
+                &format!("Failed to get active IDE: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_set_active_ide(ide_id: String) -> IpcResult<OpenSkillsManagerConfig> {
+    let ide_id_clone = ide_id.clone();
+
     match update_config(|config| {
         // Verify IDE exists
         if config.ide_configs.iter().any(|ide| ide.id == ide_id) {
             config.active_ide_id = ide_id;
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0005",
+                "Active IDE changed",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0005",
+                &format!("Failed to set active IDE: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_add_ide(ide_config: IDEConfig) -> IpcResult<OpenSkillsManagerConfig> {
+    let ide_id = ide_config.id.clone();
+    let ide_name = ide_config.name.clone();
+
     match update_config(|config| {
         // Check if IDE already exists
         if !config.ide_configs.iter().any(|ide| ide.id == ide_config.id) {
             config.ide_configs.push(ide_config);
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0006",
+                "IDE added",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id,
+                    "ide_name": ide_name,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0006",
+                &format!("Failed to add IDE: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id,
+                    "ide_name": ide_name,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_remove_ide(ide_id: String) -> IpcResult<OpenSkillsManagerConfig> {
+    let ide_id_clone = ide_id.clone();
+
     match update_config(|config| {
         config.ide_configs.retain(|ide| ide.id != ide_id);
         // If removed IDE was active, switch to first available
@@ -349,26 +527,85 @@ pub fn config_remove_ide(ide_id: String) -> IpcResult<OpenSkillsManagerConfig> {
                 .unwrap_or_default();
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0007",
+                "IDE removed",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                    "new_active_ide": &config.active_ide_id,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0007",
+                &format!("Failed to remove IDE: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_update_ide(ide_id: String, ide_config: IDEConfig) -> IpcResult<OpenSkillsManagerConfig> {
+    let ide_id_clone = ide_id.clone();
+    let ide_name = ide_config.name.clone();
+
     match update_config(|config| {
         if let Some(ide) = config.ide_configs.iter_mut().find(|ide| ide.id == ide_id) {
             *ide = ide_config;
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0008",
+                "IDE updated",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                    "ide_name": ide_name,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0008",
+                &format!("Failed to update IDE: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": ide_id_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -380,22 +617,52 @@ pub fn config_update_ide(ide_id: String, ide_config: IDEConfig) -> IpcResult<Ope
 pub fn config_get_projects(ide_id: Option<String>) -> IpcResult<Vec<Project>> {
     match load_config() {
         Ok(config) => {
-            let target_ide_id = ide_id.unwrap_or(config.active_ide_id);
+            let target_ide_id = ide_id.unwrap_or(config.active_ide_id.clone());
             let projects = config.ide_configs.iter()
                 .find(|ide| ide.id == target_ide_id)
                 .map(|ide| ide.projects.clone())
                 .unwrap_or_default();
+
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0009",
+                "Projects retrieved",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "ide_id": target_ide_id,
+                    "project_count": projects.len(),
+                })),
+                None,
+            );
             IpcResult::success(projects)
         }
-        Err(e) => IpcResult::error(
-            AppError::E103ReadFailed(e.clone()).code(),
-            &e,
-        ),
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0009",
+                &format!("Failed to get projects: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_add_project(ide_id: Option<String>, project: Project) -> IpcResult<OpenSkillsManagerConfig> {
+    let project_id = project.id.clone();
+    let project_name = project.name.clone();
+    let project_path = project.path.clone();
+
     match update_config(|config| {
         let target_ide_id = ide_id.unwrap_or_else(|| config.active_ide_id.clone());
         if let Some(ide) = config.ide_configs.iter_mut().find(|ide| ide.id == target_ide_id) {
@@ -405,32 +672,94 @@ pub fn config_add_project(ide_id: Option<String>, project: Project) -> IpcResult
             }
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0010",
+                "Project added",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "project_name": project_name,
+                    "project_path": project_path,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0010",
+                &format!("Failed to add project: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "project_name": project_name,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_remove_project(ide_id: Option<String>, project_id: String) -> IpcResult<OpenSkillsManagerConfig> {
+    let project_id_clone = project_id.clone();
+
     match update_config(|config| {
         let target_ide_id = ide_id.unwrap_or_else(|| config.active_ide_id.clone());
         if let Some(ide) = config.ide_configs.iter_mut().find(|ide| ide.id == target_ide_id) {
             ide.projects.retain(|p| p.id != project_id);
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0011",
+                "Project removed",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id_clone,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0011",
+                &format!("Failed to remove project: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_update_project(ide_id: Option<String>, project: Project) -> IpcResult<OpenSkillsManagerConfig> {
+    let project_id = project.id.clone();
+    let project_name = project.name.clone();
+
     match update_config(|config| {
         let target_ide_id = ide_id.unwrap_or_else(|| config.active_ide_id.clone());
         if let Some(ide) = config.ide_configs.iter_mut().find(|ide| ide.id == target_ide_id) {
@@ -439,11 +768,39 @@ pub fn config_update_project(ide_id: Option<String>, project: Project) -> IpcRes
             }
         }
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0012",
+                "Project updated",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "project_name": project_name,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0012",
+                &format!("Failed to update project: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "project_id": project_id,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -454,24 +811,78 @@ pub fn config_update_project(ide_id: Option<String>, project: Project) -> IpcRes
 #[tauri::command]
 pub fn config_get_groups() -> IpcResult<Vec<Group>> {
     match load_config() {
-        Ok(config) => IpcResult::success(config.groups),
-        Err(e) => IpcResult::error(
-            AppError::E103ReadFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0013",
+                "Groups retrieved",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "group_count": config.groups.len(),
+                })),
+                None,
+            );
+            IpcResult::success(config.groups)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0013",
+                &format!("Failed to get groups: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_set_groups(groups: Vec<Group>) -> IpcResult<OpenSkillsManagerConfig> {
+    let group_count = groups.len();
+
     match update_config(|config| {
         config.groups = groups;
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0014",
+                "Groups updated",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "group_count": group_count,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0014",
+                &format!("Failed to set groups: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -482,37 +893,121 @@ pub fn config_set_groups(groups: Vec<Group>) -> IpcResult<OpenSkillsManagerConfi
 #[tauri::command]
 pub fn config_get_skill_org() -> IpcResult<HashMap<String, SkillOrgEntry>> {
     match load_config() {
-        Ok(config) => IpcResult::success(config.skill_organization),
-        Err(e) => IpcResult::error(
-            AppError::E103ReadFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0015",
+                "Skill organization retrieved",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "entry_count": config.skill_organization.len(),
+                })),
+                None,
+            );
+            IpcResult::success(config.skill_organization)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0015",
+                &format!("Failed to get skill organization: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E103ReadFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_set_skill_org(folder_name: String, entry: SkillOrgEntry) -> IpcResult<OpenSkillsManagerConfig> {
+    let folder_name_clone = folder_name.clone();
+
     match update_config(|config| {
         config.skill_organization.insert(folder_name, entry);
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0016",
+                "Skill organization entry set",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "folder_name": folder_name_clone,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0016",
+                &format!("Failed to set skill organization entry: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "folder_name": folder_name_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
 #[tauri::command]
 pub fn config_remove_skill_org(folder_name: String) -> IpcResult<OpenSkillsManagerConfig> {
+    let folder_name_clone = folder_name.clone();
+
     match update_config(|config| {
         config.skill_organization.remove(&folder_name);
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0017",
+                "Skill organization entry removed",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "folder_name": folder_name_clone,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0017",
+                &format!("Failed to remove skill organization entry: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "folder_name": folder_name_clone,
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -522,14 +1017,44 @@ pub fn config_remove_skill_org(folder_name: String) -> IpcResult<OpenSkillsManag
 
 #[tauri::command]
 pub fn config_set_sync_settings(sync: SyncSettings) -> IpcResult<OpenSkillsManagerConfig> {
+    let sync_enabled = sync.enabled;
+    let sync_interval = sync.interval_minutes;
+
     match update_config(|config| {
         config.sync = sync;
     }) {
-        Ok(config) => IpcResult::success(config),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.clone()).code(),
-            &e,
-        ),
+        Ok(config) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0018",
+                "Sync settings updated",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "enabled": sync_enabled,
+                    "interval_minutes": sync_interval,
+                })),
+                None,
+            );
+            IpcResult::success(config)
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0018",
+                &format!("Failed to update sync settings: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "error": e.clone(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.clone()).code(),
+                &e,
+            )
+        }
     }
 }
 
@@ -541,11 +1066,34 @@ pub fn config_set_sync_settings(sync: SyncSettings) -> IpcResult<OpenSkillsManag
 pub fn config_needs_migration() -> IpcResult<bool> {
     // Check if new config exists
     if paths::config_exists() {
+        log(
+            LogLevel::Info,
+            "CONFIG",
+            "I0019",
+            "Migration check completed - no migration needed",
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "needs_migration": false,
+            })),
+            None,
+        );
         return IpcResult::success(false);
     }
 
     // Check if legacy data exists
-    IpcResult::success(paths::legacy_data_exists())
+    let needs_migration = paths::legacy_data_exists();
+    log(
+        LogLevel::Info,
+        "CONFIG",
+        "I0020",
+        "Migration check completed",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "needs_migration": needs_migration,
+        })),
+        None,
+    );
+    IpcResult::success(needs_migration)
 }
 
 // ============================================================================
@@ -557,7 +1105,21 @@ pub fn config_needs_migration() -> IpcResult<bool> {
 #[tauri::command]
 pub fn config_app_data_path() -> IpcResult<String> {
     let path = paths::get_app_support_path();
-    IpcResult::success(path.to_string_lossy().to_string())
+    let path_str = path.to_string_lossy().to_string();
+
+    log(
+        LogLevel::Info,
+        "CONFIG",
+        "I0021",
+        "App data path retrieved",
+        LogSource::Backend,
+        Some(serde_json::json!({
+            "path": &path_str,
+        })),
+        None,
+    );
+
+    IpcResult::success(path_str)
 }
 
 /// Reveal a path in Finder (macOS) or default file manager
@@ -566,6 +1128,17 @@ pub fn config_reveal_path(path: String) -> IpcResult<()> {
     let path_buf = std::path::PathBuf::from(&path);
 
     if !path_buf.exists() {
+        log(
+            LogLevel::Error,
+            "CONFIG",
+            "E0019",
+            "Path does not exist for reveal",
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "path": &path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E103ReadFailed("Path does not exist".to_string()).code(),
             &format!("Path does not exist: {}", path),
@@ -573,11 +1146,38 @@ pub fn config_reveal_path(path: String) -> IpcResult<()> {
     }
 
     match tauri_plugin_opener::reveal_item_in_dir(&path_buf) {
-        Ok(()) => IpcResult::success(()),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.to_string()).code(),
-            &format!("Failed to reveal path: {}", e),
-        ),
+        Ok(()) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0022",
+                "Path revealed in file manager",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "path": &path,
+                })),
+                None,
+            );
+            IpcResult::success(())
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0020",
+                &format!("Failed to reveal path: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "path": &path,
+                    "error": e.to_string(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.to_string()).code(),
+                &format!("Failed to reveal path: {}", e),
+            )
+        }
     }
 }
 
@@ -587,6 +1187,17 @@ pub fn config_open_path(path: String) -> IpcResult<()> {
     let path_buf = std::path::PathBuf::from(&path);
 
     if !path_buf.exists() {
+        log(
+            LogLevel::Error,
+            "CONFIG",
+            "E0021",
+            "Path does not exist for open",
+            LogSource::Backend,
+            Some(serde_json::json!({
+                "path": &path,
+            })),
+            None,
+        );
         return IpcResult::error(
             AppError::E103ReadFailed("Path does not exist".to_string()).code(),
             &format!("Path does not exist: {}", path),
@@ -594,10 +1205,37 @@ pub fn config_open_path(path: String) -> IpcResult<()> {
     }
 
     match tauri_plugin_opener::open_path(&path_buf, None::<&str>) {
-        Ok(()) => IpcResult::success(()),
-        Err(e) => IpcResult::error(
-            AppError::E102WriteFailed(e.to_string()).code(),
-            &format!("Failed to open path: {}", e),
-        ),
+        Ok(()) => {
+            log(
+                LogLevel::Info,
+                "CONFIG",
+                "I0023",
+                "Path opened in file manager",
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "path": &path,
+                })),
+                None,
+            );
+            IpcResult::success(())
+        }
+        Err(e) => {
+            log(
+                LogLevel::Error,
+                "CONFIG",
+                "E0022",
+                &format!("Failed to open path: {}", e),
+                LogSource::Backend,
+                Some(serde_json::json!({
+                    "path": &path,
+                    "error": e.to_string(),
+                })),
+                None,
+            );
+            IpcResult::error(
+                AppError::E102WriteFailed(e.to_string()).code(),
+                &format!("Failed to open path: {}", e),
+            )
+        }
     }
 }

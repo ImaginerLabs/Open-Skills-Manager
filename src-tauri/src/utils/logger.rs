@@ -750,3 +750,1007 @@ pub fn get_logs_with_stats(filter: Option<LogFilter>, limit: Option<usize>) -> L
         path: String::new(),
     }
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    /// Create a test logger with a temporary directory
+    fn create_test_logger() -> (Logger, TempDir) {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let log_path = temp_dir.path().join("test.log");
+
+        let logger = Logger {
+            log_path,
+            max_size: 1024, // 1KB for testing rotation
+            max_files: 3,
+        };
+
+        (logger, temp_dir)
+    }
+
+    // ===========================================================================
+    // LogLevel Tests
+    // ===========================================================================
+
+    mod log_level_tests {
+        use super::*;
+
+        #[test]
+        fn test_log_level_as_str() {
+            assert_eq!(LogLevel::Debug.as_str(), "DEBUG");
+            assert_eq!(LogLevel::Info.as_str(), "INFO");
+            assert_eq!(LogLevel::Warn.as_str(), "WARN");
+            assert_eq!(LogLevel::Error.as_str(), "ERROR");
+        }
+
+        #[test]
+        fn test_log_level_from_str() {
+            assert_eq!(LogLevel::from_str("debug"), Some(LogLevel::Debug));
+            assert_eq!(LogLevel::from_str("DEBUG"), Some(LogLevel::Debug));
+            assert_eq!(LogLevel::from_str("Info"), Some(LogLevel::Info));
+            assert_eq!(LogLevel::from_str("WARN"), Some(LogLevel::Warn));
+            assert_eq!(LogLevel::from_str("error"), Some(LogLevel::Error));
+            assert_eq!(LogLevel::from_str("invalid"), None);
+        }
+
+        #[test]
+        fn test_log_level_serialization() {
+            // Test lowercase serialization
+            let json = serde_json::to_string(&LogLevel::Debug).unwrap();
+            assert_eq!(json, "\"debug\"");
+
+            let json = serde_json::to_string(&LogLevel::Error).unwrap();
+            assert_eq!(json, "\"error\"");
+        }
+
+        #[test]
+        fn test_log_level_deserialization() {
+            let level: LogLevel = serde_json::from_str("\"info\"").unwrap();
+            assert_eq!(level, LogLevel::Info);
+
+            // Note: serde rename_all = "lowercase" only accepts lowercase
+            let level: LogLevel = serde_json::from_str("\"warn\"").unwrap();
+            assert_eq!(level, LogLevel::Warn);
+        }
+
+        #[test]
+        fn test_log_level_equality() {
+            assert_eq!(LogLevel::Debug, LogLevel::Debug);
+            assert_ne!(LogLevel::Debug, LogLevel::Info);
+        }
+    }
+
+    // ===========================================================================
+    // LogSource Tests
+    // ===========================================================================
+
+    mod log_source_tests {
+        use super::*;
+
+        #[test]
+        fn test_log_source_as_str() {
+            assert_eq!(LogSource::Frontend.as_str(), "FRONTEND");
+            assert_eq!(LogSource::Backend.as_str(), "BACKEND");
+        }
+
+        #[test]
+        fn test_log_source_serialization() {
+            let json = serde_json::to_string(&LogSource::Frontend).unwrap();
+            assert_eq!(json, "\"FRONTEND\"");
+
+            let json = serde_json::to_string(&LogSource::Backend).unwrap();
+            assert_eq!(json, "\"BACKEND\"");
+        }
+
+        #[test]
+        fn test_log_source_deserialization() {
+            let source: LogSource = serde_json::from_str("\"FRONTEND\"").unwrap();
+            assert_eq!(source, LogSource::Frontend);
+
+            let source: LogSource = serde_json::from_str("\"BACKEND\"").unwrap();
+            assert_eq!(source, LogSource::Backend);
+        }
+    }
+
+    // ===========================================================================
+    // LogEntry Tests
+    // ===========================================================================
+
+    mod log_entry_tests {
+        use super::*;
+
+        #[test]
+        fn test_log_entry_serialization() {
+            let entry = LogEntry {
+                timestamp: "2025-05-09T10:00:00Z".to_string(),
+                level: LogLevel::Error,
+                module: "LIBRARY".to_string(),
+                code: "LIBRARY_IMPORT_FAILED".to_string(),
+                message: "Failed to import skill".to_string(),
+                source: LogSource::Backend,
+                context: Some(serde_json::json!({ "skill_id": "123" })),
+                stack_trace: None,
+            };
+
+            let json = serde_json::to_string(&entry).unwrap();
+            assert!(json.contains("\"level\":\"error\""));
+            assert!(json.contains("\"module\":\"LIBRARY\""));
+            assert!(json.contains("\"source\":\"BACKEND\""));
+            assert!(json.contains("\"context\":{\"skill_id\":\"123\"}"));
+            // stack_trace is None, should be skipped
+            assert!(!json.contains("stackTrace"));
+        }
+
+        #[test]
+        fn test_log_entry_with_stack_trace() {
+            let entry = LogEntry {
+                timestamp: "2025-05-09T10:00:00Z".to_string(),
+                level: LogLevel::Error,
+                module: "SYSTEM".to_string(),
+                code: "UNKNOWN_ERROR".to_string(),
+                message: "Error occurred".to_string(),
+                source: LogSource::Frontend,
+                context: None,
+                stack_trace: Some("Error at line 1\n  at function()".to_string()),
+            };
+
+            let json = serde_json::to_string(&entry).unwrap();
+            assert!(json.contains("\"stackTrace\":\"Error at line 1"));
+        }
+
+        #[test]
+        fn test_log_entry_camel_case() {
+            let entry = LogEntry {
+                timestamp: "2025-05-09T10:00:00Z".to_string(),
+                level: LogLevel::Info,
+                module: "DEPLOY".to_string(),
+                code: "DEPLOY_SUCCESS".to_string(),
+                message: "Deployed".to_string(),
+                source: LogSource::Backend,
+                context: None,
+                stack_trace: Some("stack trace".to_string()), // Include stack trace to verify field name
+            };
+
+            let json = serde_json::to_string(&entry).unwrap();
+            // Verify camelCase field names
+            assert!(json.contains("\"stackTrace\"")); // camelCase field name
+        }
+    }
+
+    // ===========================================================================
+    // Logger Write Tests
+    // ===========================================================================
+
+    mod logger_write_tests {
+        use super::*;
+
+        #[test]
+        fn test_write_log_entry() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(
+                LogLevel::Info,
+                "LIBRARY",
+                "IMPORT_SUCCESS",
+                "Skill imported successfully",
+                LogSource::Backend,
+                Some(serde_json::json!({ "skill_id": "test-123" })),
+                None,
+            );
+
+            let content = fs::read_to_string(&logger.log_path).unwrap();
+            assert!(content.contains("IMPORT_SUCCESS"));
+            assert!(content.contains("Skill imported successfully"));
+            assert!(content.contains("LIBRARY"));
+        }
+
+        #[test]
+        fn test_write_multiple_entries() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(LogLevel::Info, "SYSTEM", "START", "App started", LogSource::Backend, None, None);
+            logger.log(LogLevel::Warn, "SYNC", "SYNC_WARN", "Sync delayed", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "LIBRARY", "IMPORT_FAILED", "Import failed", LogSource::Backend, None, None);
+
+            let content = fs::read_to_string(&logger.log_path).unwrap();
+            let lines: Vec<&str> = content.lines().collect();
+            assert_eq!(lines.len(), 3);
+
+            assert!(lines[0].contains("START"));
+            assert!(lines[1].contains("SYNC_WARN"));
+            assert!(lines[2].contains("IMPORT_FAILED"));
+        }
+
+        #[test]
+        fn test_write_with_context() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(
+                LogLevel::Error,
+                "DEPLOY",
+                "DEPLOY_FAILED",
+                "Deployment failed",
+                LogSource::Frontend,
+                Some(serde_json::json!({
+                    "skill_id": "skill-001",
+                    "target": "global",
+                    "error": "Permission denied"
+                })),
+                Some("Error stack trace here".to_string()),
+            );
+
+            let content = fs::read_to_string(&logger.log_path).unwrap();
+            let entry: LogEntry = serde_json::from_str(&content.lines().next().unwrap()).unwrap();
+
+            assert_eq!(entry.module, "DEPLOY");
+            assert!(entry.context.is_some());
+            let ctx = entry.context.unwrap();
+            assert_eq!(ctx["skill_id"], "skill-001");
+            assert_eq!(ctx["target"], "global");
+            assert!(entry.stack_trace.is_some());
+        }
+
+        #[test]
+        fn test_debug_log_only_in_debug_build() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(
+                LogLevel::Debug,
+                "SYSTEM",
+                "DEBUG_MSG",
+                "Debug message",
+                LogSource::Backend,
+                None,
+                None,
+            );
+
+            let content = fs::read_to_string(&logger.log_path).unwrap_or_default();
+
+            #[cfg(debug_assertions)]
+            {
+                // Debug build should include DEBUG logs
+                assert!(content.contains("DEBUG_MSG"));
+            }
+
+            #[cfg(not(debug_assertions))]
+            {
+                // Release build should NOT include DEBUG logs
+                assert!(!content.contains("DEBUG_MSG"));
+            }
+        }
+    }
+
+    // ===========================================================================
+    // Logger Filter Tests
+    // ===========================================================================
+
+    mod logger_filter_tests {
+        use super::*;
+
+        fn create_logs_with_various_levels(logger: &Logger) {
+            logger.log(LogLevel::Debug, "SYSTEM", "DEBUG_1", "Debug 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "LIBRARY", "INFO_1", "Info 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "LIBRARY", "INFO_2", "Info 2", LogSource::Frontend, None, None);
+            logger.log(LogLevel::Warn, "SYNC", "WARN_1", "Warn 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "DEPLOY", "ERROR_1", "Error 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "DEPLOY", "ERROR_2", "Error 2", LogSource::Frontend, None, None);
+        }
+
+        #[test]
+        fn test_filter_by_level_string() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: Some(serde_json::json!("error")),
+                module: None,
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+
+            #[cfg(debug_assertions)]
+            assert_eq!(entries.len(), 2); // 2 error entries
+            #[cfg(not(debug_assertions))]
+            assert_eq!(entries.len(), 2);
+
+            assert!(entries.iter().all(|e| e.level == LogLevel::Error));
+        }
+
+        #[test]
+        fn test_filter_by_level_array() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: Some(serde_json::json!(["error", "warn"])),
+                module: None,
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+
+            #[cfg(debug_assertions)]
+            assert_eq!(entries.len(), 3); // 1 warn + 2 error
+            #[cfg(not(debug_assertions))]
+            assert_eq!(entries.len(), 3);
+
+            assert!(entries.iter().all(|e| e.level == LogLevel::Error || e.level == LogLevel::Warn));
+        }
+
+        #[test]
+        fn test_filter_by_module() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: None,
+                module: Some(serde_json::json!("LIBRARY")),
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert!(entries.iter().all(|e| e.module == "LIBRARY"));
+        }
+
+        #[test]
+        fn test_filter_by_module_array() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: None,
+                module: Some(serde_json::json!(["LIBRARY", "SYNC"])),
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert!(entries.iter().all(|e| e.module == "LIBRARY" || e.module == "SYNC"));
+        }
+
+        #[test]
+        fn test_filter_by_source() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: None,
+                module: None,
+                code: None,
+                source: Some("FRONTEND".to_string()),
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert!(entries.iter().all(|e| e.source == LogSource::Frontend));
+        }
+
+        #[test]
+        fn test_filter_by_code() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: None,
+                module: None,
+                code: Some(serde_json::json!(["ERROR_1", "ERROR_2"])),
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert_eq!(entries.len(), 2);
+            assert!(entries.iter().all(|e| e.code.starts_with("ERROR")));
+        }
+
+        #[test]
+        fn test_filter_by_search() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: None,
+                module: None,
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: Some("Error".to_string()),
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert!(entries.iter().all(|e| e.message.contains("Error")));
+        }
+
+        #[test]
+        fn test_filter_combined() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_logs_with_various_levels(&logger);
+
+            let filter = LogFilter {
+                level: Some(serde_json::json!("error")),
+                module: Some(serde_json::json!("DEPLOY")),
+                code: None,
+                source: Some("BACKEND".to_string()),
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            assert_eq!(entries.len(), 1); // Only ERROR_1 matches (BACKEND + DEPLOY + error)
+            assert_eq!(entries[0].code, "ERROR_1");
+        }
+
+        #[test]
+        fn test_filter_returns_newest_first() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(LogLevel::Info, "SYSTEM", "FIRST", "First", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "SYSTEM", "SECOND", "Second", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "SYSTEM", "THIRD", "Third", LogSource::Backend, None, None);
+
+            let filter = LogFilter {
+                level: None,
+                module: None,
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let entries = logger.filter_logs(&filter);
+            // Should be in reverse order (newest first)
+            assert_eq!(entries[0].code, "THIRD");
+            assert_eq!(entries[1].code, "SECOND");
+            assert_eq!(entries[2].code, "FIRST");
+        }
+
+        #[test]
+        fn test_filter_by_time_range() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Manually write entries with specific timestamps
+            let entries = vec![
+                LogEntry {
+                    timestamp: "2025-05-09T10:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "MSG1".to_string(),
+                    message: "Message 1".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+                LogEntry {
+                    timestamp: "2025-05-09T12:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "MSG2".to_string(),
+                    message: "Message 2".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+                LogEntry {
+                    timestamp: "2025-05-09T14:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "MSG3".to_string(),
+                    message: "Message 3".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+            ];
+
+            for entry in &entries {
+                let json = serde_json::to_string(entry).unwrap();
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.log_path)
+                    .unwrap();
+                writeln!(file, "{}", json).unwrap();
+            }
+
+            let filter = LogFilter {
+                level: None,
+                module: None,
+                code: None,
+                source: None,
+                start_time: Some("2025-05-09T11:00:00Z".to_string()),
+                end_time: Some("2025-05-09T13:00:00Z".to_string()),
+                search: None,
+            };
+
+            let filtered = logger.filter_logs(&filter);
+            assert_eq!(filtered.len(), 1);
+            assert_eq!(filtered[0].code, "MSG2");
+        }
+    }
+
+    // ===========================================================================
+    // Logger Stats Tests
+    // ===========================================================================
+
+    mod logger_stats_tests {
+        use super::*;
+
+        #[test]
+        fn test_empty_stats() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            let stats = logger.get_stats();
+
+            assert_eq!(stats.total, 0);
+            assert_eq!(stats.by_level["debug"], 0);
+            assert_eq!(stats.by_level["info"], 0);
+            assert_eq!(stats.by_level["warn"], 0);
+            assert_eq!(stats.by_level["error"], 0);
+            assert!(stats.oldest_timestamp.is_none());
+            assert!(stats.newest_timestamp.is_none());
+        }
+
+        #[test]
+        fn test_stats_counts() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(LogLevel::Info, "LIBRARY", "I1", "Info 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "LIBRARY", "I2", "Info 2", LogSource::Backend, None, None);
+            logger.log(LogLevel::Warn, "SYNC", "W1", "Warn 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "DEPLOY", "E1", "Error 1", LogSource::Backend, None, None);
+
+            let stats = logger.get_stats();
+
+            // We logged 4 entries, all should be counted
+            assert_eq!(stats.total, 4);
+
+            assert_eq!(stats.by_level["info"], 2);
+            assert_eq!(stats.by_level["warn"], 1);
+            assert_eq!(stats.by_level["error"], 1);
+
+            assert_eq!(*stats.by_module.get("LIBRARY").unwrap_or(&0), 2);
+            assert_eq!(*stats.by_module.get("SYNC").unwrap_or(&0), 1);
+            assert_eq!(*stats.by_module.get("DEPLOY").unwrap_or(&0), 1);
+        }
+
+        #[test]
+        fn test_stats_timestamps() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Write entries with specific timestamps
+            let entries = vec![
+                LogEntry {
+                    timestamp: "2025-05-09T08:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "OLD".to_string(),
+                    message: "Old".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+                LogEntry {
+                    timestamp: "2025-05-09T16:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "NEW".to_string(),
+                    message: "New".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+            ];
+
+            for entry in &entries {
+                let json = serde_json::to_string(entry).unwrap();
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.log_path)
+                    .unwrap();
+                writeln!(file, "{}", json).unwrap();
+            }
+
+            let stats = logger.get_stats();
+
+            assert_eq!(stats.oldest_timestamp, Some("2025-05-09T08:00:00Z".to_string()));
+            assert_eq!(stats.newest_timestamp, Some("2025-05-09T16:00:00Z".to_string()));
+        }
+
+        #[test]
+        fn test_logs_with_stats() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(LogLevel::Info, "LIBRARY", "I1", "Info 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "LIBRARY", "E1", "Error 1", LogSource::Backend, None, None);
+
+            let result = logger.get_logs_with_stats(None, None);
+
+            // We logged 2 entries
+            assert_eq!(result.logs.len(), 2);
+            assert_eq!(result.stats.total, 2);
+            assert!(!result.path.is_empty());
+        }
+    }
+
+    // ===========================================================================
+    // Logger Export Tests
+    // ===========================================================================
+
+    mod logger_export_tests {
+        use super::*;
+
+        fn create_sample_logs(logger: &Logger) {
+            logger.log(LogLevel::Info, "LIBRARY", "IMPORT_SUCCESS", "Skill imported", LogSource::Backend, None, None);
+            logger.log(LogLevel::Error, "DEPLOY", "DEPLOY_FAILED", "Deploy failed", LogSource::Frontend, None, None);
+        }
+
+        #[test]
+        fn test_export_json() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_sample_logs(&logger);
+
+            let exported = logger.export_logs(LogExportFormat::Json, None);
+
+            assert!(exported.starts_with('['));
+            assert!(exported.contains("IMPORT_SUCCESS"));
+            assert!(exported.contains("DEPLOY_FAILED"));
+            assert!(exported.ends_with(']'));
+        }
+
+        #[test]
+        fn test_export_txt() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_sample_logs(&logger);
+
+            let exported = logger.export_logs(LogExportFormat::Txt, None);
+
+            // Format: [timestamp] LEVEL [module] code: message
+            assert!(exported.contains(" INFO ")); // Info level
+            assert!(exported.contains(" ERROR ")); // Error level
+            assert!(exported.contains("LIBRARY"));
+            assert!(exported.contains("DEPLOY"));
+        }
+
+        #[test]
+        fn test_export_csv() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_sample_logs(&logger);
+
+            let exported = logger.export_logs(LogExportFormat::Csv, None);
+
+            assert!(exported.starts_with("timestamp,level,module,code,message,source"));
+            assert!(exported.contains("LIBRARY"));
+            assert!(exported.contains("DEPLOY"));
+            assert!(exported.contains("BACKEND"));
+            assert!(exported.contains("FRONTEND"));
+        }
+
+        #[test]
+        fn test_export_with_filter() {
+            let (logger, _temp_dir) = create_test_logger();
+            create_sample_logs(&logger);
+
+            let filter = LogFilter {
+                level: Some(serde_json::json!("error")),
+                module: None,
+                code: None,
+                source: None,
+                start_time: None,
+                end_time: None,
+                search: None,
+            };
+
+            let exported = logger.export_logs(LogExportFormat::Json, Some(filter));
+
+            assert!(exported.contains("DEPLOY_FAILED"));
+            assert!(!exported.contains("IMPORT_SUCCESS"));
+        }
+    }
+
+    // ===========================================================================
+    // Logger Clear Tests
+    // ===========================================================================
+
+    mod logger_clear_tests {
+        use super::*;
+
+        #[test]
+        fn test_clear_all_logs() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            logger.log(LogLevel::Info, "SYSTEM", "MSG1", "Message 1", LogSource::Backend, None, None);
+            logger.log(LogLevel::Info, "SYSTEM", "MSG2", "Message 2", LogSource::Backend, None, None);
+
+            let count = logger.clear_logs(None, None);
+
+            assert_eq!(count, 2);
+            assert!(!logger.log_path.exists());
+        }
+
+        #[test]
+        fn test_clear_empty_file() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            let count = logger.clear_logs(None, None);
+
+            assert_eq!(count, 0);
+        }
+
+        #[test]
+        fn test_clear_before_timestamp() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Write entries with specific timestamps
+            let entries = vec![
+                LogEntry {
+                    timestamp: "2025-05-09T10:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "OLD".to_string(),
+                    message: "Old".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+                LogEntry {
+                    timestamp: "2025-05-09T12:00:00Z".to_string(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "NEW".to_string(),
+                    message: "New".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+            ];
+
+            for entry in &entries {
+                let json = serde_json::to_string(entry).unwrap();
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.log_path)
+                    .unwrap();
+                writeln!(file, "{}", json).unwrap();
+            }
+
+            let count = logger.clear_logs(Some("2025-05-09T11:00:00Z"), None);
+
+            assert_eq!(count, 1); // Only OLD entry deleted
+
+            let remaining = fs::read_to_string(&logger.log_path).unwrap();
+            assert!(remaining.contains("NEW"));
+            assert!(!remaining.contains("OLD"));
+        }
+
+        #[test]
+        fn test_clear_keep_days() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Calculate timestamps relative to current time
+            let now = chrono::Utc::now();
+            let old_time = now - chrono::Duration::days(10); // 10 days ago
+            let recent_time = now - chrono::Duration::days(2); // 2 days ago
+
+            // Write entries with calculated timestamps
+            let entries = vec![
+                LogEntry {
+                    timestamp: old_time.to_rfc3339(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "OLD".to_string(),
+                    message: "Old (10 days ago)".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+                LogEntry {
+                    timestamp: recent_time.to_rfc3339(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: "RECENT".to_string(),
+                    message: "Recent (2 days ago)".to_string(),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                },
+            ];
+
+            for entry in &entries {
+                let json = serde_json::to_string(entry).unwrap();
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.log_path)
+                    .unwrap();
+                writeln!(file, "{}", json).unwrap();
+            }
+
+            // Keep last 7 days
+            let count = logger.clear_logs(None, Some(7));
+
+            assert_eq!(count, 1); // OLD entry deleted (10 days ago > 7 days)
+
+            let remaining = fs::read_to_string(&logger.log_path).unwrap();
+            assert!(remaining.contains("RECENT"));
+            assert!(!remaining.contains("OLD"));
+        }
+    }
+
+    // ===========================================================================
+    // Logger Rotation Tests
+    // ===========================================================================
+
+    mod logger_rotation_tests {
+        use super::*;
+
+        #[test]
+        fn test_rotation_triggered_by_size() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Write enough data to trigger rotation (max_size is 1024 bytes)
+            for i in 0..20 {
+                logger.log(
+                    LogLevel::Info,
+                    "SYSTEM",
+                    &format!("MSG_{}", i),
+                    &format!("This is a longer message to trigger rotation - entry number {}", i),
+                    LogSource::Backend,
+                    Some(serde_json::json!({ "index": i })),
+                    None,
+                );
+            }
+
+            // Check if rotation file was created
+            let rotated_path = logger.log_path.with_extension("log.1");
+            assert!(rotated_path.exists() || fs::metadata(&logger.log_path).unwrap().len() <= 1024);
+        }
+
+        #[test]
+        fn test_rotation_max_files() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Force multiple rotations
+            for batch in 0..4 {
+                for i in 0..20 {
+                    logger.log(
+                        LogLevel::Info,
+                        "SYSTEM",
+                        &format!("BATCH{}_MSG_{}", batch, i),
+                        &format!("Batch {} Message {} - some padding text", batch, i),
+                        LogSource::Backend,
+                        None,
+                        None,
+                    );
+                }
+            }
+
+            // With max_files = 3, we should have at most log.1, log.2, log.3
+            let log3 = logger.log_path.with_extension("log.3");
+            let log4 = logger.log_path.with_extension("log.4");
+
+            // log.4 should not exist (max_files = 3)
+            assert!(!log4.exists());
+        }
+    }
+
+    // ===========================================================================
+    // Read Logs Tests
+    // ===========================================================================
+
+    mod read_logs_tests {
+        use super::*;
+
+        #[test]
+        fn test_read_logs_with_limit() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            // Write 10 entries directly to the file to bypass any potential issues
+            for i in 0..10 {
+                let entry = LogEntry {
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    level: LogLevel::Info,
+                    module: "SYSTEM".to_string(),
+                    code: format!("MSG_{}", i),
+                    message: format!("Message {}", i),
+                    source: LogSource::Backend,
+                    context: None,
+                    stack_trace: None,
+                };
+                let json = serde_json::to_string(&entry).unwrap();
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.log_path)
+                    .unwrap();
+                writeln!(file, "{}", json).unwrap();
+            }
+
+            let logs = logger.read_logs(Some(5));
+
+            // Should return exactly 5 entries (the last 5)
+            assert_eq!(logs.len(), 5);
+
+            // Should be the last 5 entries
+            assert!(logs[4]["code"].as_str().unwrap().starts_with("MSG_"));
+        }
+
+        #[test]
+        fn test_read_logs_default_limit() {
+            let (logger, _temp_dir) = create_test_logger();
+
+            for i in 0..5 {
+                logger.log(LogLevel::Info, "SYSTEM", &format!("MSG_{}", i), &format!("Message {}", i), LogSource::Backend, None, None);
+            }
+
+            let logs = logger.read_logs(None);
+
+            // Default limit is 100, but we only have 5 entries
+            assert_eq!(logs.len(), 5);
+        }
+    }
+
+    // ===========================================================================
+    // Convenience Functions Tests
+    // ===========================================================================
+
+    mod convenience_functions_tests {
+        use super::*;
+
+        #[test]
+        fn test_log_error_function() {
+            let _ = LOGGER.lock().unwrap().take(); // Clear any existing logger
+            init_logger();
+
+            log_error("TEST_ERROR", "Test error message", serde_json::json!({ "key": "value" }));
+
+            let path = get_log_path();
+            let content = fs::read_to_string(&path).unwrap_or_default();
+
+            assert!(content.contains("TEST_ERROR"));
+            assert!(content.contains("SYSTEM"));
+        }
+
+        #[test]
+        fn test_get_log_path_function() {
+            let _ = LOGGER.lock().unwrap().take();
+            init_logger();
+
+            let path = get_log_path();
+
+            assert!(path.contains("CSM"));
+            assert!(path.contains("csm.log"));
+        }
+    }
+}

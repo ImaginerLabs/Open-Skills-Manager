@@ -5,6 +5,7 @@ use tauri_plugin_updater::UpdaterExt;
 
 use super::library::IpcResult;
 use crate::utils::logger::{log, LogLevel, LogSource};
+use serde_json::json;
 
 /// Global state for update tracking
 static UPDATE_AVAILABLE: AtomicBool = AtomicBool::new(false);
@@ -219,13 +220,29 @@ pub async fn update_download(app: AppHandle) -> IpcResult<UpdateInfo> {
                 if t > 0 {
                     let progress = ((chunk_length as f64 / t as f64) * 100.0) as u8;
                     // Could emit progress event to frontend here
-                    log::info!("Download progress: {}%", progress);
+                    log(
+                        LogLevel::Debug,
+                        "UPDATE",
+                        "DOWNLOAD_PROGRESS",
+                        &format!("Download progress: {}%", progress),
+                        LogSource::Backend,
+                        Some(json!({ "progress": progress })),
+                        None,
+                    );
                 }
             }
         },
         || {
             // Download complete callback
-            log::info!("Download complete");
+            log(
+                LogLevel::Debug,
+                "UPDATE",
+                "DOWNLOAD_CALLBACK",
+                "Download complete callback triggered",
+                LogSource::Backend,
+                None,
+                None,
+            );
         }
     ).await;
 
