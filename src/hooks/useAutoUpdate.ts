@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getName, getVersion } from '@tauri-apps/api/app';
 import {
   checkForUpdate,
@@ -6,17 +6,11 @@ import {
   type UpdateInfo,
 } from '../services/updateService';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useUpdateStore } from '../stores/updateStore';
 import { useUIStore } from '../stores/uiStore';
 import { logService, LOG_MODULES, LOG_CODES } from '../services/logService';
 
 export interface UseAutoUpdateResult {
-  appName: string;
-  currentVersion: string;
-  updateInfo: UpdateInfo | null;
-  isChecking: boolean;
-  isDownloading: boolean;
-  downloadProgress: number;
-  error: string | null;
   checkForUpdates: () => Promise<void>;
   downloadAndInstall: () => Promise<void>;
 }
@@ -28,54 +22,73 @@ const AUTO_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 const MIN_CHECK_INTERVAL = 1 * 60 * 60 * 1000;
 
 export function useAutoUpdate(): UseAutoUpdateResult {
-  const [appName, setAppName] = useState<string>('');
-  const [currentVersion, setCurrentVersion] = useState<string>('');
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
   const { autoUpdateCheck } = useSettingsStore();
+  const {
+    setAppName,
+    setCurrentVersion,
+    setUpdateAvailable,
+    setChecking,
+    setDownloadProgress,
+    setDownloading,
+    setError,
+  } = useUpdateStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const autoCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCheckTimeRef = useRef<number>(0);
   const hasCheckedOnStartup = useRef(false);
+  const lastNotifiedVersionRef = useRef<string | null>(null);
+  const updateInfoRef = useRef<UpdateInfo | null>(null);
 
   // Get app info on mount
   useEffect(() => {
-    getVersion().then(setCurrentVersion).catch(() => setCurrentVersion('Unknown'));
-    getName().then(setAppName).catch(() => setAppName('Open Skills Manager'));
-  }, []);
+    getVersion()
+      .then((version) => {
+        setCurrentVersion(version);
+      })
+      .catch(() => setCurrentVersion('Unknown'));
+    getName()
+      .then((name) => {
+        setAppName(name);
+      })
+      .catch(() => setAppName('Open Skills Manager'));
+  }, [setCurrentVersion, setAppName]);
 
   // Core update check logic
-  const doCheck = useCallback(async (showSuccessToast: boolean) => {
-    try {
-      const info = await checkForUpdate();
-      setUpdateInfo(info);
+  const doCheck = useCallback(
+    async (showSuccessToast: boolean) => {
+      try {
+        const info = await checkForUpdate();
+        updateInfoRef.current = info;
 
-      if (info) {
-        showToast('info', `发现新版本 ${info.latestVersion}，可在设置页面安装`);
-      } else if (showSuccessToast) {
-        showToast('success', '当前已是最新版本');
-      }
+        if (info) {
+          setUpdateAvailable(true, info.latestVersion, info.releaseNotes);
+          // Only show toast if we haven't already notified about this version
+          if (lastNotifiedVersionRef.current !== info.latestVersion) {
+            lastNotifiedVersionRef.current = info.latestVersion ?? null;
+            showToast('info', `发现新版本 ${info.latestVersion}，可在设置页面安装`);
+          }
+        } else {
+          setUpdateAvailable(false);
+          if (showSuccessToast) {
+            showToast('success', '当前已是最新版本');
+          }
+        }
 
-      return info;
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : '检查更新失败';
-      logService.error(
-        LOG_MODULES.UPDATE,
-        LOG_CODES.UPDATE_CHECK_FAILED,
-        'Update check failed',
-        { error: errorMessage }
-      );
-      if (showSuccessToast) {
-        setError(errorMessage);
-        showToast('error', errorMessage);
+        return info;
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '检查更新失败';
+        logService.error(LOG_MODULES.UPDATE, LOG_CODES.UPDATE_CHECK_FAILED, 'Update check failed', {
+          error: errorMessage,
+        });
+        if (showSuccessToast) {
+          setError(errorMessage);
+          showToast('error', errorMessage);
+        }
+        return null;
       }
-      return null;
-    }
-  }, [showToast]);
+    },
+    [setUpdateAvailable, showToast, setError]
+  );
 
   // Automatic check with rate limiting
   const performAutoCheck = useCallback(async () => {
@@ -89,26 +102,26 @@ export function useAutoUpdate(): UseAutoUpdateResult {
 
   // Manual check (always shows feedback, bypasses rate limit)
   const checkForUpdates = useCallback(async () => {
-    setIsChecking(true);
+    setChecking(true);
     setError(null);
     await doCheck(true);
-    setIsChecking(false);
-  }, [doCheck]);
+    setChecking(false);
+  }, [doCheck, setChecking, setError]);
 
   // Download and install update
   const downloadAndInstall = useCallback(async () => {
-    if (!updateInfo) {
+    if (!updateInfoRef.current) {
       showToast('error', '没有可用的更新');
       return;
     }
 
     showConfirmDialog({
       title: '安装更新',
-      message: `即将安装版本 ${updateInfo.latestVersion}。应用将自动重启以完成更新。`,
+      message: `即将安装版本 ${updateInfoRef.current.latestVersion}。应用将自动重启以完成更新。`,
       confirmText: '安装并重启',
       cancelText: '取消',
       onConfirm: async () => {
-        setIsDownloading(true);
+        setDownloading(true);
         setDownloadProgress(0);
         setError(null);
 
@@ -127,12 +140,12 @@ export function useAutoUpdate(): UseAutoUpdateResult {
           );
           setError(errorMessage);
           showToast('error', errorMessage);
-          setIsDownloading(false);
+          setDownloading(false);
           setDownloadProgress(0);
         }
       },
     });
-  }, [updateInfo, showToast, showConfirmDialog]);
+  }, [showToast, showConfirmDialog, setDownloading, setDownloadProgress, setError]);
 
   // Automatic update check on startup and periodically
   useEffect(() => {
@@ -167,13 +180,6 @@ export function useAutoUpdate(): UseAutoUpdateResult {
   }, [autoUpdateCheck, performAutoCheck]);
 
   return {
-    appName,
-    currentVersion,
-    updateInfo,
-    isChecking,
-    isDownloading,
-    downloadProgress,
-    error,
     checkForUpdates,
     downloadAndInstall,
   };

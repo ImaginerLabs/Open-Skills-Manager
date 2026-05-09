@@ -7,6 +7,7 @@ import { Settings } from '../pages/Settings/Settings';
 import { ProjectSkillsView } from '../components/features/ProjectSkillsView';
 import { ToastContainer, ConfirmDialog } from '../components/ui';
 import { useThemeEffect } from '../hooks/useThemeEffect';
+import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { useSettingsStore } from '../stores/settingsStore';
 
 // Placeholder pages - will be implemented in later epics
@@ -21,6 +22,9 @@ function ProjectsPage(): React.ReactElement {
 function RootLayout(): React.ReactElement {
   // Apply theme based on settings
   useThemeEffect();
+
+  // Initialize auto update check at app level (not page level)
+  useAutoUpdate();
 
   // Initialize settings from backend on first load
   useEffect(() => {

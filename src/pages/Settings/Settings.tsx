@@ -8,6 +8,7 @@ import { configService, storageService } from '../../services/configService';
 import { useIcloudSync } from '../../hooks/useIcloudSync';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useUpdateStore } from '../../stores/updateStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAutoUpdate } from '../../hooks/useAutoUpdate';
 import { formatSize } from '../../utils/formatters';
@@ -22,9 +23,20 @@ export function Settings(): React.ReactElement {
   const { theme, setTheme, setLanguage, autoUpdateCheck, setAutoUpdateCheck } = useSettingsStore();
   const { showToast, showConfirmDialog } = useUIStore();
   const { refreshAll } = useSidebarData();
-  const [appVersion, setAppVersion] = useState<string>('');
-  const [appName, setAppName] = useState<string>('');
   const [showLogViewer, setShowLogViewer] = useState(false);
+
+  // Get update state from store (managed by useAutoUpdate in RootLayout)
+  const {
+    currentVersion,
+    updateAvailable,
+    latestVersion,
+    isChecking,
+    isDownloading,
+    downloadProgress,
+  } = useUpdateStore();
+
+  // Get update actions from hook (hook is called in RootLayout, this just returns actions)
+  const { checkForUpdates, downloadAndInstall } = useAutoUpdate();
 
   const {
     status,
@@ -36,15 +48,8 @@ export function Settings(): React.ReactElement {
     forceSync,
   } = useIcloudSync();
 
-  const {
-    currentVersion,
-    updateInfo,
-    isChecking,
-    isDownloading,
-    downloadProgress,
-    checkForUpdates,
-    downloadAndInstall,
-  } = useAutoUpdate();
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [appName, setAppName] = useState<string>('');
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
@@ -211,12 +216,12 @@ export function Settings(): React.ReactElement {
             </div>
           </div>
 
-          {updateInfo && (
+          {updateAvailable && latestVersion && (
             <div className={styles.settingRow}>
               <div className={styles.settingLabel}>
                 <span className={styles.settingName}>Update Available</span>
                 <span className={styles.settingDescription}>
-                  Version {updateInfo.latestVersion} is available
+                  Version {latestVersion} is available
                 </span>
               </div>
               <div className={styles.settingValue}>
@@ -236,7 +241,7 @@ export function Settings(): React.ReactElement {
             </div>
           )}
 
-          {!updateInfo && (
+          {!updateAvailable && (
             <div className={styles.settingRow}>
               <div className={styles.settingLabel}>
                 <span className={styles.settingName}>Check for Updates</span>
