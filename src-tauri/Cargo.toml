@@ -32,3 +32,6 @@ tauri-plugin-process = "2"
 log = "0.4"
 sha2 = "0.10"
 lazy_static = "1.4"
+
+[dev-dependencies]
+serial_test = "3"

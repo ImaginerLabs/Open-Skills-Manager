@@ -951,8 +951,15 @@ pub fn project_skill_pull(project_id: String, skill_id: String, options: Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs;
     use tempfile::TempDir;
+
+    /// Clear all projects from storage before each test
+    fn clear_projects() {
+        let _ = save_projects(&[]);
+        get_storage().invalidate_cache();
+    }
 
     struct TestContext {
         _temp_dir: TempDir,
@@ -960,6 +967,8 @@ mod tests {
 
     impl TestContext {
         fn new() -> Self {
+            // Clear projects before each test to ensure isolation
+            clear_projects();
             let temp_dir = TempDir::new().expect("Failed to create temp dir");
             TestContext { _temp_dir: temp_dir }
         }
@@ -997,6 +1006,8 @@ mod tests {
     // ===========================================================================
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_project_add_valid_path() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("my-project");
@@ -1014,6 +1025,8 @@ mod tests {
     }
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_project_add_scans_skills() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("skilled-project");
@@ -1028,6 +1041,8 @@ mod tests {
     }
 
     #[test]
+    #[serial]
+    #[serial]
     fn test_project_add_rejects_nonexistent_path() {
         let _ctx = TestContext::new();
 
@@ -1039,6 +1054,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_add_rejects_file_path() {
         let ctx = TestContext::new();
         let file_path = ctx._temp_dir.path().join("file.txt");
@@ -1051,6 +1067,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_add_rejects_missing_claude_dir() {
         let ctx = TestContext::new();
         let project_path = ctx._temp_dir.path().join("no-claude-project");
@@ -1063,6 +1080,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_add_rejects_duplicate_path() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("duplicate-project");
@@ -1080,6 +1098,7 @@ mod tests {
     // ===========================================================================
 
     #[test]
+    #[serial]
     fn test_project_list_empty() {
         let _ctx = TestContext::new();
 
@@ -1090,6 +1109,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_list_returns_projects() {
         let ctx = TestContext::new();
         let path1 = ctx.create_valid_project("project-1");
@@ -1106,6 +1126,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_list_marks_exists_status() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("existing-project");
@@ -1119,6 +1140,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_list_marks_nonexistent_status() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("deleted-project");
@@ -1140,6 +1162,7 @@ mod tests {
     // ===========================================================================
 
     #[test]
+    #[serial]
     fn test_project_remove_existing() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("to-remove");
@@ -1157,6 +1180,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_remove_nonexistent_id() {
         let _ctx = TestContext::new();
 
@@ -1167,6 +1191,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_remove_only_targets_specific_id() {
         let ctx = TestContext::new();
         let path1 = ctx.create_valid_project("keep-project");
@@ -1190,6 +1215,7 @@ mod tests {
     // ===========================================================================
 
     #[test]
+    #[serial]
     fn test_project_skills_returns_list() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("skills-project");
@@ -1208,6 +1234,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_skills_empty_for_no_skills() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("empty-project");
@@ -1222,6 +1249,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_skills_nonexistent_project() {
         let _ctx = TestContext::new();
 
@@ -1232,6 +1260,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_skills_deleted_project_path() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("deleted-path-project");
@@ -1249,6 +1278,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_skill_has_correct_fields() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("field-test-project");
@@ -1275,6 +1305,7 @@ mod tests {
     // ===========================================================================
 
     #[test]
+    #[serial]
     fn test_project_refresh_specific_project() {
         let ctx = TestContext::new();
         let project_path = ctx.create_valid_project("refresh-project");
@@ -1302,6 +1333,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_refresh_all_projects() {
         let ctx = TestContext::new();
         let path1 = ctx.create_valid_project("refresh-all-1");
@@ -1324,6 +1356,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_project_refresh_nonexistent_project() {
         let _ctx = TestContext::new();
 
